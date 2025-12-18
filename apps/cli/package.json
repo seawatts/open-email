@@ -1,0 +1,106 @@
+{
+  "author": "Seawatts Team (https://github.com/seawatts-sh)",
+  "bin": {
+    "seawatts": "./bin/cli.js"
+  },
+  "bugs": {
+    "url": "https://github.com/seawatts/seawatts/issues"
+  },
+  "dependencies": {
+    "@seawatts/api": "workspace:*",
+    "@seawatts/id": "workspace:*",
+    "@seawatts/logger": "workspace:*",
+    "@seawatts/zustand": "workspace:*",
+    "@t3-oss/env-core": "catalog:",
+    "chalk": "5.6.2",
+    "cli-highlight": "2.1.11",
+    "clipboardy": "5.0.0",
+    "figlet": "1.9.3",
+    "figures": "6.1.0",
+    "ink": "6.4.0",
+    "keytar": "7.9.0",
+    "open": "10.2.0",
+    "react": "catalog:",
+    "react-error-boundary": "6.0.0",
+    "type-fest": "5.2.0",
+    "yargs": "18.0.0",
+    "zod": "catalog:",
+    "zustand": "catalog:"
+  },
+  "description": "A CLI tool for testing webhooks locally with team collaboration features.",
+  "devDependencies": {
+    "@seawatts/npm": "workspace:*",
+    "@seawatts/tsconfig": "workspace:*",
+    "@types/bun": "catalog:",
+    "@types/react": "catalog:",
+    "@types/yargs": "17.0.34",
+    "ink-testing-library": "4.0.0",
+    "react-devtools-core": "7.0.1",
+    "tsup": "8.5.0",
+    "typescript": "catalog:"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "exports": {
+    ".": {
+      "default": "./src/exports.ts",
+      "types": "./dist/src/exports.d.ts"
+    }
+  },
+  "files": [
+    "bin/cli.js",
+    "README.md",
+    "LICENSE"
+  ],
+  "homepage": "https://github.com/seawatts/seawatts#readme",
+  "keywords": [
+    "webhook",
+    "development",
+    "testing",
+    "cli",
+    "webhook",
+    "local-development",
+    "webhook-testing",
+    "webhook-development",
+    "team-collaboration",
+    "real-time",
+    "monitoring",
+    "debugging",
+    "stripe-webhooks",
+    "github-webhooks",
+    "slack-webhooks",
+    "clerk-webhooks",
+    "ngrok",
+    "svix"
+  ],
+  "license": "MIT",
+  "name": "@seawatts/cli",
+  "private": false,
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "directory": "apps/cli",
+    "type": "git",
+    "url": "git+https://github.com/seawatts-sh/seawatts.git"
+  },
+  "scripts": {
+    "build": "tsup",
+    "clean": "git clean -xdf .turbo node_modules dist bin/cli.js",
+    "dev": "tsup --watch",
+    "prepublishOnly": "bun run typecheck && bun run build && prepare-publish",
+    "start": "bun bin/cli.js",
+    "start:debug": "DEBUG=* bun bin/cli.js",
+    "test": "bun test",
+    "typecheck": "bun run tsc --noEmit"
+  },
+  "trustedDependencies": [
+    "@clerk/shared",
+    "browser-tabs-lock",
+    "core-js",
+    "keytar"
+  ],
+  "type": "module",
+  "version": "0.12.21"
+}

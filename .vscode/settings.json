@@ -1,0 +1,49 @@
+{
+  "[json]": {
+    "editor.defaultFormatter": "vscode.json-language-features"
+  },
+  "cSpell.words": ["Omni", "openai"],
+  "editor.codeActionsOnSave": {
+    "source.fixAll.biome": "explicit"
+  },
+  "editor.defaultFormatter": "biomejs.biome",
+  "editor.formatOnSave": true,
+  "files.exclude": {
+    "**/build": false,
+    "tooling/github/cli/build": false
+  },
+  "files.watcherExclude": {
+    "**/build": false,
+    "tooling/github/cli/build": false
+  },
+  "search.exclude": {
+    "**/build": false,
+    "tooling/github/cli/build": false
+  },
+  "svg.preview.background": "editor",
+  "tailwindCSS.experimental.classRegex": [
+    ["clsx\\(([^)]*)\\)", "(?:'|\"|`)([^']*)(?:'|\"|`)"],
+    ["cva\\(([^)]*)\\)", "[\"'`]([^\"'`]*).*?[\"'`]"],
+    ["cn\\(([^)]*)\\)", "[\"'`]([^\"'`]*).*?[\"'`]"],
+    ["cx\\(([^)]*)\\)", "(?:'|\"|`)([^']*)(?:'|\"|`)"],
+    "cn\\(.*?,\\s*['\"]([^'\"]*)['\"]",
+    "cn\\.[^`]+`([^`]*)`",
+    "cn\\(.*?\\).*?`([^`]*)",
+    ["cn\\.[^`]+\\(([^)]*)\\)", "(?:'|\"|`)([^']*)(?:'|\"|`)"],
+    ["cn\\(.*?\\).*?\\(([^)]*)\\)", "(?:'|\"|`)([^']*)(?:'|\"|`)"],
+    "twc\\.[^`]+`([^`]*)`",
+    "twc\\(.*?\\).*?`([^`]*)",
+    ["twc\\.[^`]+\\(([^)]*)\\)", "(?:'|\"|`)([^']*)(?:'|\"|`)"],
+    ["twc\\(.*?\\).*?\\(([^)]*)\\)", "(?:'|\"|`)([^']*)(?:'|\"|`)"],
+    "twx\\.[^`]+`([^`]*)`",
+    "twx\\(.*?\\).*?`([^`]*)",
+    ["twx\\.[^`]+\\(([^)]*)\\)", "(?:'|\"|`)([^']*)(?:'|\"|`)"],
+    ["twx\\(.*?\\).*?\\(([^)]*)\\)", "(?:'|\"|`)([^']*)(?:'|\"|`)"]
+  ],
+  "workbench.colorCustomizations": {
+    "titleBar.activeBackground": "#000000",
+    "titleBar.activeForeground": "#ffffff",
+    "titleBar.inactiveBackground": "#000000",
+    "titleBar.inactiveForeground": "#ffffff"
+  }
+}

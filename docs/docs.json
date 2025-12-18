@@ -1,0 +1,119 @@
+{
+  "$schema": "https://mintlify.com/docs.json",
+  "banner": {
+    "content": "Seawatts is currently in beta."
+  },
+  "colors": {
+    "dark": "#009689",
+    "light": "#009689",
+    "primary": "#009689"
+  },
+  "description": "Seawatts is a simple, secure, and reliable webhook service that allows you to create and manage webhooks for your applications.",
+  "favicon": "/logo/favicon.png",
+  "fonts": {
+    "family": "Geist",
+    "format": "woff2",
+    "source": "https://fonts.gstatic.com/s/geist/v3/gyByhwUxId8gMEwcGFWNOITd.woff2",
+    "weight": 400
+  },
+  "footer": {
+    "socials": {
+      "github": "https://github.com/seawatts-sh/seawatts"
+    }
+  },
+  "icons": {
+    "library": "lucide"
+  },
+  "integrations": {
+    "posthog": {
+      "apiHost": "https://us.api.posthog.com",
+      "apiKey": "phc_KaX5gqla4Oco74fZowSXJ4nfoDG4TqhXRyIHr3TExcG"
+    }
+  },
+  "logo": {
+    "dark": "/logo/logo-dark.svg",
+    "light": "/logo/logo-light.svg"
+  },
+  "name": "Seawatts",
+  "navbar": {
+    "links": [
+      {
+        "href": "mailto:chris.watts.t@gmail.com",
+        "label": "Support"
+      },
+      {
+        "href": "https://seawatts.sh/app",
+        "label": "Dashboard"
+      }
+    ],
+    "primary": {
+      "href": "https://seawatts.sh/app/webhooks/create?utm_source=docs",
+      "label": "Create Webhook URL",
+      "type": "button"
+    }
+  },
+  "navigation": {
+    "global": {
+      "anchors": [
+        {
+          "anchor": "Github",
+          "href": "https://github.com/seawatts-sh",
+          "icon": "github"
+        },
+        {
+          "anchor": "Changelog",
+          "href": "https://github.com/seawatts-sh/seawatts/releases",
+          "icon": "newspaper"
+        },
+        {
+          "anchor": "Community",
+          "href": "https://discord.gg/qRZzTCK6MZ",
+          "icon": "discord"
+        }
+      ]
+    },
+    "tabs": [
+      {
+        "groups": [
+          {
+            "group": "Get Started",
+            "pages": [
+              "introduction",
+              "quickstart",
+              "configuration",
+              "providers"
+            ]
+          },
+          {
+            "group": "Reference",
+            "pages": ["cli", "architecture", "essentials/data-model"]
+          },
+          {
+            "group": "Development",
+            "pages": ["contributing"]
+          }
+        ],
+        "tab": "Guides"
+      },
+      {
+        "groups": [
+          {
+            "group": "API Documentation",
+            "pages": ["api-reference/introduction"]
+          },
+          {
+            "group": "Endpoint Examples",
+            "pages": [
+              "api-reference/endpoint/get",
+              "api-reference/endpoint/create",
+              "api-reference/endpoint/delete",
+              "api-reference/endpoint/webhook"
+            ]
+          }
+        ],
+        "tab": "API Reference"
+      }
+    ]
+  },
+  "theme": "mint"
+}

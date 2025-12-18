@@ -1,0 +1,17 @@
+{
+  "dependencies": {
+    "@commitlint/cli": "20.1.0",
+    "@commitlint/config-conventional": "20.0.0"
+  },
+  "exports": {
+    ".": "./commitlint.config.js"
+  },
+  "name": "@seawatts/commitlint-config",
+  "private": true,
+  "scripts": {
+    "clean": "git clean -xdf .turbo node_modules",
+    "commitlint": "commitlint"
+  },
+  "type": "module",
+  "version": "0.1.0"
+}

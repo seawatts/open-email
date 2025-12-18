@@ -1,0 +1,26 @@
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@seawatts/ui/card';
+
+import { FeatureWaitlistButton } from './feature-waitlist/button';
+
+export function CompetitorsCard() {
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Competitors</CardTitle>
+        <CardDescription>Get a list of other YC competitors.</CardDescription>
+      </CardHeader>
+      <CardContent>
+        <FeatureWaitlistButton
+          element="competitors-card"
+          featureName="competitors"
+        />
+      </CardContent>
+    </Card>
+  );
+}

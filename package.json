@@ -1,0 +1,123 @@
+{
+  "catalog": {
+    "@clerk/nextjs": "6.34.1",
+    "@supabase/supabase-js": "2.78.0",
+    "@t3-oss/env-core": "0.13.8",
+    "@t3-oss/env-nextjs": "0.13.8",
+    "@tanstack/react-query": "5.90.6",
+    "@trpc/client": "11.7.1",
+    "@trpc/react-query": "11.7.1",
+    "@trpc/server": "11.7.1",
+    "@types/bun": "1.2.23",
+    "@types/react": "19.2.2",
+    "@types/react-dom": "19.2.2",
+    "date-fns": "4.1.0",
+    "drizzle-orm": "0.44.7",
+    "drizzle-zod": "0.8.3",
+    "next": "16.0.1",
+    "react": "19.2.0",
+    "react-dom": "19.2.0",
+    "stripe": "19.2.0",
+    "superjson": "2.2.5",
+    "tailwindcss": "4.1.16",
+    "typescript": "5.9.3",
+    "zod": "4.1.12",
+    "zustand": "5.0.8"
+  },
+  "commitlint": {
+    "extends": [
+      "@seawatts/commitlint-config"
+    ]
+  },
+  "devDependencies": {
+    "@biomejs/biome": "2.2.6",
+    "@changesets/changelog-github": "0.5.1",
+    "@changesets/cli": "2.29.7",
+    "@commitlint/cli": "20.1.0",
+    "@seawatts/commitlint-config": "workspace:*",
+    "@testing-library/react": "16.3.0",
+    "@types/bun": "1.2.23",
+    "checkly": "6.8.2",
+    "knip": "5.67.1",
+    "lefthook": "2.0.2",
+    "turbo": "^2.6.0",
+    "typescript": "5.9.3",
+    "vitest": "4.0.6"
+  },
+  "engines": {
+    "node": ">=20.12.0"
+  },
+  "name": "@seawatts/root",
+  "overrides": {
+    "@types/vscode": "1.96.0"
+  },
+  "packageManager": "bun@1.2.23",
+  "private": true,
+  "scripts": {
+    "build": "turbo run build",
+    "bump-versions": "changeset version && bun install",
+    "clean": "git clean -xdf node_modules .turbo",
+    "clean:ws": "turbo run clean",
+    "cleanup:all": "bun run scripts/cleanup-all-resources.ts",
+    "cleanup:all:dry-run": "bun run scripts/cleanup-all-resources.ts --dry-run",
+    "cleanup:orgs": "bun run scripts/cleanup-orgs.ts",
+    "cleanup:orgs:dry-run": "bun run scripts/cleanup-orgs.ts --dry-run",
+    "cleanup:webhooks": "bun run scripts/cleanup-webhooks.ts",
+    "cleanup:webhooks:dry-run": "bun run scripts/cleanup-webhooks.ts --dry-run",
+    "db:gen-migration": "turbo -F @seawatts/db gen-migration",
+    "db:migrate": "turbo -F @seawatts/db migrate",
+    "db:push": "turbo -F @seawatts/db push",
+    "db:seed": "turbo -F @seawatts/db seed",
+    "db:studio": "turbo -F @seawatts/db studio",
+    "dev": "turbo watch dev dev:extension dev:webview",
+    "dev:next": "turbo watch dev -F @seawatts/web-app...",
+    "dev:vscode": "turbo watch dev dev:extension dev:webview -F seawatts-vscode... -F @seawatts/web-app...",
+    "docs": "turbo run dev --filter=@seawatts/docs...",
+    "ensure:user-resources": "bun run scripts/ensure-user-resources.ts",
+    "ensure:user-resources:dry-run": "bun run scripts/ensure-user-resources.ts --dry-run",
+    "format": "biome check",
+    "format:ci": "biome ci",
+    "format:fix": "biome check --write",
+    "knip": "knip --include dependencies",
+    "lint:ws": "bunx sherif@latest",
+    "postinstall": "bun lint:ws",
+    "publish": "turbo run build --filter=./apps/cli... --filter=./packages/client... --filter=./apps/vscode-extension... && changeset publish",
+    "test": "bun test",
+    "test:integ": "turbo run test --filter=@seawatts/integ-test",
+    "test:integ:ci": "turbo run test:ci --filter=@seawatts/integ-test",
+    "test:integ:watch": "turbo run test:watch --filter=@seawatts/integ-test",
+    "typecheck": "turbo run typecheck",
+    "typecheck:ci": "turbo run build --filter @seawatts/stripe && turbo run typecheck",
+    "ui-add": "turbo run ui-add",
+    "version": "changeset version && bun biome check --write",
+    "with-env": "infisical run --"
+  },
+  "trustedDependencies": [
+    "@biomejs/biome",
+    "@clerk/shared",
+    "@scarf/scarf",
+    "@sentry/cli",
+    "@tailwindcss/oxide",
+    "@vercel/speed-insights",
+    "browser-tabs-lock",
+    "bufferutil",
+    "bun",
+    "core-js",
+    "electron",
+    "esbuild",
+    "keytar",
+    "lefthook",
+    "puppeteer",
+    "sharp",
+    "supabase",
+    "yarn"
+  ],
+  "workspaces": {
+    "packages": [
+      "packages/*",
+      "apps/*",
+      "tooling/*",
+      "docs"
+    ]
+  }
+}

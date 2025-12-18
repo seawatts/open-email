@@ -1,0 +1,21 @@
+{
+  "devDependencies": {
+    "@happy-dom/global-registrator": "20.0.10",
+    "@seawatts/tsconfig": "workspace:*",
+    "@testing-library/jest-dom": "6.9.1",
+    "typescript": "catalog:"
+  },
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "license": "MIT",
+  "name": "@seawatts/tooling-testing",
+  "private": true,
+  "scripts": {
+    "clean": "git clean -xdf .turbo node_modules dist",
+    "dev": "tsc --watch",
+    "typecheck": "tsc --noEmit --emitDeclarationOnly false"
+  },
+  "type": "module",
+  "version": "0.1.0"
+}

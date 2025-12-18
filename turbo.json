@@ -1,0 +1,181 @@
+{
+  "$schema": "https://turborepo.org/schema.json",
+  "concurrency": "20",
+  "globalEnv": ["NODE_ENV"],
+  "globalPassThroughEnv": [
+    "NODE_ENV",
+    "CI",
+    "VERCEL",
+    "VERCEL_ENV",
+    "VERCEL_URL",
+    "npm_lifecycle_event",
+    "TURBO_TOKEN",
+    "TURBO_TEAM",
+    "NPM_TOKEN",
+    "VERCEL_TOKEN"
+  ],
+  "tasks": {
+    "@seawatts/stripe#build": {
+      "cache": false,
+      "env": ["STRIPE_*"]
+    },
+    "@seawatts/web-app#build": {
+      "dependsOn": ["@seawatts/stripe#build"],
+      "env": [
+        "NEXT_PUBLIC_*",
+        "CLERK_*",
+        "SUPABASE_*",
+        "POSTGRES_*",
+        "POSTHOG_*",
+        "OPENAI_API_KEY",
+        "STRIPE_*",
+        "RESEND_*"
+      ]
+    },
+    "//#clean": {
+      "cache": false
+    },
+    "build": {
+      "dependsOn": ["^build"],
+      "env": [
+        "NEXT_PUBLIC_*",
+        "CLERK_*",
+        "SUPABASE_*",
+        "POSTGRES_*",
+        "POSTHOG_*",
+        "OPENAI_API_KEY",
+        "STRIPE_*",
+        "RESEND_*"
+      ],
+      "outputs": [
+        ".next/**",
+        "!.next/cache/**",
+        "next-env.d.ts",
+        ".expo/**",
+        ".output/**",
+        ".vercel/output/**",
+        "dist/**",
+        "build/**",
+        "bin/**",
+        "*.generated.ts"
+      ]
+    },
+    "clean": {
+      "cache": false
+    },
+    "dev": {
+      "cache": false,
+      "env": [
+        "PORT",
+        "NEXT_PUBLIC_*",
+        "CLERK_*",
+        "SUPABASE_*",
+        "POSTGRES_*",
+        "POSTHOG_*",
+        "OPENAI_API_KEY",
+        "STRIPE_*",
+        "RESEND_*"
+      ],
+      "persistent": true
+    },
+    "format": {
+      "dependsOn": ["^build"]
+    },
+    "format:ci": {
+      "cache": false,
+      "dependsOn": ["^build"]
+    },
+    "gen-migration": {
+      "cache": false,
+      "env": [
+        "DATABASE_*",
+        "POSTGRES_*",
+        "SUPABASE_*",
+        "CLERK_*",
+        "STRIPE_*",
+        "NODE_ENV"
+      ],
+      "interactive": true
+    },
+    "migrate": {
+      "cache": false,
+      "env": [
+        "DATABASE_*",
+        "POSTGRES_*",
+        "SUPABASE_*",
+        "CLERK_*",
+        "STRIPE_*",
+        "NODE_ENV"
+      ],
+      "interactive": true
+    },
+    "push": {
+      "cache": false,
+      "env": [
+        "DATABASE_*",
+        "POSTGRES_*",
+        "SUPABASE_*",
+        "CLERK_*",
+        "STRIPE_*",
+        "NODE_ENV"
+      ],
+      "interactive": true
+    },
+    "seawatts-vscode#dev:extension": {
+      "cache": false,
+      "persistent": true
+    },
+    "seawatts-vscode#dev:webview": {
+      "cache": false,
+      "persistent": true
+    },
+    "seed": {
+      "cache": false,
+      "env": [
+        "DATABASE_*",
+        "POSTGRES_*",
+        "SUPABASE_*",
+        "CLERK_*",
+        "STRIPE_*",
+        "NODE_ENV"
+      ],
+      "interactive": true
+    },
+    "studio": {
+      "cache": false,
+      "env": [
+        "DATABASE_*",
+        "POSTGRES_*",
+        "SUPABASE_*",
+        "CLERK_*",
+        "STRIPE_*",
+        "NODE_ENV"
+      ],
+      "persistent": true
+    },
+    "test": {
+      "cache": false,
+      "dependsOn": ["^build"],
+      "env": ["USE_LOCAL_DB"],
+      "outputs": ["coverage/**"]
+    },
+    "test:ci": {
+      "cache": false,
+      "dependsOn": ["^build"],
+      "outputs": ["coverage/**"]
+    },
+    "test:watch": {
+      "cache": false,
+      "dependsOn": ["^build"],
+      "persistent": true
+    },
+    "typecheck": {
+      "outputs": ["node_modules/.cache/tsbuildinfo.json"]
+    },
+    "ui-add": {
+      "cache": false,
+      "interactive": true
+    }
+  },
+  "ui": "tui"
+}

@@ -1,0 +1,31 @@
+{
+  "dependencies": {
+    "@react-email/components": "0.5.7",
+    "@react-email/render": "1.4.0",
+    "@t3-oss/env-core": "catalog:",
+    "react": "catalog:",
+    "react-dom": "catalog:",
+    "resend": "6.4.0",
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@seawatts/tsconfig": "workspace:*",
+    "@types/react": "catalog:",
+    "@types/react-dom": "catalog:",
+    "typescript": "catalog:"
+  },
+  "exports": {
+    ".": "./src/index.ts",
+    "./templates": "./src/templates/index.ts"
+  },
+  "license": "MIT",
+  "name": "@seawatts/email",
+  "private": true,
+  "scripts": {
+    "clean": "git clean -xdf dist node_modules .turbo",
+    "dev": "tsc --watch",
+    "typecheck": "tsc --noEmit --emitDeclarationOnly false"
+  },
+  "type": "module",
+  "version": "0.1.0"
+}

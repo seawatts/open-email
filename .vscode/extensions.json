@@ -1,0 +1,16 @@
+{
+  "recommendations": [
+    // Existing recommendations
+    "biomejs.biome",
+    "yoavbls.pretty-ts-errors",
+    "bradlc.vscode-tailwindcss",
+
+    // Bun support
+    "oven.bun-vscode",
+
+    // Markdown
+    "yzhang.markdown-all-in-one",
+
+    "unhook.unhook-vscode"
+  ]
+}

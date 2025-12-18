@@ -1,0 +1,43 @@
+{
+  "dependencies": {
+    "@clerk/nextjs": "catalog:",
+    "@seawatts/db": "workspace:*",
+    "@seawatts/id": "workspace:*",
+    "@seawatts/logger": "workspace:*",
+    "@seawatts/stripe": "workspace:*",
+    "@t3-oss/env-nextjs": "catalog:",
+    "@tanstack/react-query": "catalog:",
+    "@trpc/client": "catalog:",
+    "@trpc/react-query": "catalog:",
+    "@trpc/server": "catalog:",
+    "drizzle-orm": "catalog:",
+    "next": "catalog:",
+    "react": "catalog:",
+    "react-dom": "catalog:",
+    "superjson": "catalog:",
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@seawatts/tsconfig": "workspace:*",
+    "@types/react": "catalog:",
+    "@types/react-dom": "catalog:",
+    "typescript": "catalog:"
+  },
+  "exports": {
+    ".": "./src/index.ts",
+    "./client": "./src/client.ts",
+    "./react": "./src/react/client-exports.ts",
+    "./server": "./src/react/server-exports.ts",
+    "./services": "./src/services/index.ts"
+  },
+  "license": "MIT",
+  "name": "@seawatts/api",
+  "private": true,
+  "scripts": {
+    "clean": "git clean -xdf .turbo node_modules dist",
+    "dev": "tsc --watch",
+    "typecheck": "tsc --noEmit --emitDeclarationOnly false"
+  },
+  "type": "module",
+  "version": "0.1.0"
+}

@@ -1,0 +1,28 @@
+{
+  "compilerOptions": {
+    "baseUrl": ".",
+    "incremental": true,
+    "paths": {
+      "@seawatts/analytics/*": ["../../packages/analytics/src/*"],
+      "@seawatts/stripe/*": ["../../packages/stripe/src/*"],
+      "@seawatts/ui/*": ["../../packages/ui/src/*"],
+      "@seawatts/zustand/*": ["../../packages/zustand/src/*"],
+      "~/*": ["./src/*"]
+    },
+    "plugins": [
+      {
+        "name": "next"
+      }
+    ],
+    "tsBuildInfoFile": "node_modules/.cache/tsbuildinfo.json"
+  },
+  "exclude": ["node_modules", ".next"],
+  "extends": "@seawatts/tsconfig/nextjs.json",
+  "include": [
+    "next-env.d.ts",
+    "next.config.ts",
+    "**/*.ts",
+    "**/*.tsx",
+    ".next/types/**/*.ts"
+  ]
+}

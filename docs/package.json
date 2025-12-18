@@ -1,0 +1,10 @@
+{
+  "dependencies": {
+    "mint": "4.2.186"
+  },
+  "name": "@seawatts/docs",
+  "private": true,
+  "scripts": {
+    "dev": "mint dev"
+  }
+}

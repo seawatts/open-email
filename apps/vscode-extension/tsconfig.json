@@ -1,0 +1,21 @@
+{
+  "compilerOptions": {
+    // "tsBuildInfoFile": "node_modules/.cache/tsbuildinfo.json",
+    // "composite": true,
+    // "declaration": true,
+    // "declarationDir": "dist",
+    "jsx": "react-jsx",
+    "module": "ESNext",
+    "outDir": "dist",
+    "rootDir": "src",
+    "skipLibCheck": true,
+    "types": ["node", "vscode"]
+    // "baseUrl": ".",
+    // "paths": {
+    //   "~/*": ["src/*"]
+    // }
+  },
+  "exclude": ["node_modules", "dist"],
+  "extends": "@seawatts/tsconfig/react-library.json",
+  "include": ["src"]
+}

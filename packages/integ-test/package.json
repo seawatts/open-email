@@ -1,0 +1,36 @@
+{
+  "dependencies": {
+    "@seawatts/db": "workspace:*",
+    "@seawatts/id": "workspace:*",
+    "drizzle-orm": "catalog:",
+    "postgres": "3.4.7"
+  },
+  "devDependencies": {
+    "@faker-js/faker": "10.1.0",
+    "@seawatts/tsconfig": "workspace:*",
+    "@types/node": "24.10.0",
+    "@vitest/coverage-v8": "4.0.6",
+    "@vitest/ui": "4.0.6",
+    "dotenv": "17.2.3",
+    "testcontainers": "11.7.2",
+    "typescript": "catalog:",
+    "vitest": "4.0.6"
+  },
+  "engines": {
+    "node": ">=20.12.0"
+  },
+  "name": "@seawatts/integ-test",
+  "private": true,
+  "scripts": {
+    "clean": "git clean -xdf .turbo node_modules dist coverage",
+    "test": "vitest",
+    "test:ci": "CI=true vitest run --coverage",
+    "test:debug": "vitest --inspect-brk --inspect --logHeapUsage --threads=false",
+    "test:run": "vitest run",
+    "test:ui": "vitest --ui",
+    "test:watch": "vitest --watch",
+    "typecheck": "tsc --noEmit"
+  },
+  "type": "module",
+  "version": "0.0.22"
+}
