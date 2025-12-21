@@ -1,10 +1,10 @@
 {
   "dependencies": {
-    "node-inspect-extracted": "3.2.2"
+    "node-inspect-extracted": "3.3.0"
   },
   "devDependencies": {
     "@types/bun": "catalog:",
-    "@types/vscode": "1.105.0",
+    "@types/vscode": "1.107.0",
     "typescript": "catalog:"
   },
   "exports": {

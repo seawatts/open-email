@@ -1,20 +1,23 @@
 {
   "dependencies": {
+    "@seawatts/ai": "workspace:*",
+    "@seawatts/api": "workspace:*",
     "@seawatts/db": "workspace:*",
     "@seawatts/id": "workspace:*",
     "drizzle-orm": "catalog:",
-    "postgres": "3.4.7"
+    "postgres": "3.4.7",
+    "zod": "catalog:"
   },
   "devDependencies": {
     "@faker-js/faker": "10.1.0",
     "@seawatts/tsconfig": "workspace:*",
-    "@types/node": "24.10.0",
-    "@vitest/coverage-v8": "4.0.6",
-    "@vitest/ui": "4.0.6",
+    "@types/node": "25.0.3",
+    "@vitest/coverage-v8": "4.0.16",
+    "@vitest/ui": "4.0.16",
     "dotenv": "17.2.3",
-    "testcontainers": "11.7.2",
+    "testcontainers": "11.10.0",
     "typescript": "catalog:",
-    "vitest": "4.0.6"
+    "vitest": "4.0.16"
   },
   "engines": {
     "node": ">=20.12.0"

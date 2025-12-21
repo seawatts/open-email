@@ -2,6 +2,7 @@ import { apiKeyUsageRouter } from './router/api-key-usage';
 import { apiKeysRouter } from './router/api-keys';
 import { authRouter } from './router/auth';
 import { billingRouter } from './router/billing';
+import { emailRouter } from './router/email';
 import { orgRouter } from './router/org';
 import { orgMembersRouter } from './router/org-members';
 import { userRouter } from './router/user';
@@ -12,6 +13,7 @@ export const appRouter = createTRPCRouter({
   apiKeyUsage: apiKeyUsageRouter,
   auth: authRouter,
   billing: billingRouter,
+  email: emailRouter,
   org: orgRouter,
   orgMembers: orgMembersRouter,
   user: userRouter,

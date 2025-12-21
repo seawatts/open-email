@@ -1,6 +1,7 @@
 {
   "dependencies": {
     "@clerk/nextjs": "catalog:",
+    "@seawatts/ai": "workspace:*",
     "@seawatts/db": "workspace:*",
     "@seawatts/id": "workspace:*",
     "@seawatts/logger": "workspace:*",
@@ -11,6 +12,7 @@
     "@trpc/react-query": "catalog:",
     "@trpc/server": "catalog:",
     "drizzle-orm": "catalog:",
+    "googleapis": "^169.0.0",
     "next": "catalog:",
     "react": "catalog:",
     "react-dom": "catalog:",
@@ -26,9 +28,13 @@
   "exports": {
     ".": "./src/index.ts",
     "./client": "./src/client.ts",
+    "./email/types": "./src/email/types.ts",
     "./react": "./src/react/client-exports.ts",
     "./server": "./src/react/server-exports.ts",
-    "./services": "./src/services/index.ts"
+    "./services": "./src/services/index.ts",
+    "./services/email-search": "./src/services/email-search/index.ts",
+    "./services/email-thread": "./src/services/email-thread/index.ts",
+    "./utils": "./src/utils/index.ts"
   },
   "license": "MIT",
   "name": "@seawatts/api",

@@ -1,0 +1,35 @@
+{
+  "$schema": "https://biomejs.dev/schemas/2.3.3/schema.json",
+  "root": false,
+  "files": {
+    "ignoreUnknown": false
+  },
+  "linter": {
+    "enabled": true,
+    "rules": {
+      "recommended": false,
+      "correctness": {
+        "noUnusedVariables": "off",
+        "noUnusedFunctionParameters": "off"
+      }
+    }
+  },
+  "plugins": [
+    ".grit/prefer-wrap-over-try-catch.grit",
+    ".grit/no-promise-race.grit",
+    ".grit/no-negated-result-checks.grit",
+    ".grit/no-iife.grit",
+    ".grit/prefer-async-result.grit",
+    ".grit/use-named-arguments.grit",
+    ".grit/prefer-nullish-over-optional-nullable.grit",
+    ".grit/prefer-assert-over-expect-result.grit",
+    ".grit/prefer-component-over-render-helper.grit",
+    ".grit/prefer-run-if-called-as-script.grit",
+    ".grit/openai-naming-convention.grit",
+    ".grit/openai-responses-pattern.grit",
+    ".grit/openresponses-pattern.grit",
+    ".grit/prefer-classname-over-style.grit",
+    ".grit/no-template-string-in-logs.grit",
+    ".grit/prefer-valueof-helper.grit"
+  ]
+}

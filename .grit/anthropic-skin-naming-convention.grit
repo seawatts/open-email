@@ -1,0 +1,22 @@
+// Pattern: Enforce naming conventions for Anthropic messages schemas
+// Applies to:
+// 1. Schemas that start with "Anthropic" prefix (anywhere)
+// 2. All schemas in packages/llm-interfaces/**/schemas directories
+
+engine biome(2.0)
+language js(typescript, jsx)
+
+or {
+  // Rule 1: Schemas starting with Anthropic must end with "Schema"
+  `export const $name = $value` where {
+    $name <: r"^Anthropic[A-Z]",
+    $value <: or {
+      `z.object($_)`,
+      `z.discriminatedUnion($_)`,
+      `z.union($_)`,
+      `z.array($_)`
+    },
+    $name <: not r".*Schema$",
+    register_diagnostic(span=$name, message="Schema constant should end with 'Schema' suffix. Current name: $name", severity="warning")
+  }
+}
