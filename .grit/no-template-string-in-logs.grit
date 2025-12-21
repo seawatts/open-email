@@ -1,0 +1,31 @@
+// Warn when logging helpers (iLog, eLog, wLog, dLog, vLog) are passed a template string
+// as the first argument. Use constant strings with dynamic data in the second argument.
+//
+// See "Logging Guidelines" in CLAUDE.md for more details.
+//
+// Example:
+// Bad:
+//   iLog(`User ${userId} logged in`);
+//   eLog(`Failed to process ${item}`);
+//
+// Good:
+//   iLog('user-logged-in', { user_id: userId });
+//   eLog('failed-to-process', { item });
+
+engine biome(2.0)
+language js(typescript, jsx)
+
+// Single pattern with $... handles both single-arg and multi-arg cases
+// Using $program to pre-filter files that import the logger
+`$fn($arg, $...)` as $call where {
+  $fn <: or {
+    `iLog`,
+    `eLog`,
+    `wLog`,
+    `dLog`,
+    `vLog`
+  },
+  $arg <: JsTemplateExpression(),
+  $program <: contains "instrumentation/logger",
+  register_diagnostic(span=$call, message="Avoid template strings in logging helpers. Use a constant string with dynamic data in the second argument: fn('event-name', { key: value }). See 'Logging Guidelines' in CLAUDE.md.", severity="warning")
+}

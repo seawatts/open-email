@@ -13,6 +13,8 @@ coverage
 out/
 next-env.d.ts
 
+.tmp
+
 # nitro
 .nitro/
 .output/

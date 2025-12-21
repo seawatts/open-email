@@ -1,0 +1,31 @@
+// Prefer ValueOf<typeof X> over (typeof X)[number] for extracting array element types
+// The ValueOf helper from @openrouter-monorepo/type-utils provides a more readable
+// and consistent way to extract the element type from a const array.
+//
+// Example transformation:
+// Before:
+//   type PricingFieldKey = (typeof PRICING_FIELDS)[number];
+//
+// After:
+//   type PricingFieldKey = ValueOf<typeof PRICING_FIELDS>;
+//
+// Note: This rule does NOT apply when accessing properties after [number], e.g.:
+//   (typeof X)[number]['key'] - ValueOf cannot extract properties, so this is valid
+//
+// Import ValueOf from '@openrouter-monorepo/type-utils'
+
+engine biome(2.0)
+language js(typescript)
+
+// Match [number] indexed access where the type is a parenthesized typeof expression
+// but only when it's NOT followed by additional property/index access
+// We match type alias declarations to check the full type expression context
+`type $name = $value;` as $typeDecl where {
+  // Match standalone (typeof X)[number] pattern
+  $value <: `$type[number]`,
+  $type <: TsParenthesizedType(),
+  $type <: contains TsTypeofType(),
+  // Exclude nested patterns like (typeof X)[number]['key'] or (typeof X)[number][0]
+  not ($value <: `$_[number][$_]`),
+  register_diagnostic(span=$value, message="Prefer ValueOf<typeof X> over (typeof X)[number]. Import ValueOf from '@openrouter-monorepo/type-utils'.", severity="warning")
+}

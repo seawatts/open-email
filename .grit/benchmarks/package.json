@@ -1,0 +1,30 @@
+{
+  "name": "benchmarks",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host",
+    "build": "vite build"
+  },
+  "dependencies": {
+    "@heroicons/react": "2.2.0",
+    "@openrouter-monorepo/db": "workspace:*",
+    "@openrouter-monorepo/frontend": "workspace:*",
+    "@openrouter-monorepo/theme": "workspace:*",
+    "@openrouter-monorepo/type-utils": "workspace:*",
+    "next-themes": "0.4.6",
+    "react": "19.1.1",
+    "react-dom": "19.1.1",
+    "recharts": "3.3.0"
+  },
+  "devDependencies": {
+    "@types/react": "19.1.12",
+    "@types/react-dom": "19.1.9",
+    "@vitejs/plugin-react": "^4.3.4",
+    "autoprefixer": "^10.4.20",
+    "postcss": "^8.4.49",
+    "tailwindcss": "3.4.16",
+    "typescript": "5.9.3",
+    "vite-tsconfig-paths": "5.1.4"
+  }
+}

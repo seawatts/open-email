@@ -8,6 +8,23 @@ export async function cleanupTestData(
   // Delete all data in reverse order of dependencies
   // Use try-catch to handle potential constraint issues
   try {
+    // User profile tables
+    await db.delete(schema.UserContactStyle);
+    await db.delete(schema.UserWritingProfile);
+    await db.delete(schema.UserMemory);
+
+    // Email-related tables (in dependency order)
+    await db.delete(schema.EmailKeywords);
+    await db.delete(schema.EmailHighlights);
+    await db.delete(schema.EmailActions);
+    await db.delete(schema.AgentDecisions);
+    await db.delete(schema.EmailMessages);
+    await db.delete(schema.EmailThreads);
+    await db.delete(schema.EmailRules);
+    await db.delete(schema.UserEmailSettings);
+    await db.delete(schema.GmailAccounts);
+
+    // Original tables
     await db.delete(schema.AuthCodes);
     await db.delete(schema.ApiKeyUsage);
     await db.delete(schema.ApiKeys);
@@ -16,11 +33,15 @@ export async function cleanupTestData(
     await db.delete(schema.Users);
   } catch (error) {
     console.warn('Cleanup warning:', error);
-    // If there are constraint issues, try again in a different order
+    // If there are constraint issues, try again with TRUNCATE CASCADE
     try {
-      // Use TRUNCATE CASCADE for more thorough cleanup
       await db.execute(
-        sql`TRUNCATE TABLE "authCodes", "apiKeyUsage", "apiKeys", "orgMembers", "orgs", "user" RESTART IDENTITY CASCADE`,
+        sql`TRUNCATE TABLE
+          "userContactStyle", "userWritingProfile", "userMemory",
+          "emailKeywords", "emailHighlights", "emailActions", "agentDecisions", "emailMessages",
+          "emailThreads", "emailRules", "userEmailSettings", "gmailAccounts",
+          "authCodes", "apiKeyUsage", "apiKeys", "orgMembers", "orgs", "user"
+          RESTART IDENTITY CASCADE`,
       );
     } catch (truncateError) {
       console.error('Failed to cleanup test data:', truncateError);

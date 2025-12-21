@@ -1,0 +1,24 @@
+// Pattern: Exported Anthropic*Schema without satisfies clause
+engine biome(2.0)
+language js(typescript, jsx)
+
+or {
+  // Match schemas without any satisfies clause
+  `export const $name = $value;` as $match where {
+    $name <: r"Anthropic.*Schema",
+    // The value should NOT contain satisfies keyword
+    $value <: not contains `satisfies`,
+    // Exclude helper schemas, transform schemas, and schemas that would cause circular references
+    $name <: not or {
+      r".*WebSearchUserLocation.*",
+      r".*SearchContextSize.*",
+      r".*Annotation.*",
+      r".*NormalizedRequestSchema.*",
+      r"AnthropicMessagesRequestSchema"
+    },
+    register_diagnostic(
+      span=$match,
+      message="Exported Anthropic-prefixed schema should include a 'satisfies' clause to ensure type safety. Add 'satisfies ZodShape<Anthropic.Messages.*>' or 'satisfies z.Schema<ImportedType>' after the schema definition.",
+      severity="warning"
+    )
+  }

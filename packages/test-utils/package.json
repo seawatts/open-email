@@ -1,6 +1,6 @@
 {
   "dependencies": {
-    "@clerk/backend": "2.19.1",
+    "@clerk/backend": "2.27.1",
     "@seawatts/db": "workspace:*",
     "@seawatts/id": "workspace:*",
     "@t3-oss/env-nextjs": "catalog:",

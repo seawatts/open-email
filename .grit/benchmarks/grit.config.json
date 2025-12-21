@@ -1,0 +1,132 @@
+{
+  "rules": [
+    {
+      "name": "no-negated-result-checks",
+      "path": ".grit/no-negated-result-checks.grit",
+      "category": "style",
+      "severity": "warning",
+      "description": "Enforces isOk() over !isErr() and vice versa",
+      "config": "biome.json"
+    },
+    {
+      "name": "no-iife",
+      "path": ".grit/no-iife.grit",
+      "category": "style",
+      "severity": "warning",
+      "description": "Prevents IIFEs, suggests helper functions or Effect.pipe()",
+      "config": "biome.json"
+    },
+    {
+      "name": "prefer-async-result",
+      "path": ".grit/prefer-async-result.grit",
+      "category": "style",
+      "severity": "warning",
+      "description": "Enforces AsyncResult<T> over Promise<Result<T>>",
+      "config": "biome.json"
+    },
+    {
+      "name": "openai-responses-pattern",
+      "path": ".grit/openai-responses-pattern.grit",
+      "category": "type-safety",
+      "severity": "warning",
+      "description": "Enforces satisfies clause on OpenAI schema exports",
+      "config": "biome.json"
+    },
+    {
+      "name": "openai-naming-convention",
+      "path": ".grit/openai-naming-convention.grit",
+      "category": "naming",
+      "severity": "warning",
+      "description": "Enforces 'Schema' suffix on OpenAI/Open prefixed schemas",
+      "config": "biome.json"
+    },
+    {
+      "name": "openresponses-pattern",
+      "path": ".grit/openresponses-pattern.grit",
+      "category": "consistency",
+      "severity": "info",
+      "description": "Enforces OpenResponses schemas reference base OpenAIResponses schemas",
+      "config": "biome.json"
+    },
+    {
+      "name": "no-promise-race",
+      "path": ".grit/no-promise-race.grit",
+      "category": "correctness",
+      "severity": "error",
+      "description": "Enforces safeRace() over Promise.race() to prevent memory leaks",
+      "config": "biome.json"
+    },
+    {
+      "name": "use-named-arguments",
+      "path": ".grit/use-named-arguments.grit",
+      "category": "maintainability",
+      "severity": "warning",
+      "description": "Enforces object destructuring for 4+ parameters",
+      "config": "biome.json"
+    },
+    {
+      "name": "prefer-nullish-over-optional-nullable",
+      "path": ".grit/prefer-nullish-over-optional-nullable.grit",
+      "category": "style",
+      "severity": "warning",
+      "description": "Enforces .nullish() over .nullable().optional()",
+      "config": "biome.json"
+    },
+    {
+      "name": "prefer-assert-over-expect-result",
+      "path": ".grit/prefer-assert-over-expect-result.grit",
+      "category": "test-quality",
+      "severity": "warning",
+      "description": "Enforces assertOk()/assertErr() over expect(isOk()).toBe(true)",
+      "config": "biome.json"
+    },
+    {
+      "name": "prefer-wrap-over-try-catch",
+      "path": ".grit/prefer-wrap-over-try-catch.grit",
+      "category": "style",
+      "severity": "info",
+      "description": "Suggests wrap() over try/catch for consistent error handling",
+      "config": "biome-incremental.json"
+    },
+    {
+      "name": "prefer-run-if-called-as-script",
+      "path": ".grit/prefer-run-if-called-as-script.grit",
+      "category": "style",
+      "severity": "info",
+      "description": "Suggests runIfCalledAsScript for zx scripts",
+      "config": "biome-incremental.json"
+    },
+    {
+      "name": "prefer-classname-over-style",
+      "path": ".grit/prefer-classname-over-style.grit",
+      "category": "style",
+      "severity": "warning",
+      "description": "Prefer className with Tailwind over inline style attributes",
+      "config": "biome-incremental.json"
+    },
+    {
+      "name": "prefer-component-over-render-helper",
+      "path": ".grit/prefer-component-over-render-helper.grit",
+      "category": "style",
+      "severity": "warning",
+      "description": "Prefer React components over render helper functions",
+      "config": "biome-incremental.json"
+    },
+    {
+      "name": "prefer-valueof-helper",
+      "path": ".grit/prefer-valueof-helper.grit",
+      "category": "style",
+      "severity": "warning",
+      "description": "Prefer ValueOf<typeof X> over (typeof X)[number]",
+      "config": "biome-incremental.json"
+    },
+    {
+      "name": "no-template-string-in-logs",
+      "path": ".grit/no-template-string-in-logs.grit",
+      "category": "style",
+      "severity": "warning",
+      "description": "Avoid template strings in logging helpers, use constant strings with context objects",
+      "config": "biome-incremental.json"
+    }
+  ]
+}

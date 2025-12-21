@@ -1,0 +1,185 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+*,
+*:before,
+*:after {
+  box-sizing: inherit;
+}
+
+html {
+  height: 100%;
+  /* biome-ignore lint/suspicious/noDuplicateProperties: Intentional fallback for browser compatibility */
+  height: -webkit-fill-available;
+  box-sizing: border-box;
+  touch-action: manipulation;
+  font-feature-settings:
+    'case' 1,
+    'rlig' 1,
+    'calt' 0;
+}
+
+html,
+body {
+  font-family:
+    'Inter', -apple-system, system-ui, BlinkMacSystemFont, 'Helvetica Neue', 'Helvetica', sans-serif;
+  @apply antialiased;
+}
+
+body {
+  position: relative;
+  min-height: 100vh;
+  /* biome-ignore lint/suspicious/noDuplicateProperties: Intentional fallback for browser compatibility */
+  min-height: -webkit-fill-available;
+  margin: 0;
+  padding: 0;
+}
+
+#root {
+  min-height: 100vh;
+  padding: 1.5rem;
+}
+
+@media (min-width: 768px) {
+  #root {
+    padding: 2rem;
+  }
+}
+
+@layer base {
+  :root {
+    --link: 234 89.5% 73.9%;
+    --link-hover: 239 83.5% 66.7%;
+
+    --accent: 240 4.8% 95.9%;
+    --accent-foreground: 240 5.9% 10%;
+
+    --background: 0 0% 100%;
+    --foreground: 240 10% 3.9%;
+
+    --secondary: 240 4.8% 95.9%;
+    --secondary-foreground: 240 5.9% 10%;
+
+    --muted: 240 4.8% 95.9%;
+    --muted-foreground: 240 3.8% 46.1%;
+
+    --primary: 239 84% 67%;
+    --primary-foreground: 0 0% 98%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 240 10% 3.9%;
+
+    --border: 240 5.9% 90%;
+    --input: 240 5.9% 90%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 240 10% 3.9%;
+
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 98%;
+
+    --warning: 42 100% 62%;
+    --warning-foreground: 24 40% 22%;
+
+    --ring: 240 5% 64.9%;
+
+    --radius: 0.5rem;
+  }
+
+  .dark {
+    --background: 224 7% 4%;
+    --foreground: 206 6% 88%;
+
+    --secondary: 240 3.7% 15.9%;
+    --secondary-foreground: 0 0% 98%;
+
+    --accent: 240 3.7% 15.9%;
+    --accent-foreground: 0 0% 98%;
+
+    --muted: 240 3.7% 15.9%;
+    --muted-foreground: 240 5% 64.9%;
+
+    --primary: 239 84% 67%;
+    --primary-foreground: 0 0% 98%;
+
+    --popover: 240 10% 3.9%;
+    --popover-foreground: 0 0% 98%;
+
+    --border: 240 4.7% 24.9%;
+    --input: 240 4.7% 24.9%;
+
+    --card: 240 10% 3.9%;
+    --card-foreground: 0 0% 98%;
+
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 98%;
+
+    --warning: 42 100% 62%;
+    --warning-foreground: 24 40% 22%;
+
+    --ring: 240 4.9% 83.9%;
+
+    --radius: 0.5rem;
+  }
+
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+
+  .main-content-container {
+    @apply mx-auto max-w-full md:max-w-screen-md;
+  }
+
+  .main-content-container-lg {
+    @apply mx-auto max-w-full md:max-w-screen-lg;
+  }
+
+  h1 {
+    @apply text-accent-foreground text-xl font-medium tracking-tight md:text-2xl;
+  }
+
+  h2 {
+    @apply text-secondary-foreground text-lg font-medium tracking-tight md:text-xl;
+  }
+
+  h3 {
+    @apply text-muted-foreground tracking-tight;
+  }
+
+  p {
+    @apply tracking-tight leading-7;
+  }
+
+  /* Ensure SVG icons render properly */
+  svg {
+    display: inline-block;
+    vertical-align: middle;
+    flex-shrink: 0;
+  }
+
+  /* Ensure size utilities work for icons */
+  .size-4 {
+    width: 1rem;
+    height: 1rem;
+  }
+
+  .size-3\.5 {
+    width: 0.875rem;
+    height: 0.875rem;
+  }
+
+  /* Ensure checkbox checked state is visible */
+  [data-state='checked'] {
+    background-color: hsl(var(--primary));
+    color: hsl(var(--primary-foreground));
+  }
+
+  /* Ensure checkbox border is visible */
+  [role='checkbox'] {
+    border-color: hsl(var(--primary));
+  }
+}
