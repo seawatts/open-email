@@ -1,0 +1,75 @@
+ls:
+  # Default: strict kebab-case for source files
+  .ts: kebab-case
+  .js: kebab-case
+  .tsx: kebab-case
+  .jsx: kebab-case
+  .json: kebab-case
+  .yaml: kebab-case
+  .yml: kebab-case
+  .md: kebab-case | SCREAMING_SNAKE_CASE
+  .mdx: kebab-case
+  .html: kebab-case
+  .css: kebab-case
+  .scss: kebab-case
+  .sql: kebab-case | snake_case
+  .sh: kebab-case
+  # Directories need regex to handle dotdirs, @scoped, node_modules, Next.js routes, etc.
+  .dir: regex:^([a-z0-9][a-z0-9._]*(-[a-z0-9._]+)*|_[a-z][a-z0-9-]*|_next|\[[a-z0-9-]+\]|\([a-z0-9-]+\)|\[\[\.{3}[a-z0-9-]+\]\]|node_modules|\.[a-z][a-z0-9._-]*|@[a-z][a-zA-Z0-9-]*|__[a-z0-9_]+__|[A-Z][a-zA-Z0-9]*|[a-zA-Z0-9_-]+)$
+
+  # React components in projects/web - allow PascalCase for component files, camelCase for hooks
+  apps/web-app:
+    .tsx: kebab-case | PascalCase
+    .ts: kebab-case | PascalCase | camelCase
+
+# NOTE: Do NOT use **/ glob patterns - they cause ls-lint to hang due to symlink traversal issues
+# Simple directory names match at any depth in the tree
+ignore:
+  # Dependencies
+  - node_modules
+  # Nested node_modules in subpackages (simple name matching doesn't always work)
+  - packages/*/node_modules
+  - apps/*/node_modules
+  - .pnp
+  - .pnp.js
+  - .pnpm-store
+  # Build outputs
+  - dist
+  - .next
+  - out
+  - build
+  - target
+  - coverage
+  # Dotfiles/dotdirs
+  - .git
+  - .turbo
+  - .vercel
+  - .codanna
+  - .basehub
+  - .wrangler
+  - .tmp
+  - .logs
+  - .idea
+  - .vscode
+  - .husky
+  - .github
+  - .DS_Store
+  - .terraform
+  - .bin
+  - .fastembed_cache
+  # Vitest cache (including nested in node_modules)
+  - .vite
+  - vitest
+  - deps_ssr
+  # Auto-generated SDKs (Speakeasy)
+  - sdks/typescript
+  - sdks/python
+  # Project-specific ignores
+  - .well-known
+  # Markdown files (specific paths)
+  - README.md
+  - AGENTS.md
+  - CLAUDE.md
+  - CRUSH.md
+  - WARP.md
+

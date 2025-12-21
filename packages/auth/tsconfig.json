@@ -1,0 +1,8 @@
+{
+  "compilerOptions": {
+    "tsBuildInfoFile": "node_modules/.cache/tsbuildinfo.json"
+  },
+  "exclude": ["node_modules"],
+  "extends": "@seawatts/tsconfig/react-library.json",
+  "include": ["src/**/*.ts", "src/**/*.tsx"]
+}

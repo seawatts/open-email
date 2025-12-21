@@ -1,0 +1,32 @@
+{
+  "dependencies": {
+    "@seawatts/db": "workspace:*",
+    "@t3-oss/env-nextjs": "catalog:",
+    "better-auth": "catalog:",
+    "next": "catalog:",
+    "react": "catalog:",
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@seawatts/tsconfig": "workspace:*",
+    "@types/react": "catalog:",
+    "typescript": "catalog:"
+  },
+  "exports": {
+    ".": "./src/index.ts",
+    "./client": "./src/client.ts",
+    "./env": "./src/env.ts",
+    "./middleware": "./src/middleware.ts",
+    "./server": "./src/server.ts"
+  },
+  "license": "MIT",
+  "name": "@seawatts/auth",
+  "private": true,
+  "scripts": {
+    "clean": "git clean -xdf .turbo node_modules dist",
+    "dev": "tsc --watch",
+    "typecheck": "tsc --noEmit --emitDeclarationOnly false"
+  },
+  "type": "module",
+  "version": "0.1.0"
+}

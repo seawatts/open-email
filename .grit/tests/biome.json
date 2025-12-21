@@ -1,0 +1,20 @@
+{
+  "$schema": "https://biomejs.dev/schemas/2.3.10/schema.json",
+  "files": {
+    "ignoreUnknown": false
+  },
+  "linter": {
+    "enabled": true,
+    "rules": {
+      "correctness": {
+        "noUnusedFunctionParameters": "off",
+        "noUnusedVariables": "off"
+      },
+      "recommended": false
+    }
+  },
+  "plugins": [
+    "../use-named-arguments.grit"
+  ],
+  "root": false
+}
