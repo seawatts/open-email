@@ -110,10 +110,7 @@ export function OrbitingCircles({
               <motion.div
                 animate={{ opacity: 1, scale: 1 }}
                 initial={{ opacity: 0, scale: 0 }}
-                key={`orbit-child-${
-                  // biome-ignore lint/suspicious/noArrayIndexKey: Array index is stable here since we're mapping over a fixed slice of children
-                  index
-                }`}
+                key={`orbit-child-${index}`}
                 transition={{
                   damping: 18,
                   delay: 0.6 + index * 0.2 + startAnimationDelay,

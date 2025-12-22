@@ -115,7 +115,6 @@ export function ScriptCopyBtn({
                 className={`[&>pre]:overflow-x-auto [&>pre]:rounded-md [&>pre]:p-1.5 [&>pre]:px-4 [&>pre]:font-mono bg-background rounded ${
                   theme === 'dark' ? 'dark' : 'light'
                 }`}
-                // biome-ignore lint/security/noDangerouslySetInnerHtml: ok
                 dangerouslySetInnerHTML={{ __html: highlightedCode }}
               />
             ) : (

@@ -5,11 +5,10 @@
  * These summaries enable fast search and context building without reading full content.
  */
 
-import { chat, toolDefinition } from '@tanstack/ai';
-import { z } from 'zod';
-
 import { getDefaultAdapter, getModel } from '@seawatts/ai';
 import type { EmailMessageType, EmailThreadType } from '@seawatts/db/schema';
+import { chat, toolDefinition } from '@tanstack/ai';
+import { z } from 'zod';
 
 // ============================================================================
 // Types

@@ -1,7 +1,8 @@
-import { auth } from '@clerk/nextjs/server';
+import { auth } from '@seawatts/auth/server';
 import { db } from '@seawatts/db/client';
 import { Orgs } from '@seawatts/db/schema';
 import { eq } from 'drizzle-orm';
+import { headers } from 'next/headers';
 import { stripe } from '../index';
 import type {
   EntitlementKey,
@@ -71,7 +72,11 @@ async function getCustomerEntitlements(
 export async function checkOrgEntitlements(
   entitlement: EntitlementKey | EntitlementKey[],
 ): Promise<boolean | PartialEntitlementsRecord> {
-  const { userId, orgId } = await auth();
+  const session = await auth.api.getSession({
+    headers: await headers(),
+  });
+  const userId = session?.user?.id;
+  const orgId = session?.session?.activeOrganizationId;
 
   if (!userId || !orgId) {
     return Array.isArray(entitlement) ? {} : false;
@@ -106,7 +111,11 @@ export async function checkOrgEntitlements(
  * Helper function to get all entitlements for the current user's organization
  */
 export async function getOrgEntitlements(): Promise<EntitlementsRecord> {
-  const { userId, orgId } = await auth();
+  const session = await auth.api.getSession({
+    headers: await headers(),
+  });
+  const userId = session?.user?.id;
+  const orgId = session?.session?.activeOrganizationId;
 
   if (!userId || !orgId) {
     return {} as EntitlementsRecord;

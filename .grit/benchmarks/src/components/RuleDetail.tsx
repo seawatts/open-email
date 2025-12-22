@@ -1,5 +1,3 @@
-import type { BenchmarkResult } from '../types';
-
 import { ArrowLeftIcon } from '@heroicons/react/24/outline';
 import { formatMedianLatency } from '@openrouter-monorepo/db/featured-models';
 import { isErr, wrap } from '@openrouter-monorepo/type-utils/result-monad';
@@ -15,6 +13,7 @@ import {
   XAxis,
   YAxis,
 } from 'recharts';
+import type { BenchmarkResult } from '../types';
 import { BenchmarkDataSchema } from '../types';
 import { CATEGORY_COLORS } from '../utils';
 import { ErrorState } from './ErrorState';
@@ -27,15 +26,15 @@ interface RuleDetailProps {
 }
 
 const HistoricalDataPointSchema = z.object({
-  timestamp: z.string(),
+  commit: z.string(),
   displayDate: z.string(),
+  max: z.number(),
   mean: z.number(),
   median: z.number(),
-  p95: z.number(),
   min: z.number(),
-  max: z.number(),
+  p95: z.number(),
   samples: z.array(z.number()),
-  commit: z.string(),
+  timestamp: z.string(),
 });
 
 type HistoricalDataPoint = z.infer<typeof HistoricalDataPointSchema>;
@@ -47,7 +46,9 @@ function isHistoricalDataPoint(value: unknown): value is HistoricalDataPoint {
 export function RuleDetail({ ruleName, onBack }: RuleDetailProps) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [historicalData, setHistoricalData] = useState<HistoricalDataPoint[]>([]);
+  const [historicalData, setHistoricalData] = useState<HistoricalDataPoint[]>(
+    [],
+  );
   const [ruleInfo, setRuleInfo] = useState<BenchmarkResult | null>(null);
 
   useEffect(() => {
@@ -101,25 +102,28 @@ export function RuleDetail({ ruleName, onBack }: RuleDetailProps) {
 
           const date = new Date(benchmarkData.timestamp);
           dataPoints.push({
-            timestamp: benchmarkData.timestamp,
+            commit: benchmarkData.environment.commit.slice(0, 7),
             displayDate: date.toLocaleDateString('en-US', {
-              month: 'short',
               day: 'numeric',
               hour: '2-digit',
               minute: '2-digit',
+              month: 'short',
             }),
+            max: rule.max,
             mean: rule.mean,
             median: rule.median,
-            p95: rule.p95,
             min: rule.min,
-            max: rule.max,
+            p95: rule.p95,
             samples: rule.samples,
-            commit: benchmarkData.environment.commit.slice(0, 7),
+            timestamp: benchmarkData.timestamp,
           });
         }
       }
 
-      dataPoints.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+      dataPoints.sort(
+        (a, b) =>
+          new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime(),
+      );
 
       setHistoricalData(dataPoints);
       setRuleInfo(latestRuleInfo);
@@ -127,9 +131,7 @@ export function RuleDetail({ ruleName, onBack }: RuleDetailProps) {
     }
 
     void loadHistoricalData();
-  }, [
-    ruleName,
-  ]);
+  }, [ruleName]);
 
   const stats = useMemo(() => {
     if (historicalData.length === 0) {
@@ -143,13 +145,11 @@ export function RuleDetail({ ruleName, onBack }: RuleDetailProps) {
 
     return {
       avgMean,
-      minMean,
       maxMean,
+      minMean,
       runCount: historicalData.length,
     };
-  }, [
-    historicalData,
-  ]);
+  }, [historicalData]);
 
   if (loading) {
     return <LoadingState />;
@@ -164,53 +164,61 @@ export function RuleDetail({ ruleName, onBack }: RuleDetailProps) {
     : CATEGORY_COLORS.correctness;
 
   return (
-    <div className='main-content-container-lg flex flex-col gap-4'>
-      <div className='flex items-start justify-between gap-4'>
-        <div className='flex flex-col gap-2'>
+    <div className="main-content-container-lg flex flex-col gap-4">
+      <div className="flex items-start justify-between gap-4">
+        <div className="flex flex-col gap-2">
           <button
-            type='button'
+            className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
             onClick={onBack}
-            className='flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors'
+            type="button"
           >
-            <ArrowLeftIcon className='h-4 w-4' />
+            <ArrowLeftIcon className="h-4 w-4" />
             Back to overview
           </button>
           <h1>{ruleName}</h1>
-          {ruleInfo && <p className='text-muted-foreground'>{ruleInfo.description}</p>}
+          {ruleInfo && (
+            <p className="text-muted-foreground">{ruleInfo.description}</p>
+          )}
         </div>
         <ThemeToggle />
       </div>
 
       {ruleInfo && (
-        <div className='grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4'>
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
           <div
-            className='flex min-h-[100px] flex-col justify-between overflow-hidden rounded-lg border border-l-4 bg-card p-4 shadow-sm'
+            className="flex min-h-[100px] flex-col justify-between overflow-hidden rounded-lg border border-l-4 bg-card p-4 shadow-sm"
             style={{
               borderLeftColor: categoryColor,
             }}
           >
-            <h3 className='mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground'>
+            <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
               Category
             </h3>
-            <div className='text-2xl font-semibold text-foreground'>{ruleInfo.category}</div>
+            <div className="text-2xl font-semibold text-foreground">
+              {ruleInfo.category}
+            </div>
           </div>
-          <div className='flex min-h-[100px] flex-col justify-between overflow-hidden rounded-lg border border-l-4 border-l-green-500 bg-card p-4 shadow-sm'>
-            <h3 className='mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground'>
+          <div className="flex min-h-[100px] flex-col justify-between overflow-hidden rounded-lg border border-l-4 border-l-green-500 bg-card p-4 shadow-sm">
+            <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
               Severity
             </h3>
-            <div className='text-2xl font-semibold text-foreground'>{ruleInfo.severity}</div>
+            <div className="text-2xl font-semibold text-foreground">
+              {ruleInfo.severity}
+            </div>
           </div>
-          <div className='flex min-h-[100px] flex-col justify-between overflow-hidden rounded-lg border border-l-4 border-l-green-500 bg-card p-4 shadow-sm'>
-            <h3 className='mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground'>
+          <div className="flex min-h-[100px] flex-col justify-between overflow-hidden rounded-lg border border-l-4 border-l-green-500 bg-card p-4 shadow-sm">
+            <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
               Total Runs
             </h3>
-            <div className='text-2xl font-semibold text-foreground'>{stats?.runCount ?? 0}</div>
+            <div className="text-2xl font-semibold text-foreground">
+              {stats?.runCount ?? 0}
+            </div>
           </div>
-          <div className='flex min-h-[100px] flex-col justify-between overflow-hidden rounded-lg border border-l-4 border-l-green-500 bg-card p-4 shadow-sm'>
-            <h3 className='mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground'>
+          <div className="flex min-h-[100px] flex-col justify-between overflow-hidden rounded-lg border border-l-4 border-l-green-500 bg-card p-4 shadow-sm">
+            <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
               Avg Mean Time
             </h3>
-            <div className='text-2xl font-semibold text-foreground'>
+            <div className="text-2xl font-semibold text-foreground">
               {stats ? formatMedianLatency(stats.avgMean) : 'N/A'}
             </div>
           </div>
@@ -218,44 +226,47 @@ export function RuleDetail({ ruleName, onBack }: RuleDetailProps) {
       )}
 
       {historicalData.length === 0 ? (
-        <div className='rounded-lg border bg-card p-8 text-center'>
-          <p className='text-muted-foreground'>No historical data found for this rule.</p>
+        <div className="rounded-lg border bg-card p-8 text-center">
+          <p className="text-muted-foreground">
+            No historical data found for this rule.
+          </p>
         </div>
       ) : (
         <>
-          <div className='rounded-lg border bg-card p-4 shadow-sm'>
-            <h2 className='mb-4 text-lg font-semibold'>Performance Over Time</h2>
-            <div className='h-[400px]'>
-              <ResponsiveContainer
-                width='100%'
-                height='100%'
-              >
+          <div className="rounded-lg border bg-card p-4 shadow-sm">
+            <h2 className="mb-4 text-lg font-semibold">
+              Performance Over Time
+            </h2>
+            <div className="h-[400px]">
+              <ResponsiveContainer height="100%" width="100%">
                 <LineChart
                   data={historicalData}
                   margin={{
-                    top: 5,
-                    right: 30,
-                    left: 20,
                     bottom: 5,
+                    left: 20,
+                    right: 30,
+                    top: 5,
                   }}
                 >
                   <CartesianGrid
-                    strokeDasharray='3 3'
-                    className='stroke-muted'
+                    className="stroke-muted"
+                    strokeDasharray="3 3"
                   />
                   <XAxis
-                    dataKey='displayDate'
+                    className="text-muted-foreground"
+                    dataKey="displayDate"
                     tick={{
                       fontSize: 12,
                     }}
-                    className='text-muted-foreground'
                   />
                   <YAxis
-                    tickFormatter={(value: number) => formatMedianLatency(value)}
+                    className="text-muted-foreground"
                     tick={{
                       fontSize: 12,
                     }}
-                    className='text-muted-foreground'
+                    tickFormatter={(value: number) =>
+                      formatMedianLatency(value)
+                    }
                   />
                   <Tooltip
                     content={({
@@ -276,11 +287,15 @@ export function RuleDetail({ ruleName, onBack }: RuleDetailProps) {
                       }
                       const data = rawPayload;
                       return (
-                        <div className='rounded-md border bg-background p-3 shadow-md'>
-                          <p className='mb-2 font-semibold'>{data.displayDate}</p>
-                          <div className='space-y-1 text-sm'>
+                        <div className="rounded-md border bg-background p-3 shadow-md">
+                          <p className="mb-2 font-semibold">
+                            {data.displayDate}
+                          </p>
+                          <div className="space-y-1 text-sm">
                             <div>Mean: {formatMedianLatency(data.mean)}</div>
-                            <div>Median: {formatMedianLatency(data.median)}</div>
+                            <div>
+                              Median: {formatMedianLatency(data.median)}
+                            </div>
                             <div>P95: {formatMedianLatency(data.p95)}</div>
                             <div>Min: {formatMedianLatency(data.min)}</div>
                             <div>Max: {formatMedianLatency(data.max)}</div>
@@ -292,96 +307,102 @@ export function RuleDetail({ ruleName, onBack }: RuleDetailProps) {
                   />
                   <Legend />
                   <Line
-                    type='monotone'
-                    dataKey='mean'
-                    name='Mean'
-                    stroke={categoryColor}
-                    strokeWidth={2}
+                    activeDot={{
+                      r: 6,
+                    }}
+                    dataKey="mean"
                     dot={{
                       fill: categoryColor,
                       strokeWidth: 2,
                     }}
-                    activeDot={{
-                      r: 6,
-                    }}
+                    name="Mean"
+                    stroke={categoryColor}
+                    strokeWidth={2}
+                    type="monotone"
                   />
                   <Line
-                    type='monotone'
-                    dataKey='median'
-                    name='Median'
-                    stroke='#22c55e'
-                    strokeWidth={2}
+                    dataKey="median"
                     dot={{
                       fill: '#22c55e',
                       strokeWidth: 2,
                     }}
+                    name="Median"
+                    stroke="#22c55e"
+                    strokeWidth={2}
+                    type="monotone"
                   />
                   <Line
-                    type='monotone'
-                    dataKey='p95'
-                    name='P95'
-                    stroke='#f59e0b'
-                    strokeWidth={2}
+                    dataKey="p95"
                     dot={{
                       fill: '#f59e0b',
                       strokeWidth: 2,
                     }}
+                    name="P95"
+                    stroke="#f59e0b"
+                    strokeWidth={2}
+                    type="monotone"
                   />
                 </LineChart>
               </ResponsiveContainer>
             </div>
           </div>
 
-          <div className='rounded-lg border bg-card p-4 shadow-sm'>
-            <h2 className='mb-4 text-lg font-semibold'>Run History</h2>
-            <div className='overflow-x-auto'>
-              <table className='w-full text-sm'>
+          <div className="rounded-lg border bg-card p-4 shadow-sm">
+            <h2 className="mb-4 text-lg font-semibold">Run History</h2>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
                 <thead>
-                  <tr className='border-b'>
-                    <th className='px-4 py-2 text-left font-medium text-muted-foreground'>Date</th>
-                    <th className='px-4 py-2 text-right font-medium text-muted-foreground'>Mean</th>
-                    <th className='px-4 py-2 text-right font-medium text-muted-foreground'>
+                  <tr className="border-b">
+                    <th className="px-4 py-2 text-left font-medium text-muted-foreground">
+                      Date
+                    </th>
+                    <th className="px-4 py-2 text-right font-medium text-muted-foreground">
+                      Mean
+                    </th>
+                    <th className="px-4 py-2 text-right font-medium text-muted-foreground">
                       Median
                     </th>
-                    <th className='px-4 py-2 text-right font-medium text-muted-foreground'>P95</th>
-                    <th className='px-4 py-2 text-right font-medium text-muted-foreground'>Min</th>
-                    <th className='px-4 py-2 text-right font-medium text-muted-foreground'>Max</th>
-                    <th className='px-4 py-2 text-left font-medium text-muted-foreground'>
+                    <th className="px-4 py-2 text-right font-medium text-muted-foreground">
+                      P95
+                    </th>
+                    <th className="px-4 py-2 text-right font-medium text-muted-foreground">
+                      Min
+                    </th>
+                    <th className="px-4 py-2 text-right font-medium text-muted-foreground">
+                      Max
+                    </th>
+                    <th className="px-4 py-2 text-left font-medium text-muted-foreground">
                       Commit
                     </th>
                   </tr>
                 </thead>
                 <tbody>
-                  {[
-                    ...historicalData,
-                  ]
-                    .reverse()
-                    .map((dataPoint) => (
-                      <tr
-                        key={dataPoint.timestamp}
-                        className='border-b last:border-b-0 hover:bg-muted/50'
-                      >
-                        <td className='px-4 py-2'>{dataPoint.displayDate}</td>
-                        <td className='px-4 py-2 text-right font-mono'>
-                          {formatMedianLatency(dataPoint.mean)}
-                        </td>
-                        <td className='px-4 py-2 text-right font-mono'>
-                          {formatMedianLatency(dataPoint.median)}
-                        </td>
-                        <td className='px-4 py-2 text-right font-mono'>
-                          {formatMedianLatency(dataPoint.p95)}
-                        </td>
-                        <td className='px-4 py-2 text-right font-mono'>
-                          {formatMedianLatency(dataPoint.min)}
-                        </td>
-                        <td className='px-4 py-2 text-right font-mono'>
-                          {formatMedianLatency(dataPoint.max)}
-                        </td>
-                        <td className='px-4 py-2 font-mono text-muted-foreground'>
-                          {dataPoint.commit}
-                        </td>
-                      </tr>
-                    ))}
+                  {[...historicalData].reverse().map((dataPoint) => (
+                    <tr
+                      className="border-b last:border-b-0 hover:bg-muted/50"
+                      key={dataPoint.timestamp}
+                    >
+                      <td className="px-4 py-2">{dataPoint.displayDate}</td>
+                      <td className="px-4 py-2 text-right font-mono">
+                        {formatMedianLatency(dataPoint.mean)}
+                      </td>
+                      <td className="px-4 py-2 text-right font-mono">
+                        {formatMedianLatency(dataPoint.median)}
+                      </td>
+                      <td className="px-4 py-2 text-right font-mono">
+                        {formatMedianLatency(dataPoint.p95)}
+                      </td>
+                      <td className="px-4 py-2 text-right font-mono">
+                        {formatMedianLatency(dataPoint.min)}
+                      </td>
+                      <td className="px-4 py-2 text-right font-mono">
+                        {formatMedianLatency(dataPoint.max)}
+                      </td>
+                      <td className="px-4 py-2 font-mono text-muted-foreground">
+                        {dataPoint.commit}
+                      </td>
+                    </tr>
+                  ))}
                 </tbody>
               </table>
             </div>

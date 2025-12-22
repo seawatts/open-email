@@ -3,7 +3,7 @@
 import { copyFileSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import Stripe from 'stripe';
-import { env } from '../src/env.server';
+import { env } from '../src/env';
 import { PRICE_LOOKUP_KEYS } from './billing-ids.template';
 
 // Define the mapping of lookup keys to their corresponding product names

@@ -11,10 +11,10 @@ import {
   type UserPreferences,
 } from '@seawatts/ai';
 import {
+  Accounts,
   AgentDecisions,
   EmailMessages,
   EmailThreads,
-  GmailAccounts,
   UserEmailSettings,
 } from '@seawatts/db/schema';
 import { eq } from 'drizzle-orm';
@@ -52,12 +52,12 @@ export const triageProcedure = protectedProcedure
       where: eq(EmailMessages.threadId, thread.id),
     });
 
-    // Get account email
-    const account = await ctx.db.query.GmailAccounts.findFirst({
-      where: eq(GmailAccounts.id, thread.gmailAccountId),
+    // Get account (Google OAuth account from better-auth)
+    const account = await ctx.db.query.Accounts.findFirst({
+      where: eq(Accounts.id, thread.accountId),
     });
 
-    if (!account) throw new Error('Gmail account not found');
+    if (!account) throw new Error('Account not found');
 
     // Get user settings
     const settings = await ctx.db.query.UserEmailSettings.findFirst({
@@ -120,7 +120,7 @@ export const triageProcedure = protectedProcedure
       policy,
       preferences,
       thread: aiThread,
-      userEmail: account.email,
+      userEmail: account.accountId, // accountId is the email for Google OAuth
     })) {
       events.push(event);
       if (event.type === 'triage_complete') {

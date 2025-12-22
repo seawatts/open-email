@@ -1,5 +1,3 @@
-import type { BenchmarkData, BenchmarkResult, SortBy } from './types';
-
 import { isErr, wrap } from '@openrouter-monorepo/type-utils/result-monad';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { BenchmarkChart } from './components/BenchmarkChart';
@@ -11,6 +9,7 @@ import { LoadingState } from './components/LoadingState';
 import { PageHeader } from './components/PageHeader';
 import { RuleDetail } from './components/RuleDetail';
 import { StatsGrid } from './components/StatsGrid';
+import type { BenchmarkData, BenchmarkResult, SortBy } from './types';
 
 function parseRoute(): {
   view: 'overview' | 'rule';
@@ -20,8 +19,8 @@ function parseRoute(): {
   if (hash.startsWith('rule/')) {
     const ruleName = decodeURIComponent(hash.slice(5));
     return {
-      view: 'rule',
       ruleName,
+      view: 'rule',
     };
   }
   return {
@@ -49,18 +48,17 @@ export function App() {
   }, []);
 
   if (route.view === 'rule' && route.ruleName) {
-    return (
-      <RuleDetail
-        ruleName={route.ruleName}
-        onBack={navigateToOverview}
-      />
-    );
+    return <RuleDetail onBack={navigateToOverview} ruleName={route.ruleName} />;
   }
 
   return <BenchmarkOverview onRuleClick={navigateToRule} />;
 }
 
-function BenchmarkOverview({ onRuleClick }: { onRuleClick: (ruleName: string) => void }) {
+function BenchmarkOverview({
+  onRuleClick,
+}: {
+  onRuleClick: (ruleName: string) => void;
+}) {
   const [availableFiles, setAvailableFiles] = useState<string[]>([]);
   const [selectedFile, setSelectedFile] = useState<string>('');
   const [data, setData] = useState<BenchmarkData | null>(null);
@@ -70,7 +68,9 @@ function BenchmarkOverview({ onRuleClick }: { onRuleClick: (ruleName: string) =>
   const [showAllTogether, setShowAllTogether] = useState(true);
   const [showRelative, setShowRelative] = useState(true);
   const [sortBy, setSortBy] = useState<SortBy>('slowest');
-  const [selectedCategories, setSelectedCategories] = useState<Set<string>>(new Set());
+  const [selectedCategories, setSelectedCategories] = useState<Set<string>>(
+    new Set(),
+  );
 
   async function loadAvailableFiles() {
     const fetchResult = await wrap(async () => {
@@ -113,14 +113,18 @@ function BenchmarkOverview({ onRuleClick }: { onRuleClick: (ruleName: string) =>
     const fetchResult = await wrap(async () => {
       const response = await fetch(`./results/${selectedFile}`);
       if (!response.ok) {
-        throw new Error(`Failed to load: ${response.status} ${response.statusText}`);
+        throw new Error(
+          `Failed to load: ${response.status} ${response.statusText}`,
+        );
       }
       return response.json() as Promise<BenchmarkData>;
     });
 
     if (isErr(fetchResult)) {
       const errorMessage =
-        fetchResult.error instanceof Error ? fetchResult.error.message : 'Unknown error';
+        fetchResult.error instanceof Error
+          ? fetchResult.error.message
+          : 'Unknown error';
       setError(
         `Error: ${errorMessage}. Please run 'pnpm bench:grit' to generate benchmark results.`,
       );
@@ -132,7 +136,9 @@ function BenchmarkOverview({ onRuleClick }: { onRuleClick: (ruleName: string) =>
     setData(json);
 
     if (json.rules) {
-      const categories = new Set<string>(json.rules.map((r: BenchmarkResult) => r.category));
+      const categories = new Set<string>(
+        json.rules.map((r: BenchmarkResult) => r.category),
+      );
       setSelectedCategories(categories);
     }
 
@@ -145,31 +151,21 @@ function BenchmarkOverview({ onRuleClick }: { onRuleClick: (ruleName: string) =>
 
   useEffect(() => {
     void loadData();
-  }, [
-    selectedFile,
-  ]);
+  }, [selectedFile]);
 
   const categories = useMemo(() => {
     if (!data?.rules) {
       return [];
     }
     return Array.from(new Set(data.rules.map((r) => r.category))).sort();
-  }, [
-    data,
-  ]);
+  }, [data]);
 
   const slowestRule = useMemo(() => {
     if (!data?.rules || data.rules.length === 0) {
       return null;
     }
-    return (
-      [
-        ...data.rules,
-      ].sort((a, b) => b.mean - a.mean)[0] ?? null
-    );
-  }, [
-    data,
-  ]);
+    return [...data.rules].sort((a, b) => b.mean - a.mean)[0] ?? null;
+  }, [data]);
 
   const handleCategoryChange = (category: string) => {
     setSelectedCategories((prev) => {
@@ -207,49 +203,43 @@ function BenchmarkOverview({ onRuleClick }: { onRuleClick: (ruleName: string) =>
   }
 
   return (
-    <div className='main-content-container-lg flex flex-col gap-4'>
+    <div className="main-content-container-lg flex flex-col gap-4">
       <PageHeader />
 
       {error && (
-        <div className='rounded-md border border-destructive/50 bg-destructive/10 p-4 text-destructive'>
+        <div className="rounded-md border border-destructive/50 bg-destructive/10 p-4 text-destructive">
           {error}
         </div>
       )}
 
-      <StatsGrid
-        data={data}
-        slowestRule={slowestRule}
-      />
+      <StatsGrid data={data} slowestRule={slowestRule} />
 
       <ControlsPanel
         availableFiles={availableFiles}
-        selectedFile={selectedFile}
-        onFileChange={setSelectedFile}
-        showBaseline={showBaseline}
-        onShowBaselineChange={setShowBaseline}
-        showAllTogether={showAllTogether}
-        onShowAllTogetherChange={setShowAllTogether}
-        showRelative={showRelative}
-        onShowRelativeChange={setShowRelative}
         categories={categories}
-        selectedCategories={selectedCategories}
         onCategoryChange={handleCategoryChange}
+        onFileChange={setSelectedFile}
         onReset={handleReset}
+        onShowAllTogetherChange={setShowAllTogether}
+        onShowBaselineChange={setShowBaseline}
+        onShowRelativeChange={setShowRelative}
+        selectedCategories={selectedCategories}
+        selectedFile={selectedFile}
+        showAllTogether={showAllTogether}
+        showBaseline={showBaseline}
+        showRelative={showRelative}
       />
 
-      <ChartHeader
-        sortBy={sortBy}
-        onSortByChange={setSortBy}
-      />
+      <ChartHeader onSortByChange={setSortBy} sortBy={sortBy} />
 
       <BenchmarkChart
         data={data}
-        showBaseline={showBaseline}
+        onRuleClick={onRuleClick}
+        selectedCategories={selectedCategories}
         showAllTogether={showAllTogether}
+        showBaseline={showBaseline}
         showRelative={showRelative}
         sortBy={sortBy}
-        selectedCategories={selectedCategories}
-        onRuleClick={onRuleClick}
       />
 
       <EnvironmentInfo data={data} />

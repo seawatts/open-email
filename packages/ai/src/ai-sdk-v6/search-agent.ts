@@ -20,8 +20,8 @@ import { getDefaultProvider, getModel } from './adapters';
 // ============================================================================
 
 export interface SearchAgentConfig {
-  /** Gmail account ID to search within */
-  gmailAccountId: string;
+  /** Account ID to search within */
+  accountId: string;
   /** Maximum number of agent iterations (default: 5) */
   maxIterations?: number;
   /** Maximum total tool calls across all iterations (default: 15) */
@@ -137,9 +137,9 @@ export interface SearchToolExecutor {
 }
 
 /**
- * Factory to create a SearchToolExecutor with gmailAccountId baked in
+ * Factory to create a SearchToolExecutor with accountId baked in
  */
-export type CreateSearchExecutor = (gmailAccountId: string) => SearchToolExecutor;
+export type CreateSearchExecutor = (accountId: string) => SearchToolExecutor;
 
 // ============================================================================
 // System Prompts
@@ -267,7 +267,7 @@ export async function* searchAgent(
   executor: SearchToolExecutor,
   config: SearchAgentConfig,
 ): AsyncGenerator<SearchAgentEvent> {
-  const { gmailAccountId, maxIterations = 5, maxToolCalls = 15 } = config;
+  const { accountId, maxIterations = 5, maxToolCalls = 15 } = config;
 
   const provider = getDefaultProvider();
 
@@ -281,7 +281,7 @@ export async function* searchAgent(
   const messages: Array<{ role: 'user' | 'assistant'; content: string }> = [];
   messages.push({
     role: 'user',
-    content: `User question: ${query}\n\nGmail Account ID: ${gmailAccountId}`,
+    content: `User question: ${query}\n\nGmail Account ID: ${accountId}`,
   });
 
   try {

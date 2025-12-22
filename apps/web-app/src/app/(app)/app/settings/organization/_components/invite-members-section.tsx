@@ -1,7 +1,7 @@
 'use client';
 
-import { useOrganization, useUser } from '@clerk/nextjs';
 import { MetricButton, MetricLink } from '@seawatts/analytics/components';
+import { useActiveOrganization } from '@seawatts/auth/client';
 import {
   Entitled,
   NotEntitled,
@@ -20,19 +20,51 @@ import {
   SelectValue,
 } from '@seawatts/ui/select';
 import { toast } from '@seawatts/ui/sonner';
-import { useState } from 'react';
+import { useAction } from 'next-safe-action/hooks';
+import { useCallback, useEffect, useState } from 'react';
+import { inviteMemberAction } from '../actions';
+
+// Type for invitation
+interface Invitation {
+  id: string;
+  email: string;
+  role: string;
+  expiresAt: Date;
+}
 
 export function InviteMembersSection() {
   const [email, setEmail] = useState('');
-  const [role, setRole] = useState<'admin' | 'user'>('user');
-  const [isInviting, setIsInviting] = useState(false);
+  const [role, setRole] = useState<'admin' | 'member'>('member');
   const [isRevokingInvitation, setIsRevokingInvitation] = useState(false);
+  const [invitations, setInvitations] = useState<Invitation[]>([]);
 
-  const { organization, invitations } = useOrganization({
-    invitations: true,
-  });
-  const { user } = useUser();
-  const isEntitled = useIsEntitled('unlimited_developers');
+  const { data: activeOrg } = useActiveOrganization();
+  const isEntitledCheck = useIsEntitled('unlimited_developers');
+
+  // Use server action for inviting members
+  const { executeAsync: executeInvite, status: inviteStatus } =
+    useAction(inviteMemberAction);
+  const isInviting = inviteStatus === 'executing';
+
+  // Fetch invitations
+  const fetchInvitations = useCallback(async () => {
+    if (!activeOrg?.id) return;
+    try {
+      const response = await fetch(
+        `/api/auth/organization/list-invitations?organizationId=${activeOrg.id}`,
+      );
+      if (response.ok) {
+        const data = await response.json();
+        setInvitations(data.invitations || []);
+      }
+    } catch (error) {
+      console.error('Failed to fetch invitations:', error);
+    }
+  }, [activeOrg?.id]);
+
+  useEffect(() => {
+    fetchInvitations();
+  }, [fetchInvitations]);
 
   const handleInvite = async () => {
     if (!email.trim()) {
@@ -45,85 +77,52 @@ export function InviteMembersSection() {
       return;
     }
 
-    if (!organization) {
+    if (!activeOrg) {
       toast.error('No organization found');
       return;
     }
 
-    // Check if user is admin
-    const organizationId = organization.id;
-    const { data: organizationMemberships } =
-      (await user?.getOrganizationMemberships()) || { data: [] };
-    const currentMembership = organizationMemberships?.find(
-      (membership) => membership.organization.id === organizationId,
-    );
-
-    if (!currentMembership || currentMembership.role !== 'org:admin') {
-      toast.error('Only admins can invite members');
-      return;
-    }
-
-    setIsInviting(true);
-
     try {
-      await organization.inviteMember({
-        emailAddress: email.trim(),
-        role: role === 'admin' ? 'org:admin' : 'org:member',
+      const result = await executeInvite({
+        email: email.trim(),
+        role: role,
       });
 
-      toast.success(`Invitation sent to ${email}`);
-      setEmail('');
-      setRole('user');
-
-      // Refresh invitations list
-      invitations?.revalidate?.();
-    } catch (error) {
-      console.error('Failed to send invitation:', error);
-
-      // Handle specific Clerk errors
-      if (error instanceof Error) {
-        if (error.message.includes('already exists')) {
-          toast.error(
-            'A user with this email is already a member of this organization.',
-          );
-        } else if (error.message.includes('Forbidden')) {
-          toast.error(
-            'You do not have permission to invite members to this organization.',
-          );
-        } else if (error.message.includes('Not Found')) {
-          toast.error(
-            'Organization not found. Please ensure you have proper permissions.',
-          );
-        } else {
-          toast.error('Failed to send invitation', {
-            description: error.message,
-          });
-        }
-      } else {
+      if (result?.data?.success) {
+        toast.success(`Invitation sent to ${email}`);
+        setEmail('');
+        setRole('member');
+        fetchInvitations();
+      } else if (result?.serverError) {
         toast.error('Failed to send invitation', {
-          description: 'An unexpected error occurred',
+          description: result.serverError,
         });
       }
-    } finally {
-      setIsInviting(false);
+    } catch (error) {
+      console.error('Failed to send invitation:', error);
+      toast.error('Failed to send invitation', {
+        description:
+          error instanceof Error
+            ? error.message
+            : 'An unexpected error occurred',
+      });
     }
   };
 
-  const handleRevokeInvitation = async (invitation: {
-    id: string;
-    emailAddress: string;
-    revoke: () => Promise<unknown>;
-  }) => {
+  const handleRevokeInvitation = async (
+    invitationId: string,
+    invitationEmail: string,
+  ) => {
     setIsRevokingInvitation(true);
 
     try {
-      await invitation.revoke();
-      toast.success(
-        `Successfully revoked invitation for ${invitation.emailAddress}`,
-      );
-
-      // Refresh invitations list
-      invitations?.revalidate?.();
+      await fetch('/api/auth/organization/cancel-invitation', {
+        body: JSON.stringify({ invitationId }),
+        headers: { 'Content-Type': 'application/json' },
+        method: 'POST',
+      });
+      toast.success(`Successfully revoked invitation for ${invitationEmail}`);
+      fetchInvitations();
     } catch (error) {
       console.error('Failed to revoke invitation:', error);
       toast.error('Failed to revoke invitation', {
@@ -157,7 +156,7 @@ export function InviteMembersSection() {
             <div className="flex-1 gap-2 grid">
               <Label htmlFor="email">Email</Label>
               <Input
-                disabled={isInviting || !isEntitled}
+                disabled={isInviting || !isEntitledCheck}
                 id="email"
                 onChange={(e) => setEmail(e.target.value)}
                 onKeyDown={handleKeyDown}
@@ -168,15 +167,15 @@ export function InviteMembersSection() {
             <div className="w-fit gap-2 grid">
               <Label htmlFor="role">Role</Label>
               <Select
-                disabled={isInviting || !isEntitled}
-                onValueChange={(value) => setRole(value as 'admin' | 'user')}
+                disabled={isInviting || !isEntitledCheck}
+                onValueChange={(value) => setRole(value as 'admin' | 'member')}
                 value={role}
               >
                 <SelectTrigger id="role">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="user">User</SelectItem>
+                  <SelectItem value="member">Member</SelectItem>
                   <SelectItem value="admin">Admin</SelectItem>
                 </SelectContent>
               </Select>
@@ -211,52 +210,50 @@ export function InviteMembersSection() {
         </CardContent>
       </Card>
 
-      {!invitations?.isLoading &&
-        invitations?.data &&
-        invitations.data.length > 0 && (
-          <Card>
-            <CardHeader>
-              <CardTitle>Pending Invitations</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {invitations.data.map((invitation) => (
-                  <div
-                    className="flex items-center justify-between"
-                    key={invitation.id}
-                  >
-                    <div className="flex items-center gap-3 border-l-2 border-muted">
-                      <span className="text-sm pl-2">
-                        {invitation.emailAddress}
-                      </span>
-                      <span className="text-xs text-muted-foreground">
-                        {invitation.role.split(':')[1]}
-                      </span>
-                      <span className="text-xs text-muted-foreground">
-                        Invited{' '}
-                        {new Date(invitation.createdAt).toLocaleDateString()}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <MetricButton
-                        disabled={isRevokingInvitation}
-                        metric="invite_members_section_revoke_clicked"
-                        onClick={() => handleRevokeInvitation(invitation)}
-                        properties={{
-                          location: 'invite_members_section',
-                        }}
-                        size="sm"
-                        variant="destructive"
-                      >
-                        Revoke
-                      </MetricButton>
-                    </div>
+      {invitations && invitations.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Pending Invitations</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {invitations.map((invitation) => (
+                <div
+                  className="flex items-center justify-between"
+                  key={invitation.id}
+                >
+                  <div className="flex items-center gap-3 border-l-2 border-muted">
+                    <span className="text-sm pl-2">{invitation.email}</span>
+                    <span className="text-xs text-muted-foreground">
+                      {invitation.role}
+                    </span>
+                    <span className="text-xs text-muted-foreground">
+                      Invited{' '}
+                      {new Date(invitation.expiresAt).toLocaleDateString()}
+                    </span>
                   </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        )}
+                  <div className="flex items-center gap-2">
+                    <MetricButton
+                      disabled={isRevokingInvitation}
+                      metric="invite_members_section_revoke_clicked"
+                      onClick={() =>
+                        handleRevokeInvitation(invitation.id, invitation.email)
+                      }
+                      properties={{
+                        location: 'invite_members_section',
+                      }}
+                      size="sm"
+                      variant="destructive"
+                    >
+                      Revoke
+                    </MetricButton>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }

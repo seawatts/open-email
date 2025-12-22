@@ -1,7 +1,7 @@
 'use client';
 
-import { SignedIn, SignedOut, useOrganization } from '@clerk/nextjs';
 import { MetricLink } from '@seawatts/analytics/components';
+import { useActiveOrganization, useSession } from '@seawatts/auth/client';
 import {
   SubscriptionActive,
   SubscriptionPastDue,
@@ -93,7 +93,9 @@ export const PricingCard = memo(function PricingCard({
     TEAM_PRICING.DEFAULT_SEATS,
   );
 
-  const { organization } = useOrganization();
+  const { data: session } = useSession();
+  const { data: activeOrg } = useActiveOrganization();
+  const isAuthenticated = !!session?.user;
 
   // Safe action for checkout
   const { executeAsync: executeCreateCheckout, status: checkoutStatus } =
@@ -134,13 +136,13 @@ export const PricingCard = memo(function PricingCard({
   }, [teamSeats, billingCycle, tier.name]);
 
   const handleSubscribe = async () => {
-    if (!organization?.id) return;
+    if (!activeOrg?.id) return;
 
     // Track subscription attempt
     posthog.capture('subscription_attempted', {
       billing_cycle: billingCycle,
       location: 'pricing_section',
-      organization_id: organization.id,
+      organization_id: activeOrg.id,
       plan_name: tier.name,
       team_seats: tier.name === 'Team' ? teamSeats : undefined,
     });
@@ -148,7 +150,7 @@ export const PricingCard = memo(function PricingCard({
     try {
       await executeCreateCheckout({
         billingInterval: billingCycle,
-        orgId: organization.id,
+        orgId: activeOrg.id,
         planType: tier.name === 'Team' ? 'team' : 'free',
       });
 
@@ -156,7 +158,7 @@ export const PricingCard = memo(function PricingCard({
       posthog.capture('checkout_session_created', {
         billing_cycle: billingCycle,
         location: 'pricing_section',
-        organization_id: organization.id,
+        organization_id: activeOrg.id,
         plan_name: tier.name,
         team_seats: tier.name === 'Team' ? teamSeats : undefined,
       });
@@ -168,7 +170,7 @@ export const PricingCard = memo(function PricingCard({
         billing_cycle: billingCycle,
         error: error instanceof Error ? error.message : 'Unknown error',
         location: 'pricing_section',
-        organization_id: organization.id,
+        organization_id: activeOrg.id,
         plan_name: tier.name,
         team_seats: tier.name === 'Team' ? teamSeats : undefined,
       });
@@ -191,7 +193,7 @@ export const PricingCard = memo(function PricingCard({
     // For signed out users, show "Create Webhook URL" with link
     return (
       <>
-        <SignedOut>
+        {!isAuthenticated && (
           <MetricLink
             className={`h-10 w-full flex items-center justify-center text-sm font-normal tracking-wide rounded-full px-4 cursor-pointer transition-all ease-out active:scale-95 ${
               tier.isPopular
@@ -206,11 +208,11 @@ export const PricingCard = memo(function PricingCard({
           >
             Install Extension
           </MetricLink>
-        </SignedOut>
+        )}
 
         {/* For signed in users */}
-        <SignedIn>
-          {tier.name === 'Team' ? (
+        {isAuthenticated &&
+          (tier.name === 'Team' ? (
             // Team plan logic
             <>
               <SubscriptionActive>
@@ -310,8 +312,7 @@ export const PricingCard = memo(function PricingCard({
                 </MetricLink>
               )}
             </>
-          )}
-        </SignedIn>
+          ))}
       </>
     );
   };

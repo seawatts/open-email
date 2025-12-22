@@ -2,14 +2,14 @@
 // This file should trigger warnings for template strings in logging helpers
 
 // @ts-expect-error: Test file
-import { eLog, iLog, wLog } from '@openrouter-monorepo/instrumentation/logger';
+import { eLog, iLog, wLog } from "@openrouter-monorepo/instrumentation/logger";
 
-const userId = 'user-123';
+const userId = "user-123";
 const item = {
-  id: 1,
-  name: 'test',
+	id: 1,
+	name: "test",
 };
-const errorMessage = 'Something went wrong';
+const errorMessage = "Something went wrong";
 
 // ✅ Should trigger: Template string in iLog
 iLog(`User ${userId} logged in`);
@@ -27,22 +27,22 @@ iLog(`User ${userId} performed action on ${item.name}`);
 eLog(`Error count: ${1 + 2}`);
 
 // ❌ Should NOT trigger: Constant string with context object (the preferred way)
-iLog('user-logged-in', {
-  user_id: userId,
+iLog("user-logged-in", {
+	user_id: userId,
 });
 
 // ❌ Should NOT trigger: Constant string with structured data
-eLog('failed-to-process', {
-  item,
+eLog("failed-to-process", {
+	item,
 });
 
 // ❌ Should NOT trigger: Simple constant string
-wLog('warning-occurred', {
-  message: errorMessage,
+wLog("warning-occurred", {
+	message: errorMessage,
 });
 
 // ❌ Should NOT trigger: Just a constant string
-iLog('simple-event');
+iLog("simple-event");
 
 // ❌ Should NOT trigger: Regular function call with template string (not a log helper)
 const format = (s: string) => s;

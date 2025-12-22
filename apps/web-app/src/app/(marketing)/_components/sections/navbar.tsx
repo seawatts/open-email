@@ -1,6 +1,6 @@
 'use client';
 
-import { SignedIn, SignedOut } from '@clerk/nextjs';
+import { useSession } from '@seawatts/auth/client';
 import { Button } from '@seawatts/ui/components/button';
 import { GitHubStarsButtonWrapper } from '@seawatts/ui/custom/github-stars-button/button-wrapper';
 import { ThemeToggle } from '@seawatts/ui/custom/theme';
@@ -58,6 +58,8 @@ export function Navbar({ navs }: { navs?: NavItem[] }) {
   const [hasScrolled, setHasScrolled] = useState(false);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [activeSection, setActiveSection] = useState('hero');
+  const { data: session } = useSession();
+  const isAuthenticated = !!session?.user;
 
   useEffect(() => {
     const handleScroll = () => {
@@ -132,7 +134,7 @@ export function Navbar({ navs }: { navs?: NavItem[] }) {
                 >
                   Create Webhook URL
                 </Link>
-                <SignedIn>
+                {isAuthenticated ? (
                   <Button
                     asChild
                     className="hidden md:flex rounded-full"
@@ -142,18 +144,17 @@ export function Navbar({ navs }: { navs?: NavItem[] }) {
                       Dashboard
                     </Link>
                   </Button>
-                </SignedIn>
-                <SignedOut>
+                ) : (
                   <Button
                     asChild
                     className="hidden md:flex rounded-full"
                     variant="outline"
                   >
-                    <Link href="/webhooks/create?utm_source=marketing-site&utm_medium=navbar-sign-in">
+                    <Link href="/sign-in?utm_source=marketing-site&utm_medium=navbar-sign-in">
                       Sign In
                     </Link>
                   </Button>
-                </SignedOut>
+                )}
               </div>
               <GitHubStarsButtonWrapper
                 className="rounded-full"
@@ -257,20 +258,19 @@ export function Navbar({ navs }: { navs?: NavItem[] }) {
                   >
                     Create Webhook URL
                   </Link>
-                  <SignedIn>
+                  {isAuthenticated ? (
                     <Button asChild className="rounded-full" variant="outline">
                       <Link href="/dashboard?utm_source=marketing-site&utm_medium=navbar-dashboard">
                         Dashboard
                       </Link>
                     </Button>
-                  </SignedIn>
-                  <SignedOut>
+                  ) : (
                     <Button asChild className="rounded-full" variant="outline">
-                      <Link href="/webhooks/create?utm_source=marketing-site&utm_medium=navbar-sign-in">
+                      <Link href="/sign-in?utm_source=marketing-site&utm_medium=navbar-sign-in">
                         Sign In
                       </Link>
                     </Button>
-                  </SignedOut>
+                  )}
                 </div>
               </div>
             </motion.div>

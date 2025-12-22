@@ -7,10 +7,10 @@ import './index.css';
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <ThemeProvider
-      attribute='class'
-      defaultTheme='system'
-      enableSystem
+      attribute="class"
+      defaultTheme="system"
       disableTransitionOnChange
+      enableSystem
     >
       <App />
     </ThemeProvider>

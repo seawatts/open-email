@@ -1,11 +1,4 @@
 {
-  "name": "benchmarks",
-  "private": true,
-  "type": "module",
-  "scripts": {
-    "dev": "vite --host",
-    "build": "vite build"
-  },
   "dependencies": {
     "@heroicons/react": "2.2.0",
     "@openrouter-monorepo/db": "workspace:*",
@@ -26,5 +19,12 @@
     "tailwindcss": "3.4.16",
     "typescript": "5.9.3",
     "vite-tsconfig-paths": "5.1.4"
-  }
+  },
+  "name": "benchmarks",
+  "private": true,
+  "scripts": {
+    "build": "vite build",
+    "dev": "vite --host"
+  },
+  "type": "module"
 }

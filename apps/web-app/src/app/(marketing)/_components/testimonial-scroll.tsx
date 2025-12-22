@@ -71,7 +71,6 @@ export function SocialProofTestimonials({
                     '[--duration:60s]': i === 1,
                     '[--duration:70s]': i === 3,
                   })}
-                  // biome-ignore lint/suspicious/noArrayIndexKey: index is stable for testimonial columns
                   key={i}
                   vertical
                 >

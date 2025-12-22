@@ -39,7 +39,7 @@ const tsc = spawn('tsc', ['--watch', '--preserveWatchOutput'], {
 });
 
 // Watch for changes in schema files
-const watcher = watch(['src/schema.ts'], {
+const watcher = watch(['src/schema/**/*.ts'], {
   ignoreInitial: true,
 });
 

@@ -1,6 +1,7 @@
 'use client';
 
-import { api } from '@seawatts/api/react';
+import { useTRPC } from '@seawatts/api/react';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
 import { useCallback, useState } from 'react';
 
@@ -10,7 +11,8 @@ interface UseThreadActionsProps {
 
 export function useThreadActions({ threadId }: UseThreadActionsProps) {
   const router = useRouter();
-  const utils = api.useUtils();
+  const trpc = useTRPC();
+  const queryClient = useQueryClient();
 
   const [optimisticActionComplete, setOptimisticActionComplete] = useState<
     string | null
@@ -19,38 +21,46 @@ export function useThreadActions({ threadId }: UseThreadActionsProps) {
     Set<string>
   >(new Set());
 
-  const createAction = api.email.actions.create.useMutation({
-    onMutate: (variables) => {
-      if (
-        variables.actionType === 'archive' ||
-        variables.actionType === 'snooze'
-      ) {
-        setOptimisticActionComplete(variables.actionType);
-      }
-    },
-    onSettled: () => {
-      utils.email.threads.byId.invalidate({ id: threadId });
-      utils.email.threads.list.invalidate();
-    },
-  });
+  const createAction = useMutation(
+    trpc.email.actions.create.mutationOptions({
+      onMutate: (variables) => {
+        if (
+          variables.actionType === 'archive' ||
+          variables.actionType === 'snooze'
+        ) {
+          setOptimisticActionComplete(variables.actionType);
+        }
+      },
+      onSettled: () => {
+        queryClient.invalidateQueries(
+          trpc.email.threads.byId.queryFilter({ id: threadId }),
+        );
+        queryClient.invalidateQueries(trpc.email.threads.list.queryFilter());
+      },
+    }),
+  );
 
-  const approveAction = api.email.actions.approve.useMutation({
-    onError: (_err, variables) => {
-      setOptimisticallyApprovedIds((prev) => {
-        const next = new Set(prev);
-        next.delete(variables.actionId);
-        return next;
-      });
-    },
-    onMutate: (variables) => {
-      setOptimisticallyApprovedIds((prev) =>
-        new Set(prev).add(variables.actionId),
-      );
-    },
-    onSettled: () => {
-      utils.email.threads.byId.invalidate({ id: threadId });
-    },
-  });
+  const approveAction = useMutation(
+    trpc.email.actions.approve.mutationOptions({
+      onError: (_err, variables) => {
+        setOptimisticallyApprovedIds((prev) => {
+          const next = new Set(prev);
+          next.delete(variables.actionId);
+          return next;
+        });
+      },
+      onMutate: (variables) => {
+        setOptimisticallyApprovedIds((prev) =>
+          new Set(prev).add(variables.actionId),
+        );
+      },
+      onSettled: () => {
+        queryClient.invalidateQueries(
+          trpc.email.threads.byId.queryFilter({ id: threadId }),
+        );
+      },
+    }),
+  );
 
   const handleAction = useCallback(
     (
@@ -113,22 +123,20 @@ export function useThreadActions({ threadId }: UseThreadActionsProps) {
   );
 
   return {
-    // State
-    optimisticActionComplete,
-    optimisticallyApprovedIds,
-    isCreatingAction: createAction.isPending,
-    isApprovingAction: approveAction.isPending,
-
     // Actions
     handleAction,
     handleApproveAction,
     handleArchive,
-    handleDelete,
-    handleSnooze,
-    handleStar,
     handleArchiveAndNavigate,
+    handleDelete,
     handleDeleteAndNavigate,
+    handleSnooze,
     handleSnoozeAndNavigate,
+    handleStar,
+    isApprovingAction: approveAction.isPending,
+    isCreatingAction: createAction.isPending,
+    // State
+    optimisticActionComplete,
+    optimisticallyApprovedIds,
   };
 }
-

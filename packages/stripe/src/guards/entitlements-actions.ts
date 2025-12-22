@@ -1,6 +1,7 @@
 'use server';
 
-import { auth } from '@clerk/nextjs/server';
+import { auth } from '@seawatts/auth/server';
+import { headers } from 'next/headers';
 import { createSafeActionClient } from 'next-safe-action';
 import { z } from 'zod';
 import type { EntitlementKey, EntitlementsRecord } from './entitlement-types';
@@ -20,7 +21,11 @@ const checkEntitlementSchema = z.object({
 export const checkEntitlementAction = action
   .inputSchema(checkEntitlementSchema)
   .action(async ({ parsedInput }) => {
-    const { userId, orgId } = await auth();
+    const session = await auth.api.getSession({
+      headers: await headers(),
+    });
+    const userId = session?.user?.id;
+    const orgId = session?.session?.activeOrganizationId;
 
     if (!userId || !orgId) {
       return { entitled: false, reason: 'Unauthorized' };
@@ -46,7 +51,11 @@ export const checkEntitlementAction = action
 
 // Action to get all entitlements for the current organization
 export const getEntitlementsAction = action.action(async () => {
-  const { userId, orgId } = await auth();
+  const session = await auth.api.getSession({
+    headers: await headers(),
+  });
+  const userId = session?.user?.id;
+  const orgId = session?.session?.activeOrganizationId;
 
   if (!userId || !orgId) {
     return { entitlements: {} as EntitlementsRecord, reason: 'Unauthorized' };

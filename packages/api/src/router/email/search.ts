@@ -27,6 +27,7 @@ import { parseDateRange } from '../../utils';
 const searchInputSchema = z.object({
   filters: z
     .object({
+      accountId: z.string().optional(),
       bundleTypes: z.array(bundleTypeSchema).optional(),
       dateRange: z
         .object({
@@ -34,7 +35,6 @@ const searchInputSchema = z.object({
           start: z.string().datetime().optional(),
         })
         .optional(),
-      gmailAccountId: z.string().optional(),
       hasAttachments: z.boolean().optional(),
       senders: z.array(z.string()).optional(),
       unreadOnly: z.boolean().optional(),
@@ -46,6 +46,7 @@ const searchInputSchema = z.object({
 });
 
 const categoryInputSchema = z.object({
+  accountId: z.string().optional(),
   category: bundleTypeSchema,
   dateRange: z
     .object({
@@ -53,7 +54,6 @@ const categoryInputSchema = z.object({
       start: z.string().datetime().optional(),
     })
     .optional(),
-  gmailAccountId: z.string().optional(),
   limit: z.number().min(1).max(50).default(20),
   offset: z.number().min(0).default(0),
 });
@@ -71,28 +71,6 @@ const threadInputSchema = z.object({
 
 export const searchRouter = createTRPCRouter({
   /**
-   * Search emails by keywords, entities, or text
-   * Used by AI agent's search_emails tool
-   */
-  search: protectedProcedure
-    .input(searchInputSchema)
-    .query(async ({ input }) => {
-      const filters = input.filters
-        ? {
-            ...input.filters,
-            dateRange: parseDateRange(input.filters.dateRange),
-          }
-        : undefined;
-
-      return searchEmails({
-        filters,
-        limit: input.limit,
-        offset: input.offset,
-        query: input.query,
-      });
-    }),
-
-  /**
    * List emails by category/bundle type
    * Used by AI agent's list_emails_by_category tool
    */
@@ -100,9 +78,9 @@ export const searchRouter = createTRPCRouter({
     .input(categoryInputSchema)
     .query(async ({ input }) => {
       return listEmailsByCategory({
+        accountId: input.accountId,
         category: input.category,
         dateRange: parseDateRange(input.dateRange),
-        gmailAccountId: input.gmailAccountId,
         limit: input.limit,
         offset: input.offset,
       });
@@ -164,20 +142,41 @@ export const searchRouter = createTRPCRouter({
       const keywordMap = buildKeywordsByThreadMap(keywords);
       return Object.fromEntries(keywordMap);
     }),
+  /**
+   * Search emails by keywords, entities, or text
+   * Used by AI agent's search_emails tool
+   */
+  search: protectedProcedure
+    .input(searchInputSchema)
+    .query(async ({ input }) => {
+      const filters = input.filters
+        ? {
+            ...input.filters,
+            dateRange: parseDateRange(input.filters.dateRange),
+          }
+        : undefined;
+
+      return searchEmails({
+        filters,
+        limit: input.limit,
+        offset: input.offset,
+        query: input.query,
+      });
+    }),
 
   /**
    * Get suggested search terms based on recent keywords
    */
   suggestedTerms: protectedProcedure
     .input(
-      z.object({ gmailAccountId: z.string(), limit: z.number().default(20) }),
+      z.object({ accountId: z.string(), limit: z.number().default(20) }),
     )
     .query(async ({ input }) => {
       // Get threads for this account
       const threads = await db
         .select({ id: EmailThreads.id })
         .from(EmailThreads)
-        .where(eq(EmailThreads.gmailAccountId, input.gmailAccountId))
+        .where(eq(EmailThreads.accountId, input.accountId))
         .orderBy(desc(EmailThreads.lastMessageAt))
         .limit(100);
 

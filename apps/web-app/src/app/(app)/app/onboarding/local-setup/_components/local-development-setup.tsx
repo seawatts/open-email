@@ -19,7 +19,7 @@ import { Textarea } from '@seawatts/ui/textarea';
 import { BookOpen, FileText, HelpCircle, Terminal } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
-import { env } from '~/env.client';
+import { env } from '~/env';
 
 interface LocalDevelopmentSetupProps {
   orgName: string;
@@ -37,7 +37,7 @@ export function LocalDevelopmentSetup({
   const router = useRouter();
   const [selectedTab, setSelectedTab] = useState('cli');
 
-  const webhookUrl = `${env.NEXT_PUBLIC_WEBHOOK_BASE_URL || env.NEXT_PUBLIC_API_URL || 'https://seawatts.sh'}/${orgName}/${webhookName}`;
+  const webhookUrl = `${env.NEXT_PUBLIC_WEBHOOK_BASE_URL || env.NEXT_PUBLIC_APP_URL || 'https://seawatts.sh'}/${orgName}/${webhookName}`;
 
   // Generate the seawatts.yml content
   const generateseawattsYml = () => {

@@ -1,10 +1,9 @@
-import { describe, expect, it } from 'vitest';
-
 import {
   getErrorMessage,
   parseDateRange,
   parseGmailDate,
 } from '@seawatts/api/utils';
+import { describe, expect, it } from 'vitest';
 
 describe('Shared Utilities Integration Tests', () => {
   describe('parseDateRange', () => {
@@ -16,8 +15,8 @@ describe('Shared Utilities Integration Tests', () => {
 
     it('should parse start and end dates', () => {
       const result = parseDateRange({
-        start: '2024-12-01T00:00:00.000Z',
         end: '2024-12-31T23:59:59.999Z',
+        start: '2024-12-01T00:00:00.000Z',
       });
 
       expect(result).toBeDefined();
@@ -154,8 +153,8 @@ describe('Shared Utilities Integration Tests', () => {
   describe('Date Range with Search Service', () => {
     it('should produce correct date objects for filtering', () => {
       const inputRange = {
-        start: '2024-12-01T00:00:00.000Z',
         end: '2024-12-31T23:59:59.999Z',
+        start: '2024-12-01T00:00:00.000Z',
       };
 
       const parsedRange = parseDateRange(inputRange);

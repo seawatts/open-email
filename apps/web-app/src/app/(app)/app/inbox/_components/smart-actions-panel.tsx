@@ -299,6 +299,7 @@ export function SmartActionsPanel({
       <button
         className="flex w-full items-center justify-between"
         onClick={() => setExpanded(!expanded)}
+        type="button"
       >
         <h3 className="flex items-center gap-2 font-semibold">
           <Zap className="h-4 w-4 text-primary" />

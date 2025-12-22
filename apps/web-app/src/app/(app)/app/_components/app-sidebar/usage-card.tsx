@@ -1,7 +1,7 @@
 'use client';
 
-import { useOrganization } from '@clerk/nextjs';
 import { MetricButton } from '@seawatts/analytics/components';
+import { useActiveOrganization } from '@seawatts/auth/client';
 import { useIsEntitled } from '@seawatts/stripe/guards/client';
 import {
   Card,
@@ -125,11 +125,6 @@ function UsageDisplay({ usage }: { usage: UsageData }) {
 
 // Usage data hook that fetches real data from the API
 function useWebhookUsage(): UsageData {
-  // TODO: Re-enable when events are re-implemented
-  // const { data: usageStats, isLoading } = api.events.usage.useQuery({
-  //   period: 'month',
-  // });
-
   return useMemo(() => {
     // Free plan: 50 webhook events per month
     return {
@@ -145,7 +140,7 @@ function useWebhookUsage(): UsageData {
 }
 
 export function UsageCard() {
-  const { organization } = useOrganization();
+  const { data: activeOrg } = useActiveOrganization();
   const isEntitled = useIsEntitled('unlimited_webhook_events');
   const usage = useWebhookUsage();
 
@@ -155,7 +150,7 @@ export function UsageCard() {
   const isSubscribing = checkoutStatus === 'executing';
 
   const handleUpgrade = async () => {
-    if (!organization?.id) return;
+    if (!activeOrg?.id) return;
 
     try {
       await executeCreateCheckout();

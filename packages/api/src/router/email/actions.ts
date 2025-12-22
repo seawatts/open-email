@@ -88,10 +88,10 @@ export const actionsRouter = createTRPCRouter({
     }),
 
   pending: protectedProcedure
-    .input(z.object({ gmailAccountId: z.string() }))
+    .input(z.object({ accountId: z.string() }))
     .query(async ({ ctx, input }) => {
       const threads = await ctx.db.query.EmailThreads.findMany({
-        where: eq(EmailThreads.gmailAccountId, input.gmailAccountId),
+        where: eq(EmailThreads.accountId, input.accountId),
       });
 
       const threadIds = threads.map((t) => t.id);

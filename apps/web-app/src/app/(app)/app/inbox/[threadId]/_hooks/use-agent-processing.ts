@@ -1,6 +1,7 @@
 'use client';
 
-import { api } from '@seawatts/api/react';
+import { useTRPC } from '@seawatts/api/react';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useCallback, useState } from 'react';
 
 import type { AgentEvent } from '../_components/types';
@@ -14,7 +15,8 @@ export function useAgentProcessing({
   threadId,
   onDraftComplete,
 }: UseAgentProcessingProps) {
-  const utils = api.useUtils();
+  const trpc = useTRPC();
+  const queryClient = useQueryClient();
 
   const [agentEvents, setAgentEvents] = useState<AgentEvent[]>([]);
   const [streamingDraft, setStreamingDraft] = useState('');
@@ -35,8 +37,8 @@ export function useAgentProcessing({
         case 'draft_complete':
           if (event.draft && onDraftComplete) {
             onDraftComplete({
-              draftId: event.draft.draftId,
               body: event.draft.body,
+              draftId: event.draft.draftId,
             });
           }
           break;
@@ -45,24 +47,28 @@ export function useAgentProcessing({
     [onDraftComplete],
   );
 
-  const agentMutation = api.email.agent.processThread.useMutation({
-    onError: () => {
-      setIsProcessing(false);
-    },
-    onMutate: () => {
-      setIsProcessing(true);
-      setAgentEvents([]);
-      setStreamingDraft('');
-      setThinkingContent('');
-    },
-    onSuccess: (data) => {
-      for (const event of data.events) {
-        handleAgentEvent(event as AgentEvent);
-      }
-      utils.email.threads.byId.invalidate({ id: threadId });
-      setIsProcessing(false);
-    },
-  });
+  const agentMutation = useMutation(
+    trpc.email.agent.processThread.mutationOptions({
+      onError: () => {
+        setIsProcessing(false);
+      },
+      onMutate: () => {
+        setIsProcessing(true);
+        setAgentEvents([]);
+        setStreamingDraft('');
+        setThinkingContent('');
+      },
+      onSuccess: (data) => {
+        for (const event of data.events) {
+          handleAgentEvent(event as AgentEvent);
+        }
+        queryClient.invalidateQueries(
+          trpc.email.threads.byId.queryFilter({ id: threadId }),
+        );
+        setIsProcessing(false);
+      },
+    }),
+  );
 
   const handleRetriage = useCallback(() => {
     agentMutation.mutate({ autoExecute: false, threadId });
@@ -79,15 +85,14 @@ export function useAgentProcessing({
   return {
     // State
     agentEvents,
-    streamingDraft,
-    thinkingContent,
-    isProcessing,
-    isRetriaging: agentMutation.isPending,
 
     // Actions
     handleRetriage,
     handleSmartProcess,
+    isProcessing,
+    isRetriaging: agentMutation.isPending,
     resetDraft,
+    streamingDraft,
+    thinkingContent,
   };
 }
-

@@ -1,6 +1,6 @@
 'use client';
 
-import { useOrganization } from '@clerk/nextjs';
+import { useActiveOrganization } from '@seawatts/auth/client';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -26,7 +26,7 @@ export function DeleteOrganizationDialog({
   onConfirm,
   isDeleting,
 }: DeleteOrganizationDialogProps) {
-  const { organization: activeOrg } = useOrganization();
+  const { data: activeOrg } = useActiveOrganization();
 
   const handleConfirm = async () => {
     try {

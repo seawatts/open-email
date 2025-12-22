@@ -27,8 +27,8 @@ import {
 // ============================================================================
 
 export interface SearchAgentConfig {
-  /** Gmail account ID to search within */
-  gmailAccountId: string;
+  /** Account ID to search within */
+  accountId: string;
   /** Maximum number of agent iterations (default: 5) */
   maxIterations?: number;
   /** Maximum total tool calls across all iterations (default: 15) */
@@ -92,7 +92,7 @@ export type SearchAgentEvent =
 /**
  * Interface for executing search tools.
  * Inject this to connect the agent to your actual search service.
- * The executor is pre-configured with gmailAccountId so individual
+ * The executor is pre-configured with accountId so individual
  * tool calls don't need to pass it.
  */
 export interface SearchToolExecutor {
@@ -108,9 +108,9 @@ export interface SearchToolExecutor {
 }
 
 /**
- * Factory to create a SearchToolExecutor with gmailAccountId baked in
+ * Factory to create a SearchToolExecutor with accountId baked in
  */
-export type CreateSearchExecutor = (gmailAccountId: string) => SearchToolExecutor;
+export type CreateSearchExecutor = (accountId: string) => SearchToolExecutor;
 
 // ============================================================================
 // System Prompts
@@ -198,7 +198,7 @@ export async function* searchAgent(
   config: SearchAgentConfig,
 ): AsyncGenerator<SearchAgentEvent> {
   const {
-    gmailAccountId,
+    accountId,
     maxIterations = 5,
     maxToolCalls = 15,
     includeFullContent = true,
@@ -220,7 +220,7 @@ export async function* searchAgent(
   // Initial user message
   conversationHistory.push({
     role: 'user',
-    content: `User question: ${query}\n\nGmail Account ID to search: ${gmailAccountId}`,
+    content: `User question: ${query}\n\nGmail Account ID to search: ${accountId}`,
   });
 
   try {
@@ -307,7 +307,7 @@ export async function* searchAgent(
       const toolResults = await executeToolCallsInParallel(
         pendingToolCalls,
         executor,
-        gmailAccountId,
+        accountId,
       );
 
       totalToolCalls += toolResults.length;
@@ -392,19 +392,19 @@ export async function* searchAgent(
 async function executeToolCallsInParallel(
   toolCalls: Array<{ id: string; name: string; arguments: string }>,
   executor: SearchToolExecutor,
-  gmailAccountId: string,
+  accountId: string,
 ): Promise<ToolCallResult[]> {
   const promises = toolCalls.map(async (tc): Promise<ToolCallResult> => {
     try {
       const params = JSON.parse(tc.arguments) as Record<string, unknown>;
 
-      // Execute search with gmailAccountId injected by executor
+      // Execute search with accountId injected by executor
       if (tc.name === TOOL_NAMES.SEARCH_EMAILS) {
         const searchParams = params as z.infer<typeof searchEmailsParams>;
-        // Pass gmailAccountId separately - executor will handle it
+        // Pass accountId separately - executor will handle it
         const result = await executor.searchEmails({
           ...searchParams,
-          // Executor knows to use gmailAccountId from config
+          // Executor knows to use accountId from config
         });
         return { toolCallId: tc.id, toolName: tc.name, params, result };
       }

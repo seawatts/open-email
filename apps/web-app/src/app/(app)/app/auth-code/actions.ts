@@ -1,37 +1,43 @@
 'use server';
 
-import { auth, currentUser } from '@clerk/nextjs/server';
+import { auth } from '@seawatts/auth/server';
 import { db } from '@seawatts/db/client';
 import { AuthCodes } from '@seawatts/db/schema';
+import { headers } from 'next/headers';
 import { createSafeActionClient } from 'next-safe-action';
 
 // Create the action client
 const action = createSafeActionClient();
 
-export const createAuthCode = action.action(async () => {
-  const user = await auth();
+// Helper function to get session
+async function getSession() {
+  const session = await auth.api.getSession({
+    headers: await headers(),
+  });
+  return session;
+}
 
-  if (!user.userId) {
+export const createAuthCode = action.action(async () => {
+  const session = await getSession();
+
+  if (!session?.user?.id) {
     throw new Error('User not found');
   }
 
-  if (!user.orgId) {
+  if (!session.session?.activeOrganizationId) {
     throw new Error('Organization not found');
   }
 
-  const clerkUser = await currentUser();
-  if (!clerkUser) {
-    throw new Error('User details not found');
-  }
-
-  // Use the upsertOrg utility function (now handles user creation automatically)
+  const userId = session.user.id;
+  const orgId = session.session.activeOrganizationId;
+  const sessionId = session.session.id;
 
   // First check for an existing unused and non-expired auth code
   const existingAuthCode = await db.query.AuthCodes.findFirst({
     where: (authCode, { and, eq, isNull, gt }) =>
       and(
-        eq(authCode.userId, user.userId),
-        eq(authCode.orgId, user.orgId as string),
+        eq(authCode.userId, userId),
+        eq(authCode.organizationId, orgId),
         isNull(authCode.usedAt),
         gt(authCode.expiresAt, new Date()),
       ),
@@ -44,14 +50,14 @@ export const createAuthCode = action.action(async () => {
     };
   }
 
-  console.log('creating auth code', user.orgId, user.userId, user.sessionId);
+  console.log('creating auth code', orgId, userId, sessionId);
   // If no valid auth code exists, create a new one
   const [authCode] = await db
     .insert(AuthCodes)
     .values({
-      orgId: user.orgId,
-      sessionId: user.sessionId,
-      userId: user.userId,
+      organizationId: orgId,
+      sessionId,
+      userId,
     })
     .returning();
 

@@ -1,7 +1,6 @@
 {
   "dependencies": {
-    "@clerk/nextjs": "catalog:",
-    "@seawatts/analytics": "workspace:*",
+    "@seawatts/auth": "workspace:*",
     "@seawatts/db": "workspace:*",
     "@t3-oss/env-core": "catalog:",
     "drizzle-orm": "catalog:",
@@ -20,7 +19,7 @@
   },
   "exports": {
     ".": "./src/index.ts",
-    "./guards/client": "./src/guards/client.tsx",
+    "./guards/client": "./src/guards/client.ts",
     "./guards/server": "./src/guards/server.ts"
   },
   "license": "MIT",

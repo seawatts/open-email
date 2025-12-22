@@ -209,8 +209,7 @@ function FieldError({
       <ul className="ml-4 flex list-disc flex-col gap-1">
         {errors.map(
           (error, index) =>
-            // biome-ignore lint/suspicious/noArrayIndexKey: shadcn/ui component pattern for error display
-            error?.message && <li key={index}>{error.message}</li>,
+            error?.message && <li key={`error-${index}`}>{error.message}</li>,
         )}
       </ul>
     );

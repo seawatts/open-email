@@ -11,7 +11,7 @@ import {
 import { createId } from '@seawatts/id';
 import { betterAuth } from 'better-auth';
 import { drizzleAdapter } from 'better-auth/adapters/drizzle';
-import { organization } from 'better-auth/plugins';
+import { lastLoginMethod, organization } from 'better-auth/plugins';
 
 import { env } from './env';
 
@@ -50,6 +50,9 @@ export const auth = betterAuth({
   emailAndPassword: {
     enabled: false, // Only using Google OAuth
   },
+  experimental: {
+    joins: true,
+  },
 
   plugins: [
     organization({
@@ -69,6 +72,9 @@ export const auth = betterAuth({
         );
       },
     }),
+    lastLoginMethod({
+      storeInDatabase: true,
+    }),
   ],
 
   secret: env.BETTER_AUTH_SECRET,
@@ -84,8 +90,25 @@ export const auth = betterAuth({
 
   socialProviders: {
     google: {
+      accessType: 'offline',
       clientId: env.GOOGLE_CLIENT_ID,
       clientSecret: env.GOOGLE_CLIENT_SECRET,
+      prompt: 'consent',
+      scope: [
+        // User identity (included by default but explicit for clarity)
+        'openid',
+        'email',
+        'profile',
+        // Gmail API
+        'https://www.googleapis.com/auth/gmail.readonly',
+        'https://www.googleapis.com/auth/gmail.send',
+        'https://www.googleapis.com/auth/gmail.modify',
+        'https://www.googleapis.com/auth/gmail.labels',
+        // Calendar API
+        'https://www.googleapis.com/auth/calendar.events',
+        // Pub/Sub (for real-time notifications setup)
+        'https://www.googleapis.com/auth/pubsub',
+      ],
     },
   },
 

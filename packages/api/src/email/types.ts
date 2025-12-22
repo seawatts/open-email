@@ -139,7 +139,7 @@ export const createRuleSchema = z.object({
 
 export const syncRequestSchema = z.object({
   fullSync: z.boolean().default(false),
-  gmailAccountId: z.string(),
+  gmailAccountId: z.string().optional(), // Deprecated, use accountId
 });
 
 export const toneProfileSchema = z.object({

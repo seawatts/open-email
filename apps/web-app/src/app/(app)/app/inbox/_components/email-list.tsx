@@ -1,9 +1,10 @@
 'use client';
 
-import { api } from '@seawatts/api/react';
+import { useTRPC } from '@seawatts/api/react';
 import { Button } from '@seawatts/ui/button';
 import { Input } from '@seawatts/ui/input';
 import { Skeleton } from '@seawatts/ui/skeleton';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   Archive,
   CheckCircle2,
@@ -32,20 +33,13 @@ import { KeyboardShortcutsDialog } from './keyboard-shortcuts-dialog';
 import { SwipeableEmailRow } from './swipeable-email-row';
 import { useKeyboardShortcuts, useKeySequence } from './use-keyboard-shortcuts';
 
-type EmailCategory =
-  | 'urgent'
-  | 'needs_reply'
-  | 'awaiting_other'
-  | 'fyi'
-  | 'spam_like';
-
 type FilterMode = 'all' | 'action_needed' | 'waiting' | 'done';
 
 interface EmailListProps {
-  gmailAccountId: string;
+  accountId: string;
 }
 
-export function EmailList({ gmailAccountId }: EmailListProps) {
+export function EmailList({ accountId }: EmailListProps) {
   const router = useRouter();
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [focusedIndex, setFocusedIndex] = useState(0);
@@ -55,7 +49,7 @@ export function EmailList({ gmailAccountId }: EmailListProps) {
   const [optimisticallyRemovedIds, setOptimisticallyRemovedIds] = useState<
     Set<string>
   >(new Set());
-  const [isPending, startTransition] = useTransition();
+  const [, startTransition] = useTransition();
 
   // Keyboard shortcuts state
   const [showShortcutsDialog, setShowShortcutsDialog] = useState(false);
@@ -64,28 +58,33 @@ export function EmailList({ gmailAccountId }: EmailListProps) {
   >([]);
   const searchInputRef = useRef<HTMLInputElement>(null);
 
-  const utils = api.useUtils();
+  const trpc = useTRPC();
+  const queryClient = useQueryClient();
 
-  const { data: threads, isLoading } = api.email.threads.list.useQuery({
-    gmailAccountId,
-    limit: 50,
-  });
+  const { data: threads, isLoading } = useQuery(
+    trpc.email.threads.list.queryOptions({
+      accountId,
+      limit: 50,
+    }),
+  );
 
   // Optimistic mutation for creating actions
-  const createAction = api.email.actions.create.useMutation({
-    onError: (_err, variables) => {
-      // Rollback: remove from optimistically removed set
-      setOptimisticallyRemovedIds((prev) => {
-        const next = new Set(prev);
-        next.delete(variables.threadId);
-        return next;
-      });
-    },
-    onSettled: () => {
-      // Always refetch to ensure consistency
-      utils.email.threads.list.invalidate();
-    },
-  });
+  const createAction = useMutation(
+    trpc.email.actions.create.mutationOptions({
+      onError: (_err, variables) => {
+        // Rollback: remove from optimistically removed set
+        setOptimisticallyRemovedIds((prev) => {
+          const next = new Set(prev);
+          next.delete(variables.threadId);
+          return next;
+        });
+      },
+      onSettled: () => {
+        // Always refetch to ensure consistency
+        queryClient.invalidateQueries(trpc.email.threads.list.queryFilter());
+      },
+    }),
+  );
 
   // Filter threads (excluding optimistically removed ones)
   const filteredThreads = useMemo(() => {
@@ -494,7 +493,8 @@ export function EmailList({ gmailAccountId }: EmailListProps) {
       {
         category: 'view',
         description: 'Refresh',
-        handler: () => utils.email.threads.list.invalidate(),
+        handler: () =>
+          queryClient.invalidateQueries(trpc.email.threads.list.queryFilter()),
         key: 'r',
         shift: true,
       },

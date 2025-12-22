@@ -21,7 +21,7 @@ export async function executeAction(action: EmailActionType): Promise<void> {
     throw new Error(`Thread not found: ${action.threadId}`);
   }
 
-  const gmail = await getGmailClient(thread.gmailAccountId);
+  const gmail = await getGmailClient(thread.accountId);
 
   log(
     'Executing action %s of type %s for thread %s',
@@ -224,10 +224,12 @@ export async function getGmailLabels(
   const response = await gmail.users.labels.list({ userId: 'me' });
 
   return (response.data.labels ?? [])
-    .filter((label) => label.id && label.name)
+    .filter((label): label is { id: string; name: string } =>
+      Boolean(label.id && label.name),
+    )
     .map((label) => ({
-      id: label.id!,
-      name: label.name!,
+      id: label.id,
+      name: label.name,
     }));
 }
 
@@ -248,8 +250,12 @@ export async function createGmailLabel(
     userId: 'me',
   });
 
+  if (!response.data.id || !response.data.name) {
+    throw new Error('Gmail API returned label without id or name');
+  }
+
   return {
-    id: response.data.id!,
-    name: response.data.name!,
+    id: response.data.id,
+    name: response.data.name,
   };
 }

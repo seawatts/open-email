@@ -1,6 +1,6 @@
 'use client';
 
-import { useOrganization } from '@clerk/nextjs';
+import { useActiveOrganization } from '@seawatts/auth/client';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -31,7 +31,7 @@ export function RemoveMemberDialog({
   isRemoving,
   memberToRemove,
 }: RemoveMemberDialogProps) {
-  const { organization: activeOrg } = useOrganization();
+  const { data: activeOrg } = useActiveOrganization();
 
   return (
     <AlertDialog onOpenChange={onClose} open={isOpen}>

@@ -1,6 +1,6 @@
 'use client';
 
-import { SignOutButton, useUser } from '@clerk/nextjs';
+import { signOut, useSession } from '@seawatts/auth/client';
 import { Icons } from '@seawatts/ui/custom/icons';
 import {
   DropdownMenu,
@@ -24,17 +24,20 @@ import {
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useTheme } from 'next-themes';
-export function UserDropdownMenu() {
-  const { setTheme } = useTheme();
-  const router = useRouter();
-  const { user } = useUser();
-  const { theme } = useTheme();
 
-  // const organizations = user?.getOrgs();
+export function UserDropdownMenu() {
+  const { setTheme, theme } = useTheme();
+  const router = useRouter();
+  const { data: session } = useSession();
+  const user = session?.user;
 
   const _handleOrgChange = async (_orgId: string) => {
-    // await setActiveOrg(orgId);
     router.refresh();
+  };
+
+  const handleSignOut = async () => {
+    await signOut();
+    router.push('/');
   };
 
   return (
@@ -60,13 +63,12 @@ export function UserDropdownMenu() {
             <div className="flex items-center gap-2">
               <Icons.User className="size-4 text-muted-foreground" />
               <span className="font-medium">
-                {user?.firstName ||
-                  user?.primaryEmailAddress?.emailAddress?.split('@')[0]}
+                {user?.name || user?.email?.split('@')[0]}
               </span>
             </div>
             <div className="flex items-center gap-2 pl-6">
               <span className="text-xs text-muted-foreground">
-                {user?.primaryEmailAddress?.emailAddress}
+                {user?.email}
               </span>
             </div>
           </div>
@@ -98,11 +100,9 @@ export function UserDropdownMenu() {
           <Icons.DollarSign className="mr-1 size-4" />
           <span>Billing</span>
         </DropdownMenuItem>
-        <DropdownMenuItem asChild>
-          <SignOutButton>
-            <ArrowLeftFromLine className="mr-1 size-4" />
-            <span>Sign out</span>
-          </SignOutButton>
+        <DropdownMenuItem onClick={handleSignOut}>
+          <ArrowLeftFromLine className="mr-1 size-4" />
+          <span>Sign out</span>
         </DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuSub>
@@ -113,17 +113,6 @@ export function UserDropdownMenu() {
             </span>
           </DropdownMenuSubTrigger>
           <DropdownMenuSubContent>
-            {/* {organizations?.map((org) => (
-              <DropdownMenuItem
-                key={org.orgId}
-                onClick={() => handleOrgChange(org.orgId)}
-              >
-                <span>{org.orgName}</span>
-                {org.orgId === user?.getActiveOrg()?.orgId && (
-                  <Icons.Check className="ml-auto size-4" />
-                )}
-              </DropdownMenuItem>
-            ))} */}
             <DropdownMenuSeparator />
             <DropdownMenuItem>
               <Icons.Settings className="mr-1 size-4" />

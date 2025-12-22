@@ -1,8 +1,8 @@
 'use client';
 
-import { useOrganization, useOrganizationList, useUser } from '@clerk/nextjs';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { api } from '@seawatts/api/react';
+import { useTRPC } from '@seawatts/api/react';
+import { useActiveOrganization, useSession } from '@seawatts/auth/client';
 import {
   Card,
   CardContent,
@@ -24,11 +24,12 @@ import { Input } from '@seawatts/ui/components/input';
 import { Icons } from '@seawatts/ui/custom/icons';
 import { cn } from '@seawatts/ui/lib/utils';
 import { toast } from '@seawatts/ui/sonner';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
-import { env } from '~/env.client';
+import { env } from '~/env';
 
 // Constants
 const VALIDATION_REGEX = /^[a-z0-9-_]+$/;
@@ -188,11 +189,12 @@ export function OnboardingForm({
   redirectTo,
   source,
 }: OnboardingFormProps) {
+  const api = useTRPC();
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const { organization } = useOrganization();
-  const { setActive } = useOrganizationList({ userMemberships: true });
-  const { user } = useUser();
+  const { data: activeOrg } = useActiveOrganization();
+  const { data: session } = useSession();
+  const user = session?.user;
 
   const form = useForm<OnboardingFormData>({
     defaultValues: {
@@ -208,7 +210,7 @@ export function OnboardingForm({
   const webhookName = watch('webhookName');
 
   // Use tRPC utils for API calls
-  const apiUtils = api.useUtils();
+  const queryClient = useQueryClient();
 
   // Validation hooks
   const orgNameValidation = useNameValidation(
@@ -216,23 +218,17 @@ export function OnboardingForm({
     3,
     useCallback(
       (name) =>
-        apiUtils.org.checkNameAvailability.fetch({
-          excludeOrgId: organization?.id,
-          name,
-        }),
-      [apiUtils.org.checkNameAvailability, organization?.id],
+        queryClient.fetchQuery(
+          api.org.checkNameAvailability.queryOptions({
+            excludeOrgId: activeOrg?.id,
+            name,
+          }),
+        ),
+      [api, activeOrg?.id, queryClient],
     ),
   );
 
   // TODO: Re-enable when webhooks are re-implemented
-  // const webhookNameValidation = useNameValidation(
-  //   webhookName,
-  //   1,
-  //   useCallback(
-  //     (name) => apiUtils.webhooks.checkAvailability.fetch({ name }),
-  //     [apiUtils.webhooks.checkAvailability],
-  //   ),
-  // );
   const webhookNameValidation = {
     available: true,
     checking: false,
@@ -241,20 +237,18 @@ export function OnboardingForm({
 
   // Live URL preview
   const webhookUrl = (() => {
-    // For local development, use NEXT_PUBLIC_API_URL (localhost:3000)
-    // For production, use NEXT_PUBLIC_WEBHOOK_BASE_URL or fallback to seawatts.sh
     const baseUrl =
       env.NEXT_PUBLIC_WEBHOOK_BASE_URL ||
-      env.NEXT_PUBLIC_API_URL ||
+      env.NEXT_PUBLIC_APP_URL ||
       'https://seawatts.sh';
     if (!orgName) return `${baseUrl}/{org-name}/{webhook-name}`;
     if (!webhookName) return `${baseUrl}/${orgName}/{webhook-name}`;
     return `${baseUrl}/${orgName}/${webhookName}`;
   })();
 
-  // TODO: Re-enable when webhooks are re-implemented
-  // const { mutateAsync: createWebhook } = api.webhooks.create.useMutation();
-  const { mutateAsync: createOrganization } = api.org.upsert.useMutation();
+  const { mutateAsync: createOrganization } = useMutation(
+    api.org.upsert.mutationOptions(),
+  );
 
   const handleSubmit = async (data: OnboardingFormData) => {
     if (!user) {
@@ -277,33 +271,16 @@ export function OnboardingForm({
 
     try {
       // Check if user already has an organization to prevent duplicate creation
-      // This prevents the issue where users would end up with multiple Stripe customers
-      // by checking for existing organizations before attempting to create new ones
-      // The createOrg function also has additional duplicate prevention logic
-      if (organization) {
+      if (activeOrg) {
         console.log(
           'User already has an organization, preventing duplicate creation:',
           {
-            existingOrgId: organization.id,
-            existingOrgName: organization.name,
+            existingOrgId: activeOrg.id,
+            existingOrgName: activeOrg.name,
             requestedOrgName: data.orgName,
             userId: user.id,
           },
         );
-
-        // Update existing organization name if it's different
-        if (organization.name !== data.orgName) {
-          try {
-            await organization.update({
-              name: data.orgName,
-            });
-            console.log('Organization name updated in Clerk successfully');
-            await organization.reload();
-          } catch (error) {
-            console.error('Failed to update organization in Clerk:', error);
-            // Continue with the flow even if Clerk update fails
-          }
-        }
 
         // Redirect to webhook creation since organization already exists
         router.push(`/app/webhooks/create?orgName=${data.orgName}`);
@@ -312,7 +289,7 @@ export function OnboardingForm({
 
       console.log('Creating new organization for user:', {
         orgName: data.orgName,
-        userEmail: user.emailAddresses?.[0]?.emailAddress,
+        userEmail: user.email,
         userId: user.id,
       });
 
@@ -332,40 +309,12 @@ export function OnboardingForm({
         stripeCustomerId: orgResult.org.stripeCustomerId,
       });
 
-      if (setActive) {
-        await setActive({ organization: orgResult.org.id });
-      }
-
-      // TODO: Re-enable when webhooks are re-implemented
-      // Create webhook with custom ID using the API key from the created organization
-      // const webhook = await createWebhook({
-      //   apiKeyId: orgResult.apiKey?.id,
-      //   config: {
-      //     headers: {},
-      //     requests: {},
-      //     storage: {
-      //       maxRequestBodySize: 1024 * 1024,
-      //       maxResponseBodySize: 1024 * 1024,
-      //       storeHeaders: true,
-      //       storeRequestBody: true,
-      //       storeResponseBody: true,
-      //     },
-      //   },
-      //   id: data.webhookName,
-      //   name: data.webhookName,
-      //   orgId: orgResult.org.id,
-      //   status: 'active',
-      // });
-
-      // if (!webhook) {
-      //   throw new Error('Failed to create webhook');
-      // }
-
-      // console.log('Custom webhook created:', {
-      //   orgId: orgResult.org.id,
-      //   webhookId: webhook.id,
-      //   webhookName: webhook.name,
-      // });
+      // Set the new organization as active via Better Auth
+      await fetch('/api/auth/organization/set-active', {
+        body: JSON.stringify({ organizationId: orgResult.org.id }),
+        headers: { 'Content-Type': 'application/json' },
+        method: 'POST',
+      });
 
       toast.success('Setup complete!', {
         description:

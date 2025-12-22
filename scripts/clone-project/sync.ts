@@ -320,9 +320,7 @@ export async function fetchServiceSecrets(
 /**
  * Fetch existing secrets from Infisical project
  */
-async function fetchExistingInfisicalSecrets(
-  projectId: string,
-): Promise<{
+async function fetchExistingInfisicalSecrets(projectId: string): Promise<{
   secrets: SecretInfo[];
   byEnv: Record<Environment, Record<string, string>>;
 }> {
@@ -369,11 +367,6 @@ export async function syncSecretsToInfisical(
   // Step 1: Fetch existing secrets from Infisical first
   // This allows us to skip prompting for credentials that already exist
   let existingSecrets: SecretInfo[] = [];
-  let existingByEnv: Record<Environment, Record<string, string>> = {
-    dev: {},
-    prod: {},
-    staging: {},
-  };
 
   try {
     const existing = await withSpinner(
@@ -382,7 +375,6 @@ export async function syncSecretsToInfisical(
       'Fetched existing secrets',
     );
     existingSecrets = existing.secrets;
-    existingByEnv = existing.byEnv;
     p.log.success(
       `Found ${existingSecrets.length} existing secrets in Infisical`,
     );

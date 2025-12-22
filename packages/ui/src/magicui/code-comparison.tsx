@@ -99,7 +99,6 @@ export function CodeComparison({
             'group-hover/left:[&>pre>code>:not(.focused)]:transition-all group-hover/left:[&>pre>code>:not(.focused)]:duration-300',
             'group-hover/right:[&>pre>code>:not(.focused)]:transition-all group-hover/right:[&>pre>code>:not(.focused)]:duration-300',
           )}
-          // biome-ignore lint/security/noDangerouslySetInnerHtml: ok
           dangerouslySetInnerHTML={{ __html: highlighted }}
           style={{ '--highlight-color': highlightColor } as React.CSSProperties}
         />

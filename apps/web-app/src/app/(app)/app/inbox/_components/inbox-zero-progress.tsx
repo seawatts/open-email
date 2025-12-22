@@ -29,7 +29,13 @@ export function InboxZeroProgress({
     <div className={cn('flex items-center gap-4', className)}>
       {/* Progress ring */}
       <div className="relative h-14 w-14 flex-shrink-0">
-        <svg className="h-14 w-14 -rotate-90 transform" viewBox="0 0 56 56">
+        <svg
+          aria-label={`Progress: ${percentage}%`}
+          className="h-14 w-14 -rotate-90 transform"
+          role="img"
+          viewBox="0 0 56 56"
+        >
+          <title>Progress indicator</title>
           <circle
             className="text-secondary"
             cx="28"

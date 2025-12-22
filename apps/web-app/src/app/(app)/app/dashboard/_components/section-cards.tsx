@@ -1,6 +1,6 @@
 'use client';
 
-import { api } from '@seawatts/api/react';
+import { useTRPC } from '@seawatts/api/react';
 import {
   Card,
   CardDescription,
@@ -10,21 +10,23 @@ import {
 } from '@seawatts/ui/card';
 import { CopyButton } from '@seawatts/ui/custom/copy-button';
 import { Skeleton } from '@seawatts/ui/skeleton';
-import { env } from '~/env.client';
+import { useQuery } from '@tanstack/react-query';
+import { env } from '~/env';
 import { maskApiKey } from '~/lib/mask-api-key';
 
 export function SectionCards() {
-  const apiKeys = api.apiKeys.allWithLastUsage.useQuery();
+  const api = useTRPC();
+  const apiKeys = useQuery(api.apiKeys.allWithLastUsage.queryOptions());
   // TODO: Re-enable when webhooks are re-implemented
   // const webhooks = api.webhooks.all.useQuery();
-  const org = api.org.current.useQuery();
+  const org = useQuery(api.org.current.queryOptions());
 
   // TODO: Re-enable when webhooks are re-implemented
   // const webhook = webhooks.data?.[0];
   const webhook: { id: string; name: string } | null = null;
   const apiKey = apiKeys.data?.[0];
   const maskedApiKey = apiKey ? maskApiKey(apiKey.key) : '';
-  const webhookUrl = `${env.NEXT_PUBLIC_WEBHOOK_BASE_URL || env.NEXT_PUBLIC_API_URL || 'https://seawatts.sh'}/${org.data?.name}/webhook-name`;
+  const webhookUrl = `${env.NEXT_PUBLIC_WEBHOOK_BASE_URL || env.NEXT_PUBLIC_APP_URL || 'https://seawatts.sh'}/${org.data?.name}/webhook-name`;
   const webhookConfigComments = `
 # seawatts Webhook Configuration
 # For more information, visit: https://docs.seawatts.sh/configuration

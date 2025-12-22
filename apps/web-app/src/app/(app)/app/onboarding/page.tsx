@@ -1,6 +1,9 @@
-import { auth } from '@clerk/nextjs/server';
+import { auth } from '@seawatts/auth/server';
+import { headers } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { OnboardingForm } from './_components/onboarding-form';
+
+export const dynamic = 'force-dynamic';
 
 export default async function Page(props: {
   searchParams: Promise<{
@@ -10,14 +13,16 @@ export default async function Page(props: {
   }>;
 }) {
   const searchParams = await props.searchParams;
-  const { orgId, userId } = await auth();
+  const session = await auth.api.getSession({
+    headers: await headers(),
+  });
 
-  if (!userId) {
-    return redirect('/');
+  if (!session?.user?.id) {
+    return redirect('/sign-in');
   }
 
   // If user already has an organization, redirect to dashboard
-  if (orgId) {
+  if (session.session?.activeOrganizationId) {
     return redirect('/app/dashboard');
   }
 

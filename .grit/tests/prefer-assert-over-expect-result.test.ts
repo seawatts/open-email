@@ -3,30 +3,30 @@
 
 // Mock functions (matching the pattern the rule looks for)
 function isErr(result: unknown): result is {
-  error: unknown;
+	error: unknown;
 } {
-  return typeof result === 'object' && result !== null && 'error' in result;
+	return typeof result === "object" && result !== null && "error" in result;
 }
 
 function isOk(result: unknown): result is {
-  data: unknown;
+	data: unknown;
 } {
-  return typeof result === 'object' && result !== null && 'data' in result;
+	return typeof result === "object" && result !== null && "data" in result;
 }
 
 // Mock expect function that returns object with toBe method
 declare const expect: (value: boolean) => {
-  toBe: (expected: boolean) => boolean;
+	toBe: (expected: boolean) => boolean;
 };
 
 // ✅ Should trigger: expect(isErr(result)).toBe(true)
 const result: unknown = {
-  error: 'test',
+	error: "test",
 };
 expect(isErr(result)).toBe(true);
 
 // ✅ Should trigger: expect(isOk(result)).toBe(true)
 const okResult: unknown = {
-  data: 'test',
+	data: "test",
 };
 expect(isOk(okResult)).toBe(true);

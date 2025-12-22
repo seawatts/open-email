@@ -1,22 +1,29 @@
 'use client';
 
-import { useUser } from '@clerk/nextjs';
+import type { SupabaseClient } from '@supabase/supabase-js';
 import { useEffect } from 'react';
 
-import { useClient } from '../client';
 import { usePresenceStore } from './store-provider';
 
-export function Presence(props: { id: string }) {
-  const setOnlineUsers = usePresenceStore((store) => store.setOnlineUsers);
-  const { user } = useUser();
+export interface PresenceUser {
+  id: string;
+}
 
-  const supabase = useClient();
+export interface PresenceProps {
+  id: string;
+  user: PresenceUser | null | undefined;
+  supabaseClient: SupabaseClient;
+}
+
+export function Presence(props: PresenceProps) {
+  const setOnlineUsers = usePresenceStore((store) => store.setOnlineUsers);
+  const { user, supabaseClient: supabase, id } = props;
 
   useEffect(() => {
-    if (!user || !props.id) return;
+    if (!user || !id) return;
 
     const readingChannel = supabase
-      .channel(`presence:${props.id}`, {
+      .channel(`presence:${id}`, {
         config: {
           presence: {
             key: user.id,
@@ -45,6 +52,6 @@ export function Presence(props: { id: string }) {
     return () => {
       void supabase.removeChannel(readingChannel);
     };
-  }, [user, props.id, setOnlineUsers, supabase]);
+  }, [user, id, setOnlineUsers, supabase]);
   return null;
 }

@@ -1,20 +1,33 @@
-import { auth } from '@clerk/nextjs/server';
 import { createServerClient } from '@supabase/ssr';
 import type { NextRequest } from 'next/server';
 import { NextResponse } from 'next/server';
-import { env } from '../env.client';
+import { env } from '../env';
 
-export async function updateSession(request: NextRequest) {
+export interface SessionInfo {
+  token?: string | null;
+}
+
+export type GetSessionFn = (
+  request: NextRequest,
+) => Promise<SessionInfo | null>;
+
+export async function updateSession(
+  request: NextRequest,
+  getSession: GetSessionFn,
+) {
   let supabaseResponse = NextResponse.next({
     request,
   });
+
+  // Get session from provided function
+  const session = await getSession(request);
 
   const supabase = createServerClient(
     env.NEXT_PUBLIC_SUPABASE_URL,
     env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
     {
       async accessToken() {
-        return (await auth()).getToken();
+        return session?.token ?? null;
       },
       cookies: {
         getAll() {

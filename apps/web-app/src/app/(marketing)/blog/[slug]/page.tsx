@@ -64,7 +64,6 @@ export default async function Blog({
   return (
     <section id="blog">
       <script
-        // biome-ignore lint/security/noDangerouslySetInnerHtml: safe JSON-LD structured data
         dangerouslySetInnerHTML={{
           __html: JSON.stringify({
             '@context': 'https://schema.org',
@@ -130,7 +129,6 @@ export default async function Blog({
         </div>
         <article
           className="prose prose-lg dark:prose-invert mx-auto max-w-full prose-headings:font-semibold prose-a:text-primary hover:prose-a:text-primary/80 prose-img:rounded-lg prose-img:border prose-img:shadow-md"
-          // biome-ignore lint/security/noDangerouslySetInnerHtml: safe HTML content from processed markdown
           dangerouslySetInnerHTML={{ __html: post.source }}
         />
       </div>

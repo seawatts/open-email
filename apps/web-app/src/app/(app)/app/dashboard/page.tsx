@@ -1,13 +1,25 @@
+import { getQueryClient, HydrationBoundary, trpc } from '@seawatts/api/server';
 import { ChartAreaInteractive } from './_components/chart-area-interactive';
 import { RecentEventsTable } from './_components/recent-events-table';
 import { SectionCards } from './_components/section-cards';
 
-export default function Page() {
+// Dynamic because tRPC queries require authenticated session context
+export const dynamic = 'force-dynamic';
+
+export default async function Page() {
+  const queryClient = getQueryClient();
+
+  // Prefetch data for the dashboard components
+  void queryClient.prefetchQuery(trpc.apiKeys.allWithLastUsage.queryOptions());
+  void queryClient.prefetchQuery(trpc.org.current.queryOptions());
+
   return (
-    <div className="flex flex-col gap-4 md:gap-6">
-      <SectionCards />
-      <ChartAreaInteractive />
-      <RecentEventsTable />
-    </div>
+    <HydrationBoundary>
+      <div className="flex flex-col gap-4 md:gap-6">
+        <SectionCards />
+        <ChartAreaInteractive />
+        <RecentEventsTable />
+      </div>
+    </HydrationBoundary>
   );
 }

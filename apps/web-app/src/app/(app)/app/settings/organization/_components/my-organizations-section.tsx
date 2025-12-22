@@ -1,7 +1,10 @@
 'use client';
 
-import { useOrganization, useOrganizationList } from '@clerk/nextjs';
 import { MetricButton } from '@seawatts/analytics/components';
+import {
+  useActiveOrganization,
+  useListOrganizations,
+} from '@seawatts/auth/client';
 import { Badge } from '@seawatts/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@seawatts/ui/card';
 import { Skeleton } from '@seawatts/ui/skeleton';
@@ -11,13 +14,8 @@ import { leaveOrganizationAction } from '../actions';
 import { LeaveOrganizationDialog } from './leave-organization-dialog';
 
 export function MyOrganizationsSection() {
-  const { organization: activeOrg } = useOrganization();
-  const { userMemberships } = useOrganizationList({
-    userMemberships: true,
-  });
-
-  // Get all organizations the user belongs to
-  const organizations = userMemberships?.data || [];
+  const { data: activeOrg } = useActiveOrganization();
+  const { data: organizations, isPending: loading } = useListOrganizations();
 
   // State for leave organization dialog
   const [isLeaveDialogOpen, setIsLeaveDialogOpen] = useState(false);
@@ -45,11 +43,9 @@ export function MyOrganizationsSection() {
         setIsLeaveDialogOpen(false);
         setTargetOrganization(null);
       } else if (result?.serverError) {
-        // Error handling is done in the dialog component
         console.error('Failed to leave organization:', result.serverError);
       }
     } catch (error) {
-      // Error handling is done in the dialog component
       console.error('Failed to leave organization:', error);
     }
   };
@@ -58,7 +54,6 @@ export function MyOrganizationsSection() {
     setTargetOrganization(organization);
     setIsLeaveDialogOpen(true);
   };
-  const loading = userMemberships.isLoading;
 
   return (
     <>
@@ -83,35 +78,21 @@ export function MyOrganizationsSection() {
             </div>
           ) : (
             <div className="space-y-4">
-              {organizations.map((membership) => (
-                <div
-                  className="flex items-center justify-between"
-                  key={membership.organization.id}
-                >
+              {organizations?.map((org) => (
+                <div className="flex items-center justify-between" key={org.id}>
                   <div className="flex items-center gap-3 border-l-2 border-secondary">
-                    <span className="text-sm pl-2">
-                      {membership.organization.name}
-                    </span>
-                    {membership.organization.id === activeOrg?.id && (
+                    <span className="text-sm pl-2">{org.name}</span>
+                    {org.id === activeOrg?.id && (
                       <Badge variant="secondary">Current</Badge>
                     )}
                   </div>
                   <div className="flex items-center gap-2">
-                    <Badge variant="outline">
-                      {(() => {
-                        const rolePart = membership.role.split(':')[1];
-                        return (
-                          (rolePart || 'member').charAt(0).toUpperCase() +
-                          (rolePart || 'member').slice(1)
-                        );
-                      })()}
-                    </Badge>
                     <MetricButton
                       metric="my_organizations_leave_clicked"
                       onClick={() =>
                         openLeaveDialog({
-                          id: membership.organization.id,
-                          name: membership.organization.name,
+                          id: org.id,
+                          name: org.name,
                         })
                       }
                       size="sm"

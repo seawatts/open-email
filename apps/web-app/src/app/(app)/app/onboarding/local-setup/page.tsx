@@ -1,6 +1,9 @@
-import { auth } from '@clerk/nextjs/server';
+import { auth } from '@seawatts/auth/server';
+import { headers } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { LocalDevelopmentSetup } from './_components/local-development-setup';
+
+export const dynamic = 'force-dynamic';
 
 export default async function LocalSetupPage(props: {
   searchParams: Promise<{
@@ -11,10 +14,12 @@ export default async function LocalSetupPage(props: {
   }>;
 }) {
   const searchParams = await props.searchParams;
-  const { userId } = await auth();
+  const session = await auth.api.getSession({
+    headers: await headers(),
+  });
 
-  if (!userId) {
-    return redirect('/');
+  if (!session?.user?.id) {
+    return redirect('/sign-in');
   }
 
   const { orgName, webhookName, redirectTo, source } = searchParams;

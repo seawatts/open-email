@@ -10,7 +10,7 @@ export const apiKeyUsageRouter = createTRPCRouter({
     const apiKeyUsage = await ctx.db
       .select()
       .from(ApiKeyUsage)
-      .where(eq(ApiKeyUsage.orgId, ctx.auth.orgId))
+      .where(eq(ApiKeyUsage.organizationId, ctx.auth.orgId))
       .orderBy(desc(ApiKeyUsage.createdAt));
 
     return apiKeyUsage;
@@ -27,7 +27,7 @@ export const apiKeyUsageRouter = createTRPCRouter({
         .where(
           and(
             eq(ApiKeyUsage.apiKeyId, input.apiKeyId),
-            eq(ApiKeyUsage.orgId, ctx.auth.orgId),
+            eq(ApiKeyUsage.organizationId, ctx.auth.orgId),
           ),
         )
         .orderBy(desc(ApiKeyUsage.createdAt));
@@ -43,7 +43,7 @@ export const apiKeyUsageRouter = createTRPCRouter({
       const usage = await ctx.db.query.ApiKeyUsage.findFirst({
         where: and(
           eq(ApiKeyUsage.id, input.id),
-          eq(ApiKeyUsage.orgId, ctx.auth.orgId),
+          eq(ApiKeyUsage.organizationId, ctx.auth.orgId),
         ),
       });
 
@@ -67,7 +67,7 @@ export const apiKeyUsageRouter = createTRPCRouter({
         .where(
           and(
             eq(ApiKeyUsage.type, input.type),
-            eq(ApiKeyUsage.orgId, ctx.auth.orgId),
+            eq(ApiKeyUsage.organizationId, ctx.auth.orgId),
           ),
         )
         .orderBy(desc(ApiKeyUsage.createdAt));
@@ -86,7 +86,7 @@ export const apiKeyUsageRouter = createTRPCRouter({
           .insert(ApiKeyUsage)
           .values({
             ...input,
-            orgId: ctx.auth.orgId,
+            organizationId: ctx.auth.orgId,
             userId: ctx.auth.userId,
           })
           .returning();
@@ -108,7 +108,7 @@ export const apiKeyUsageRouter = createTRPCRouter({
         .where(
           and(
             eq(ApiKeyUsage.id, input.id),
-            eq(ApiKeyUsage.orgId, ctx.auth.orgId),
+            eq(ApiKeyUsage.organizationId, ctx.auth.orgId),
           ),
         )
         .returning();
@@ -130,7 +130,7 @@ export const apiKeyUsageRouter = createTRPCRouter({
 
       const { limit, apiKeyId, type } = input;
 
-      const conditions = [eq(ApiKeyUsage.orgId, ctx.auth.orgId)];
+      const conditions = [eq(ApiKeyUsage.organizationId, ctx.auth.orgId)];
 
       if (apiKeyId) {
         conditions.push(eq(ApiKeyUsage.apiKeyId, apiKeyId));
@@ -167,7 +167,7 @@ export const apiKeyUsageRouter = createTRPCRouter({
       startDate.setDate(startDate.getDate() - days);
 
       const conditions = [
-        eq(ApiKeyUsage.orgId, ctx.auth.orgId),
+        eq(ApiKeyUsage.organizationId, ctx.auth.orgId),
         sql`${ApiKeyUsage.createdAt} >= ${startDate}`,
       ];
 

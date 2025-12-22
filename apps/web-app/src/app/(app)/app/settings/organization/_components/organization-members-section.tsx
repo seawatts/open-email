@@ -1,7 +1,8 @@
 'use client';
 
-import { useOrganization, useUser } from '@clerk/nextjs';
 import { MetricButton } from '@seawatts/analytics/components';
+import { useTRPC } from '@seawatts/api/react';
+import { useActiveOrganization, useSession } from '@seawatts/auth/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@seawatts/ui/card';
 import {
   Select,
@@ -12,16 +13,22 @@ import {
 } from '@seawatts/ui/select';
 import { Skeleton } from '@seawatts/ui/skeleton';
 import { toast } from '@seawatts/ui/sonner';
+import { useQuery } from '@tanstack/react-query';
 import { useAction } from 'next-safe-action/hooks';
 import { useState } from 'react';
 import { removeMemberAction, updateMemberRoleAction } from '../actions';
 import { RemoveMemberDialog } from './remove-member-dialog';
 
 export function OrganizationMembersSection() {
-  const { user } = useUser();
-  const { memberships } = useOrganization({
-    memberships: true,
-  });
+  const api = useTRPC();
+  const { data: session } = useSession();
+  const user = session?.user;
+  const { data: activeOrg } = useActiveOrganization();
+
+  // Fetch members using orgMembers router
+  const { data: members, isLoading: loading } = useQuery(
+    api.orgMembers.all.queryOptions(undefined, { enabled: !!activeOrg?.id }),
+  );
 
   // State for remove member dialog
   const [isRemoveMemberDialogOpen, setIsRemoveMemberDialogOpen] =
@@ -70,7 +77,7 @@ export function OrganizationMembersSection() {
 
   const handleUpdateMemberRole = async (
     memberId: string,
-    newRole: 'admin' | 'user',
+    newRole: 'admin' | 'owner' | 'member',
   ) => {
     try {
       const result = await executeUpdateMemberRole({
@@ -95,24 +102,18 @@ export function OrganizationMembersSection() {
 
   const openRemoveMemberDialog = (member: {
     id: string;
-    publicUserData?: {
-      firstName?: string | null;
-      lastName?: string | null;
-      identifier?: string | null;
-    } | null;
+    user: {
+      name?: string | null;
+      email?: string | null;
+    };
   }) => {
     setMemberToRemove({
-      email: member.publicUserData?.identifier || 'Unknown',
+      email: member.user.email || 'Unknown',
       id: member.id,
-      name:
-        `${member.publicUserData?.firstName || ''} ${member.publicUserData?.lastName || ''}`.trim() ||
-        member.publicUserData?.identifier ||
-        'Unknown',
+      name: member.user.name || member.user.email || 'Unknown',
     });
     setIsRemoveMemberDialogOpen(true);
   };
-
-  const loading = memberships?.isLoading;
 
   return (
     <>
@@ -138,46 +139,41 @@ export function OrganizationMembersSection() {
             </div>
           ) : (
             <div className="space-y-4">
-              {memberships?.data?.map((membership) => (
+              {members?.map((member) => (
                 <div
                   className="flex items-center justify-between"
-                  key={membership.id}
+                  key={member.id}
                 >
                   <div className="flex items-center gap-3 border-l-2 border-secondary">
-                    <span className="text-sm pl-2">
-                      {membership.publicUserData?.firstName}{' '}
-                      {membership.publicUserData?.lastName}
-                    </span>
+                    <span className="text-sm pl-2">{member.user.name}</span>
                     <span className="text-xs text-muted-foreground">
-                      {membership.publicUserData?.identifier}
+                      {member.user.email}
                     </span>
                   </div>
                   <div className="flex items-center gap-2">
                     <Select
-                      disabled={
-                        isUpdatingRole ||
-                        membership.publicUserData?.userId === user?.id
-                      }
+                      disabled={isUpdatingRole || member.userId === user?.id}
                       onValueChange={(value) =>
                         handleUpdateMemberRole(
-                          membership.id,
-                          value as 'admin' | 'user',
+                          member.id,
+                          value as 'admin' | 'owner' | 'member',
                         )
                       }
-                      value={membership.role.split(':')[1]}
+                      value={member.role}
                     >
                       <SelectTrigger className="w-24">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="user">User</SelectItem>
+                        <SelectItem value="member">Member</SelectItem>
                         <SelectItem value="admin">Admin</SelectItem>
+                        <SelectItem value="owner">Owner</SelectItem>
                       </SelectContent>
                     </Select>
-                    {membership.publicUserData?.userId !== user?.id && (
+                    {member.userId !== user?.id && (
                       <MetricButton
                         metric="organization_members_remove_member_clicked"
-                        onClick={() => openRemoveMemberDialog(membership)}
+                        onClick={() => openRemoveMemberDialog(member)}
                         size="sm"
                         variant="destructive"
                       >

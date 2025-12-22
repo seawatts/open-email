@@ -1,6 +1,5 @@
 'use client';
 
-import { useOrganization } from '@clerk/nextjs';
 import {
   createContext,
   type ReactNode,
@@ -31,6 +30,17 @@ interface StripeContextType {
   checkEntitlement: (entitlement: EntitlementKey) => boolean;
 }
 
+const defaultSubscriptionInfo: StripeContextType['subscriptionInfo'] = {
+  customerId: null,
+  hasAny: false,
+  isActive: false,
+  isCanceled: false,
+  isPaid: false,
+  isPastDue: false,
+  isTrialing: false,
+  status: null,
+};
+
 export const StripeContext = createContext<StripeContextType | undefined>(
   undefined,
 );
@@ -41,44 +51,40 @@ interface StripeProviderProps {
 }
 
 export function StripeProvider({ children }: StripeProviderProps) {
-  const { organization } = useOrganization();
+  const [isMounted, setIsMounted] = useState(false);
   const [subscriptionInfo, setSubscriptionInfo] = useState<
     StripeContextType['subscriptionInfo']
-  >({
-    customerId: null,
-    hasAny: false,
-    isActive: false,
-    isCanceled: false,
-    isPaid: false,
-    isPastDue: false,
-    isTrialing: false,
-    status: null,
-  });
+  >(defaultSubscriptionInfo);
   const [entitlements, setEntitlements] = useState<EntitlementsRecord>(
     {} as EntitlementsRecord,
   );
   const [loading, setLoading] = useState(true);
 
+  // Track mount state to avoid SSR issues with auth hooks
   useEffect(() => {
-    if (!organization) {
-      setSubscriptionInfo({
-        customerId: null,
-        hasAny: false,
-        isActive: false,
-        isCanceled: false,
-        isPaid: false,
-        isPastDue: false,
-        isTrialing: false,
-        status: null,
-      });
-      setEntitlements({} as EntitlementsRecord);
-      setLoading(false);
-      return;
-    }
+    setIsMounted(true);
+  }, []);
 
-    // Check both subscription and entitlements
-    const checkStripeData = async () => {
+  // Fetch stripe data after mount
+  useEffect(() => {
+    if (!isMounted) return;
+
+    // Dynamically import auth to avoid SSR context issues
+    const fetchStripeData = async () => {
       try {
+        // Import auth client dynamically after mount
+        const { authClient } = await import('@seawatts/auth/client');
+        const orgResult = await authClient.organization.getFullOrganization();
+        const organization = orgResult.data;
+
+        if (!organization) {
+          setSubscriptionInfo(defaultSubscriptionInfo);
+          setEntitlements({} as EntitlementsRecord);
+          setLoading(false);
+          return;
+        }
+
+        // Check both subscription and entitlements
         const [subscriptionResult, entitlementsResult] = await Promise.all([
           getSubscriptionInfoAction(),
           getEntitlementsAction(),
@@ -88,16 +94,7 @@ export function StripeProvider({ children }: StripeProviderProps) {
         if (subscriptionResult.data?.subscriptionInfo) {
           setSubscriptionInfo(subscriptionResult.data.subscriptionInfo);
         } else {
-          setSubscriptionInfo({
-            customerId: null,
-            hasAny: false,
-            isActive: false,
-            isCanceled: false,
-            isPaid: false,
-            isPastDue: false,
-            isTrialing: false,
-            status: null,
-          });
+          setSubscriptionInfo(defaultSubscriptionInfo);
         }
 
         // Update entitlements
@@ -110,24 +107,15 @@ export function StripeProvider({ children }: StripeProviderProps) {
         }
       } catch (error) {
         console.error('Error checking Stripe data:', error);
-        setSubscriptionInfo({
-          customerId: null,
-          hasAny: false,
-          isActive: false,
-          isCanceled: false,
-          isPaid: false,
-          isPastDue: false,
-          isTrialing: false,
-          status: null,
-        });
+        setSubscriptionInfo(defaultSubscriptionInfo);
         setEntitlements({} as EntitlementsRecord);
       } finally {
         setLoading(false);
       }
     };
 
-    checkStripeData();
-  }, [organization]);
+    fetchStripeData();
+  }, [isMounted]);
 
   const checkEntitlement = (entitlement: EntitlementKey): boolean => {
     return entitlements[entitlement] || false;

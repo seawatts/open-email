@@ -1,8 +1,9 @@
 'use client';
-import type { REALTIME_SUBSCRIBE_STATES } from '@supabase/supabase-js';
+import type {
+  REALTIME_SUBSCRIBE_STATES,
+  SupabaseClient,
+} from '@supabase/supabase-js';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-
-import { useClient } from './client';
 
 type BroadcastStatus = 'connected' | 'connecting' | 'disconnected' | 'error';
 
@@ -34,6 +35,7 @@ interface BroadcastProps<T extends BroadcastMessage>
     BroadcastCallbacks<T> {
   topic: T['topic'];
   event: T['event'];
+  supabaseClient: SupabaseClient;
 }
 
 export function useBroadcast<T extends BroadcastMessage>({
@@ -45,6 +47,7 @@ export function useBroadcast<T extends BroadcastMessage>({
   self = false,
   ack = false,
   timeout,
+  supabaseClient: supabase,
 }: BroadcastProps<T>): {
   send: (message: T['payload']) => Promise<boolean>;
   status: BroadcastStatus;
@@ -70,8 +73,6 @@ export function useBroadcast<T extends BroadcastMessage>({
     () => channelName ?? `broadcast-${topic}`,
     [channelName, topic],
   );
-
-  const supabase = useClient();
 
   useEffect(() => {
     void handleStatusChange('connecting');

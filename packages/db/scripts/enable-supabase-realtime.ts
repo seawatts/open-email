@@ -1,49 +1,91 @@
 import { sql } from 'drizzle-orm';
 import { db } from '../src/client';
 
+// Tables that should have realtime enabled for live updates
+// These are the tables that benefit from real-time subscriptions in the email app
 const tablesToEnableRealtime = [
-  'events',
-  'requests',
-  'webhooks',
-  'connections',
+  // Email-related tables for inbox updates
+  'emailThreads',
+  'emailMessages',
+  'emailHighlights',
+  'emailKeywords',
+  // AI/Agent tables for action updates
+  'agentDecisions',
+  'emailActions',
+  // User settings for preference sync
+  'userEmailSettings',
+  'userMemory',
 ] as const;
 
 // RLS policies for realtime authorization
 const realtimePolicies = [
-  // Policy for authenticated users to read postgres changes on events table
+  // Policy for authenticated users to read postgres changes on email threads
   {
     condition: `
       realtime.messages.extension = 'postgres_changes'
-      AND realtime.topic() LIKE 'events-%'
+      AND realtime.topic() LIKE 'emailThreads-%'
       AND EXISTS (
-        SELECT 1 FROM public.events e
-        WHERE e."webhookId" = split_part(realtime.topic(), '-', 2)
-        AND e."webhookId" IN (
-          SELECT w.id FROM public.webhooks w
-          WHERE w."orgId" = (SELECT requesting_org_id())
-        )
+        SELECT 1 FROM open_email."emailThreads" t
+        JOIN open_email."account" g ON g.id = t."accountId"
+        WHERE t.id = split_part(realtime.topic(), '-', 2)::text
+        AND g."userId" = (SELECT requesting_user_id())
       )
     `,
-    name: 'authenticated_can_read_events_changes',
+    name: 'authenticated_can_read_email_threads_changes',
     operation: 'select',
     table: 'realtime.messages',
     target: 'authenticated',
   },
-  // Policy for authenticated users to read postgres changes on requests table
+  // Policy for authenticated users to read postgres changes on email messages
   {
     condition: `
       realtime.messages.extension = 'postgres_changes'
-      AND realtime.topic() LIKE 'requests-%'
+      AND realtime.topic() LIKE 'emailMessages-%'
       AND EXISTS (
-        SELECT 1 FROM public.requests r
-        WHERE r."webhookId" = split_part(realtime.topic(), '-', 2)
-        AND r."webhookId" IN (
-          SELECT w.id FROM public.webhooks w
-          WHERE w."orgId" = (SELECT requesting_org_id())
-        )
+        SELECT 1 FROM open_email."emailMessages" m
+        JOIN open_email."emailThreads" t ON t.id = m."threadId"
+        JOIN open_email."account" g ON g.id = t."accountId"
+        WHERE m.id = split_part(realtime.topic(), '-', 2)::text
+        AND g."userId" = (SELECT requesting_user_id())
       )
     `,
-    name: 'authenticated_can_read_requests_changes',
+    name: 'authenticated_can_read_email_messages_changes',
+    operation: 'select',
+    table: 'realtime.messages',
+    target: 'authenticated',
+  },
+  // Policy for authenticated users to read postgres changes on agent decisions
+  {
+    condition: `
+      realtime.messages.extension = 'postgres_changes'
+      AND realtime.topic() LIKE 'agentDecisions-%'
+      AND EXISTS (
+        SELECT 1 FROM open_email."agentDecisions" d
+        JOIN open_email."emailThreads" t ON t.id = d."threadId"
+        JOIN open_email."account" g ON g.id = t."accountId"
+        WHERE d.id = split_part(realtime.topic(), '-', 2)::text
+        AND g."userId" = (SELECT requesting_user_id())
+      )
+    `,
+    name: 'authenticated_can_read_agent_decisions_changes',
+    operation: 'select',
+    table: 'realtime.messages',
+    target: 'authenticated',
+  },
+  // Policy for authenticated users to read postgres changes on email actions
+  {
+    condition: `
+      realtime.messages.extension = 'postgres_changes'
+      AND realtime.topic() LIKE 'emailActions-%'
+      AND EXISTS (
+        SELECT 1 FROM open_email."emailActions" a
+        JOIN open_email."emailThreads" t ON t.id = a."threadId"
+        JOIN open_email."account" g ON g.id = t."accountId"
+        WHERE a.id = split_part(realtime.topic(), '-', 2)::text
+        AND g."userId" = (SELECT requesting_user_id())
+      )
+    `,
+    name: 'authenticated_can_read_email_actions_changes',
     operation: 'select',
     table: 'realtime.messages',
     target: 'authenticated',
@@ -52,7 +94,12 @@ const realtimePolicies = [
   {
     condition: `
       realtime.messages.extension = 'broadcast'
-      AND realtime.topic() LIKE 'events-%' OR realtime.topic() LIKE 'requests-%'
+      AND (
+        realtime.topic() LIKE 'emailThreads-%'
+        OR realtime.topic() LIKE 'emailMessages-%'
+        OR realtime.topic() LIKE 'agentDecisions-%'
+        OR realtime.topic() LIKE 'emailActions-%'
+      )
     `,
     name: 'authenticated_can_send_broadcast',
     operation: 'insert',
@@ -63,7 +110,12 @@ const realtimePolicies = [
   {
     condition: `
       realtime.messages.extension = 'broadcast'
-      AND realtime.topic() LIKE 'events-%' OR realtime.topic() LIKE 'requests-%'
+      AND (
+        realtime.topic() LIKE 'emailThreads-%'
+        OR realtime.topic() LIKE 'emailMessages-%'
+        OR realtime.topic() LIKE 'agentDecisions-%'
+        OR realtime.topic() LIKE 'emailActions-%'
+      )
     `,
     name: 'authenticated_can_read_broadcast',
     operation: 'select',
@@ -97,7 +149,7 @@ async function enableRealtimeForTable(tableName: string) {
 
   console.log(`Enabling realtime for table: ${tableName}`);
   await db.execute(sql`
-    ALTER PUBLICATION supabase_realtime ADD TABLE "public"."${sql.raw(tableName)}";
+    ALTER PUBLICATION supabase_realtime ADD TABLE "open_email"."${sql.raw(tableName)}";
   `);
   console.log(`Realtime enabled for table: ${tableName}`);
 }

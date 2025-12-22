@@ -61,41 +61,51 @@ export class TestFactories {
   // Email-related factories
   // ============================================================================
 
-  async createGmailAccount(
+  async createAccount(
     userId: string,
-    overrides?: Partial<schema.GmailAccountType>,
-  ): Promise<schema.GmailAccountType> {
+    overrides?: Partial<schema.AccountType>,
+  ): Promise<schema.AccountType> {
+    const email = faker.internet.email();
     const account = {
       accessToken: faker.string.alphanumeric(64),
+      accessTokenExpiresAt: new Date(Date.now() + 3600 * 1000), // 1 hour from now
+      accountId: email, // Google uses email as accountId
       createdAt: new Date(),
-      email: faker.internet.email(),
-      historyId: faker.string.numeric(10),
-      id: createId({ prefix: 'gmail' }),
+      id: createId({ prefix: 'acct' }),
+      lastHistoryId: faker.string.numeric(10),
       lastSyncAt: new Date(),
+      providerId: 'google',
       refreshToken: faker.string.alphanumeric(64),
-      tokenExpiry: new Date(Date.now() + 3600 * 1000), // 1 hour from now
       userId,
       ...overrides,
     };
 
     const [created] = await this.db
-      .insert(schema.GmailAccounts)
+      .insert(schema.Accounts)
       .values(account)
       .returning();
     if (!created) {
-      throw new Error('Failed to create Gmail account');
+      throw new Error('Failed to create account');
     }
     return created;
   }
 
+  // Alias for backward compatibility in tests
+  async createGmailAccount(
+    userId: string,
+    overrides?: Partial<schema.AccountType>,
+  ): Promise<schema.AccountType> {
+    return this.createAccount(userId, overrides);
+  }
+
   async createEmailThread(
-    gmailAccountId: string,
+    accountId: string,
     overrides?: Partial<schema.EmailThreadType>,
   ): Promise<schema.EmailThreadType> {
     const thread = {
+      accountId,
       bundleType: 'personal' as const,
       createdAt: new Date(),
-      gmailAccountId,
       gmailThreadId: faker.string.alphanumeric(16),
       id: createId({ prefix: 'thread' }),
       isPinned: false,
@@ -314,14 +324,12 @@ export class TestFactories {
     overrides?: Partial<schema.UserType>,
   ): Promise<schema.UserType> {
     const user = {
-      avatarUrl: faker.image.avatar(),
-      clerkId: `clerk_${faker.string.alphanumeric(20)}`,
       createdAt: new Date(),
       email: faker.internet.email(),
-      firstName: faker.person.firstName(),
+      emailVerified: true,
       id: createId({ prefix: 'user' }),
-      lastName: faker.person.lastName(),
-      online: false,
+      image: faker.image.avatar(),
+      name: `${faker.person.firstName()} ${faker.person.lastName()}`,
       ...overrides,
     };
 
@@ -338,14 +346,12 @@ export class TestFactories {
   async createOrg(
     overrides?: Partial<schema.OrgType>,
   ): Promise<schema.OrgType> {
-    const user = await this.createUser();
-
+    const name = overrides?.name ?? faker.company.name();
     const org = {
-      clerkOrgId: `org_${faker.string.alphanumeric(20)}`,
       createdAt: new Date(),
-      createdByUserId: user.id,
       id: createId({ prefix: 'org' }),
-      name: faker.company.name(),
+      name,
+      slug: name.toLowerCase().replace(/\s+/g, '-'),
       stripeCustomerId: faker.string.alphanumeric(20),
       stripeSubscriptionId: faker.string.alphanumeric(20),
       stripeSubscriptionStatus: 'active' as const,
@@ -361,13 +367,13 @@ export class TestFactories {
 
   async createOrgMember(
     userId: string,
-    orgId: string,
-    role: 'user' | 'admin' | 'superAdmin' = 'user',
+    organizationId: string,
+    role: 'member' | 'admin' | 'owner' = 'member',
   ): Promise<schema.OrgMembersType> {
     const member = {
       createdAt: new Date(),
       id: createId({ prefix: 'member' }),
-      orgId,
+      organizationId,
       role,
       userId,
     };
@@ -384,7 +390,7 @@ export class TestFactories {
 
   async createApiKey(
     userId: string,
-    orgId: string,
+    organizationId: string,
     overrides?: Partial<schema.ApiKeyType>,
   ): Promise<schema.ApiKeyType> {
     const apiKey = {
@@ -393,7 +399,7 @@ export class TestFactories {
       isActive: true,
       key: faker.string.alphanumeric(64),
       name: faker.lorem.words(2),
-      orgId,
+      organizationId,
       userId,
       ...overrides,
     };
@@ -416,13 +422,10 @@ export class TestFactories {
     const user = await this.createUser(overrides?.user);
 
     // Create org
-    const org = await this.createOrg({
-      createdByUserId: user.id,
-      ...overrides?.org,
-    });
+    const org = await this.createOrg(overrides?.org);
 
-    // Add user as org member
-    await this.createOrgMember(user.id, org.id, 'admin');
+    // Add user as org owner
+    await this.createOrgMember(user.id, org.id, 'owner');
 
     return { org, user };
   }

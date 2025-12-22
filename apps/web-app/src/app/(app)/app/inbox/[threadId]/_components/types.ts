@@ -54,4 +54,3 @@ export interface FormattedHighlight {
   actionUrl?: string;
   data: { type: string; [key: string]: unknown };
 }
-

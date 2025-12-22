@@ -3,7 +3,7 @@
 
 // Mock zod (matching the pattern the rule looks for)
 const z = {
-  object: () => ({}),
+	object: () => ({}),
 };
 
 // ✅ Should trigger: OpenAIResponses*Schema without satisfies

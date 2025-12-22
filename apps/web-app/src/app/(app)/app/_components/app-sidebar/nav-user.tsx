@@ -1,8 +1,13 @@
 'use client';
 
-import { useAuth, useOrganizationList, useUser } from '@clerk/nextjs';
 import { MetricLink } from '@seawatts/analytics/components';
-import { api } from '@seawatts/api/react';
+import { useTRPC } from '@seawatts/api/react';
+import {
+  signOut,
+  useActiveOrganization,
+  useListOrganizations,
+  useSession,
+} from '@seawatts/auth/client';
 import { Avatar, AvatarFallback, AvatarImage } from '@seawatts/ui/avatar';
 import {
   DropdownMenu,
@@ -23,6 +28,7 @@ import {
   IconCheck,
   IconCurrencyDollar,
 } from '@tabler/icons-react';
+import { useQueryClient } from '@tanstack/react-query';
 import {
   ArrowLeftFromLine,
   ChevronsUpDown,
@@ -39,30 +45,42 @@ import { useState } from 'react';
 import { NewOrgDialog } from './new-org-dialog';
 
 export function NavUser() {
+  const api = useTRPC();
   const pathname = usePathname();
   const isOnboarding = pathname?.startsWith('/app/onboarding');
-  const { setTheme } = useTheme();
-  const _router = useRouter();
-  const { user } = useUser();
-  const { setActive, userMemberships } = useOrganizationList({
-    userMemberships: true,
-  });
-  const { signOut, orgId } = useAuth();
-  const { theme } = useTheme();
+  const { setTheme, theme } = useTheme();
+  const router = useRouter();
+  const { data: session } = useSession();
+  const user = session?.user;
+  const { data: activeOrg } = useActiveOrganization();
+  const { data: organizations } = useListOrganizations();
 
-  const organizations = userMemberships?.data;
   const [newOrgDialogOpen, setNewOrgDialogOpen] = useState(false);
 
-  const apiUtils = api.useUtils();
+  const queryClient = useQueryClient();
 
   const handleOrgChange = async (orgId: string) => {
-    if (!setActive) {
-      return;
-    }
-    await setActive({
-      organization: orgId,
+    // Switch active organization via Better Auth
+    await fetch('/api/auth/organization/set-active', {
+      body: JSON.stringify({ organizationId: orgId }),
+      headers: { 'Content-Type': 'application/json' },
+      method: 'POST',
     });
-    await apiUtils.invalidate();
+    await queryClient.invalidateQueries(api.pathFilter());
+    router.refresh();
+  };
+
+  const handleSignOut = async () => {
+    // Track user logout action
+    if (user) {
+      posthog.capture('user_logout_clicked', {
+        email: user.email,
+        source: 'nav_user_dropdown',
+        user_id: user.id,
+      });
+    }
+    await signOut();
+    router.push('/');
   };
 
   if (!user) {
@@ -81,20 +99,18 @@ export function NavUser() {
               >
                 <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-sidebar-accent text-sidebar-accent-foreground">
                   <Avatar className="h-8 w-8 rounded-lg">
-                    <AvatarImage src={user.imageUrl} />
+                    <AvatarImage src={user.image ?? undefined} />
                     <AvatarFallback>
-                      {user.firstName?.charAt(0) ||
-                        user.emailAddresses[0]?.emailAddress.split('@')[0]}
+                      {user.name?.charAt(0) || user.email?.split('@')[0]}
                     </AvatarFallback>
                   </Avatar>
                 </div>
                 <div className="grid flex-1 text-left text-sm leading-tight">
                   <span className="truncate font-semibold">
-                    {user.firstName ||
-                      user.emailAddresses[0]?.emailAddress.split('@')[0]}
+                    {user.name || user.email?.split('@')[0]}
                   </span>
                   <span className="truncate text-xs text-muted-foreground">
-                    {user.emailAddresses[0]?.emailAddress}
+                    {user.email}
                   </span>
                 </div>
                 <ChevronsUpDown className="ml-auto size-4" />
@@ -107,11 +123,10 @@ export function NavUser() {
             >
               <div className="px-2 py-1.5">
                 <div className="text-sm font-medium">
-                  {user.firstName ||
-                    user.emailAddresses[0]?.emailAddress.split('@')[0]}
+                  {user.name || user.email?.split('@')[0]}
                 </div>
                 <div className="text-xs text-muted-foreground">
-                  {user.emailAddresses[0]?.emailAddress}
+                  {user.email}
                 </div>
               </div>
               <div className="px-2 py-1.5">
@@ -138,20 +153,18 @@ export function NavUser() {
                 Organizations
               </DropdownMenuLabel>
               {organizations
-                ?.sort((a, b) =>
-                  a.organization.name.localeCompare(b.organization.name),
-                )
+                ?.sort((a, b) => a.name.localeCompare(b.name))
                 .map((org) => (
                   <DropdownMenuItem
                     className="gap-2 p-2"
-                    key={org.organization.id}
-                    onClick={() => handleOrgChange(org.organization.id)}
+                    key={org.id}
+                    onClick={() => handleOrgChange(org.id)}
                   >
                     <div className="flex size-6 items-center justify-center rounded-sm border">
                       <IconBuilding className="size-4 shrink-0" />
                     </div>
-                    {org.organization.name}
-                    {org.organization.id === orgId && (
+                    {org.name}
+                    {org.id === activeOrg?.id && (
                       <IconCheck className="ml-auto size-4" />
                     )}
                   </DropdownMenuItem>
@@ -199,17 +212,7 @@ export function NavUser() {
                   </DropdownMenuItem>
                 </>
               )}
-              <DropdownMenuItem
-                onClick={() => {
-                  // Track user logout action
-                  posthog.capture('user_logout_clicked', {
-                    email: user.emailAddresses[0]?.emailAddress,
-                    source: 'nav_user_dropdown',
-                    user_id: user.id,
-                  });
-                  signOut();
-                }}
-              >
+              <DropdownMenuItem onClick={handleSignOut}>
                 <ArrowLeftFromLine className="mr-1 size-4" />
                 <span>Sign out</span>
               </DropdownMenuItem>

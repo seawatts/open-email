@@ -1,57 +1,66 @@
 'use server';
 
-import { auth, currentUser } from '@clerk/nextjs/server';
 import { upsertOrg } from '@seawatts/api/services';
+import { auth } from '@seawatts/auth/server';
 import { db } from '@seawatts/db/client';
-import { Orgs } from '@seawatts/db/schema';
+import { OrgMembers } from '@seawatts/db/schema';
 import { eq } from 'drizzle-orm';
+import { headers } from 'next/headers';
 import { createSafeActionClient } from 'next-safe-action';
 import { z } from 'zod';
 
 // Create the action client
 const action = createSafeActionClient();
 
+// Helper function to get session
+async function getSession() {
+  const session = await auth.api.getSession({
+    headers: await headers(),
+  });
+  return session;
+}
+
 export const upsertOrgAction = action
   .inputSchema(
     z.object({
-      clerkOrgId: z.string().optional(),
       name: z.string().optional(),
+      orgId: z.string().optional(),
       webhookId: z.string().optional(),
     }),
   )
   .action(async ({ parsedInput }) => {
-    const { clerkOrgId, name, webhookId } = parsedInput;
-    const user = await auth();
+    const { orgId, name, webhookId } = parsedInput;
+    const session = await getSession();
 
-    if (!user.userId) {
+    if (!session?.user?.id) {
       throw new Error('User not found');
     }
 
-    const clerkUser = await currentUser();
-    if (!clerkUser) {
-      throw new Error('User details not found');
-    }
+    const userId = session.user.id;
 
     console.log('upsertOrgAction called with:', {
-      clerkOrgId,
-      userId: user.userId,
+      orgId,
+      userId,
       webhookId,
     });
 
-    // If no clerkOrgId is provided (creating new org), check if user already has an organization
-    if (!clerkOrgId) {
-      const existingOrg = await db.query.Orgs.findFirst({
-        where: eq(Orgs.createdByUserId, user.userId),
+    // If no orgId is provided (creating new org), check if user already has an organization via membership
+    if (!orgId) {
+      // Find existing org through membership
+      const existingMembership = await db.query.OrgMembers.findFirst({
+        where: eq(OrgMembers.userId, userId),
+        with: { organization: true },
       });
 
+      const existingOrg = existingMembership?.organization;
       console.log('Existing org found:', existingOrg);
 
       if (existingOrg) {
         // User already has an organization, use upsertOrg to get the proper return structure
         const result = await upsertOrg({
           name: existingOrg.name,
-          orgId: existingOrg.clerkOrgId,
-          userId: user.userId,
+          orgId: existingOrg.id,
+          userId,
         });
 
         console.log('Returning existing org result:', result);
@@ -70,19 +79,11 @@ export const upsertOrgAction = action
     // Use the upsertOrg utility function
     const result = await upsertOrg({
       name: name || 'Personal',
-      orgId: clerkOrgId || '',
-      userId: user.userId,
+      orgId: orgId || '',
+      userId,
     });
 
     console.log('New org result:', result);
-
-    // TODO: Re-enable when webhooks are re-implemented
-    // If webhookId is provided, create a custom webhook
-    // if (webhookId && result.webhook) {
-    //   // Update the webhook with the custom ID
-    //   // Note: This would require additional API calls to update the webhook
-    //   console.log('Custom webhook ID requested:', webhookId);
-    // }
 
     return {
       apiKey: result.apiKey,

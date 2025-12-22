@@ -1,6 +1,6 @@
 'use server';
 
-import { auth } from '@clerk/nextjs/server';
+import { auth } from '@seawatts/auth/server';
 import { db } from '@seawatts/db/client';
 import { Orgs } from '@seawatts/db/schema';
 import {
@@ -19,13 +19,24 @@ import { createSafeActionClient } from 'next-safe-action';
 // Create the action client
 const action = createSafeActionClient();
 
+// Helper function to get session
+async function getSession() {
+  const session = await auth.api.getSession({
+    headers: await headers(),
+  });
+  return session;
+}
+
 // Create checkout session action
 export const createCheckoutSessionAction = action.action(async () => {
-  const { userId, orgId } = await auth();
+  const session = await getSession();
 
-  if (!userId || !orgId) {
+  if (!session?.user?.id || !session.session?.activeOrganizationId) {
     throw new Error('Unauthorized');
   }
+
+  const userId = session.user.id;
+  const orgId = session.session.activeOrganizationId;
 
   // Get the organization
   const org = await db.query.Orgs.findFirst({
@@ -44,14 +55,11 @@ export const createCheckoutSessionAction = action.action(async () => {
   let customerId = org.stripeCustomerId;
 
   if (!customerId) {
-    // Get user details from Clerk for creating customer
-    const user = await auth();
-
     const customer = await getOrCreateCustomer({
-      email: user.sessionClaims?.email as string,
+      email: session.user.email || '',
       metadata: {
         orgId: org.id,
-        userId: user.userId as string,
+        userId,
       },
       name: org.name,
     });
@@ -72,7 +80,7 @@ export const createCheckoutSessionAction = action.action(async () => {
   }
 
   // Create checkout session
-  const session = await createCheckoutSession({
+  const checkoutSession = await createCheckoutSession({
     billingInterval: BILLING_INTERVALS.MONTHLY,
     cancelUrl: `${origin}/app/settings/billing?canceled=true`,
     customerId,
@@ -82,19 +90,21 @@ export const createCheckoutSessionAction = action.action(async () => {
   });
 
   // Redirect to Stripe Checkout
-  if (!session.url) {
+  if (!checkoutSession.url) {
     throw new Error('Failed to create checkout session');
   }
-  redirect(session.url);
+  redirect(checkoutSession.url);
 });
 
 // Create billing portal session action
 export const createBillingPortalSessionAction = action.action(async () => {
-  const { userId, orgId } = await auth();
+  const session = await getSession();
 
-  if (!userId || !orgId) {
+  if (!session?.user?.id || !session.session?.activeOrganizationId) {
     throw new Error('Unauthorized');
   }
+
+  const orgId = session.session.activeOrganizationId;
 
   // Get the organization
   const org = await db.query.Orgs.findFirst({
@@ -110,22 +120,24 @@ export const createBillingPortalSessionAction = action.action(async () => {
   const origin = headersList.get('origin') || 'https://seawatts.sh';
 
   // Create billing portal session
-  const session = await createBillingPortalSession({
+  const portalSession = await createBillingPortalSession({
     customerId: org.stripeCustomerId,
-    returnUrl: `${origin}/${org.clerkOrgId}/billing`,
+    returnUrl: `${origin}/app/settings/billing`,
   });
 
   // Redirect to Stripe Billing Portal
-  redirect(session.url);
+  redirect(portalSession.url);
 });
 
 // Get invoices action
 export const getInvoicesAction = action.action(async () => {
-  const { userId, orgId } = await auth();
+  const session = await getSession();
 
-  if (!userId || !orgId) {
+  if (!session?.user?.id || !session.session?.activeOrganizationId) {
     throw new Error('Unauthorized');
   }
+
+  const orgId = session.session.activeOrganizationId;
 
   // Get the organization
   const org = await db.query.Orgs.findFirst({

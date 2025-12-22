@@ -9,7 +9,7 @@ export const apiKeysRouter = createTRPCRouter({
 
     const apiKeys = await ctx.db.query.ApiKeys.findMany({
       orderBy: [desc(ApiKeys.updatedAt)],
-      where: eq(ApiKeys.orgId, ctx.auth.orgId),
+      where: eq(ApiKeys.organizationId, ctx.auth.orgId),
     });
 
     return apiKeys;
@@ -21,7 +21,7 @@ export const apiKeysRouter = createTRPCRouter({
     // Get all API keys
     const apiKeys = await ctx.db.query.ApiKeys.findMany({
       orderBy: [desc(ApiKeys.updatedAt)],
-      where: eq(ApiKeys.orgId, ctx.auth.orgId),
+      where: eq(ApiKeys.organizationId, ctx.auth.orgId),
     });
 
     // For each API key, get the most recent usage
@@ -48,7 +48,10 @@ export const apiKeysRouter = createTRPCRouter({
       if (!ctx.auth.orgId) throw new Error('Organization ID is required');
 
       const apiKey = await ctx.db.query.ApiKeys.findFirst({
-        where: and(eq(ApiKeys.id, input.id), eq(ApiKeys.orgId, ctx.auth.orgId)),
+        where: and(
+          eq(ApiKeys.id, input.id),
+          eq(ApiKeys.organizationId, ctx.auth.orgId),
+        ),
       });
 
       if (!apiKey) return null;
@@ -67,7 +70,7 @@ export const apiKeysRouter = createTRPCRouter({
           .insert(ApiKeys)
           .values({
             ...input,
-            orgId: ctx.auth.orgId,
+            organizationId: ctx.auth.orgId,
             userId: ctx.auth.userId,
           })
           .returning();
@@ -86,7 +89,12 @@ export const apiKeysRouter = createTRPCRouter({
 
       const apiKey = await ctx.db
         .delete(ApiKeys)
-        .where(and(eq(ApiKeys.id, input.id), eq(ApiKeys.orgId, ctx.auth.orgId)))
+        .where(
+          and(
+            eq(ApiKeys.id, input.id),
+            eq(ApiKeys.organizationId, ctx.auth.orgId),
+          ),
+        )
         .returning();
 
       return apiKey;
@@ -99,7 +107,10 @@ export const apiKeysRouter = createTRPCRouter({
 
       // First get the current state
       const currentApiKey = await ctx.db.query.ApiKeys.findFirst({
-        where: and(eq(ApiKeys.id, input.id), eq(ApiKeys.orgId, ctx.auth.orgId)),
+        where: and(
+          eq(ApiKeys.id, input.id),
+          eq(ApiKeys.organizationId, ctx.auth.orgId),
+        ),
       });
 
       if (!currentApiKey) throw new Error('API Key not found');
@@ -109,7 +120,12 @@ export const apiKeysRouter = createTRPCRouter({
         .set({
           isActive: !currentApiKey.isActive,
         })
-        .where(and(eq(ApiKeys.id, input.id), eq(ApiKeys.orgId, ctx.auth.orgId)))
+        .where(
+          and(
+            eq(ApiKeys.id, input.id),
+            eq(ApiKeys.organizationId, ctx.auth.orgId),
+          ),
+        )
         .returning();
 
       return apiKey;
@@ -141,7 +157,9 @@ export const apiKeysRouter = createTRPCRouter({
       const [apiKey] = await ctx.db
         .update(ApiKeys)
         .set(updateData)
-        .where(and(eq(ApiKeys.id, id), eq(ApiKeys.orgId, ctx.auth.orgId)))
+        .where(
+          and(eq(ApiKeys.id, id), eq(ApiKeys.organizationId, ctx.auth.orgId)),
+        )
         .returning();
 
       return apiKey;
@@ -157,7 +175,12 @@ export const apiKeysRouter = createTRPCRouter({
         .set({
           lastUsedAt: new Date(),
         })
-        .where(and(eq(ApiKeys.id, input.id), eq(ApiKeys.orgId, ctx.auth.orgId)))
+        .where(
+          and(
+            eq(ApiKeys.id, input.id),
+            eq(ApiKeys.organizationId, ctx.auth.orgId),
+          ),
+        )
         .returning();
 
       return apiKey;

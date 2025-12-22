@@ -1,10 +1,6 @@
 import { eq } from '@seawatts/db';
 import { db } from '@seawatts/db/client';
-import {
-  EmailMessages,
-  EmailThreads,
-  GmailAccounts,
-} from '@seawatts/db/schema';
+import { Accounts, EmailMessages, EmailThreads } from '@seawatts/db/schema';
 import { debug } from '@seawatts/logger';
 import type { gmail_v1 } from 'googleapis';
 
@@ -59,12 +55,12 @@ export async function syncGmailAccount(
     userId,
   } = options;
 
-  const account = await db.query.GmailAccounts.findFirst({
-    where: eq(GmailAccounts.id, accountId),
+  const account = await db.query.Accounts.findFirst({
+    where: eq(Accounts.id, accountId),
   });
 
   if (!account) {
-    throw new Error(`Gmail account not found: ${accountId}`);
+    throw new Error(`Account not found: ${accountId}`);
   }
 
   const gmail = await getGmailClient(accountId);
@@ -101,12 +97,12 @@ export async function syncGmailAccount(
     // Update last history ID
     if (result.newHistoryId) {
       await db
-        .update(GmailAccounts)
+        .update(Accounts)
         .set({
           lastHistoryId: result.newHistoryId,
           lastSyncAt: new Date(),
         })
-        .where(eq(GmailAccounts.id, accountId));
+        .where(eq(Accounts.id, accountId));
     }
 
     // Run extraction for synced threads
@@ -181,7 +177,7 @@ async function performFullSync(
   accountId: string,
   result: SyncResult,
   syncedThreadIds: string[],
-  account?: { email: string } | null,
+  account?: { accountId: string } | null,
 ): Promise<void> {
   log('Performing full Gmail sync for account %s', accountId);
 
@@ -232,7 +228,7 @@ async function performIncrementalSync(
   lastHistoryId: string,
   result: SyncResult,
   syncedThreadIds: string[],
-  account?: { email: string } | null,
+  account?: { accountId: string } | null,
 ): Promise<void> {
   log(
     'Performing incremental Gmail sync for account %s from history %s',
@@ -318,7 +314,7 @@ async function syncThread(
   accountId: string,
   threadId: string,
   result: SyncResult,
-  account?: { email: string } | null,
+  account?: { accountId: string } | null,
 ): Promise<string | null> {
   const threadResponse = await gmail.users.threads.get({
     format: 'full',
@@ -369,7 +365,7 @@ async function syncThread(
   const [dbThread] = await db
     .insert(EmailThreads)
     .values({
-      gmailAccountId: accountId,
+      accountId,
       gmailThreadId: threadId,
       isRead,
       labels,
@@ -389,7 +385,7 @@ async function syncThread(
         snippet,
         subject: redactPII(subject),
       },
-      target: [EmailThreads.gmailAccountId, EmailThreads.gmailThreadId],
+      target: [EmailThreads.accountId, EmailThreads.gmailThreadId],
     })
     .returning();
 
@@ -397,7 +393,7 @@ async function syncThread(
 
   // Sync individual messages
   for (const msg of messages) {
-    await syncMessage(dbThread.id, msg, result, account?.email);
+    await syncMessage(dbThread.id, msg, result, account?.accountId);
   }
 
   return dbThread.id;

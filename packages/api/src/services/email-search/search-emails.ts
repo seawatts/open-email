@@ -7,10 +7,9 @@
  * 3. Standard SQL filters for dates, senders, etc.
  */
 
-import { and, desc, eq, gte, ilike, inArray, lte, or, sql } from 'drizzle-orm';
-
 import { db } from '@seawatts/db/client';
 import { EmailKeywords, EmailThreads } from '@seawatts/db/schema';
+import { and, desc, eq, gte, ilike, inArray, lte, or, sql } from 'drizzle-orm';
 
 import {
   buildKeywordsByThreadMap,
@@ -62,9 +61,9 @@ export async function searchEmails(
   }
 
   // Has attachments filter - requires join to messages
-  // Gmail account filter
-  if (filters?.gmailAccountId) {
-    conditions.push(eq(EmailThreads.gmailAccountId, filters.gmailAccountId));
+  // Account filter
+  if (filters?.accountId) {
+    conditions.push(eq(EmailThreads.accountId, filters.accountId));
   }
 
   // Unread only filter
@@ -78,8 +77,8 @@ export async function searchEmails(
   // Get threads with relevance score
   const threads = await db
     .select({
+      accountId: EmailThreads.accountId,
       bundleType: EmailThreads.bundleType,
-      gmailAccountId: EmailThreads.gmailAccountId,
       id: EmailThreads.id,
       isRead: EmailThreads.isRead,
       lastMessageAt: EmailThreads.lastMessageAt,
@@ -170,7 +169,7 @@ export async function listEmailsByCategory(
   const startTime = performance.now();
   const {
     category,
-    gmailAccountId,
+    accountId,
     dateRange,
     limit = 20,
     offset = 0,
@@ -180,8 +179,8 @@ export async function listEmailsByCategory(
     eq(EmailThreads.bundleType, category),
   ];
 
-  if (gmailAccountId) {
-    conditions.push(eq(EmailThreads.gmailAccountId, gmailAccountId));
+  if (accountId) {
+    conditions.push(eq(EmailThreads.accountId, accountId));
   }
 
   if (dateRange?.start) {

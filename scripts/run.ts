@@ -104,7 +104,7 @@ async function main() {
   try {
     $.verbose = true;
     await $`bun ${scriptPath} ${args}`;
-  } catch (error) {
+  } catch {
     // Script already printed its output, just exit with error code
     process.exit(1);
   }

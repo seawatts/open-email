@@ -36,14 +36,7 @@ export function WordFadeIn({
       whileInView={'visible'}
     >
       {_words.map((word, i) => (
-        <motion.span
-          custom={i}
-          key={`word-${
-            // biome-ignore lint/suspicious/noArrayIndexKey: Array index is stable here since we're mapping over a fixed slice of children
-            i
-          }`}
-          variants={variants}
-        >
+        <motion.span custom={i} key={`word-${i}`} variants={variants}>
           {word}{' '}
         </motion.span>
       ))}

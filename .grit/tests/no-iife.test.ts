@@ -3,36 +3,36 @@
 
 // ✅ Should trigger: (function() { ... })()
 (() => {
-  const localVar = 'test';
-  console.log(localVar);
+	const localVar = "test";
+	console.log(localVar);
 })();
 
 // ✅ Should trigger: (function(args) { ... })()
 ((arg: string) => {
-  console.log(arg);
-})('test');
+	console.log(arg);
+})("test");
 
 // ✅ Should trigger: (async function() { ... })()
 (async () => {
-  await someAsyncOp();
+	await someAsyncOp();
 })();
 
 // ✅ Should trigger: (() => { ... })()
 (() => {
-  const localVar = 'test';
-  console.log(localVar);
+	const localVar = "test";
+	console.log(localVar);
 })();
 
 // ✅ Should trigger: ((args) => { ... })()
 ((arg: string) => {
-  console.log(arg);
-})('test');
+	console.log(arg);
+})("test");
 
 // ✅ Should trigger: (async () => { ... })()
 (async () => {
-  await someAsyncOp();
+	await someAsyncOp();
 })();
 
 function someAsyncOp() {
-  return Promise.resolve('done');
+	return Promise.resolve("done");
 }

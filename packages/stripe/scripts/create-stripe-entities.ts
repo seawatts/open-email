@@ -1,5 +1,5 @@
 import Stripe from 'stripe';
-import { env } from '../src/env.server';
+import { env } from '../src/env';
 
 // Note: This script requires STRIPE_SECRET_KEY to be configured
 const stripe = new Stripe(

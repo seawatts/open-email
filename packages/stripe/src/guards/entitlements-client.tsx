@@ -1,7 +1,7 @@
 'use client';
 
-import { useOrganization } from '@clerk/nextjs';
 import { MetricLink } from '@seawatts/analytics';
+import { useActiveOrganization } from '@seawatts/auth/client';
 import {
   createContext,
   type ReactNode,
@@ -29,7 +29,7 @@ interface EntitlementProviderProps {
 }
 
 export function EntitlementProvider({ children }: EntitlementProviderProps) {
-  const { organization } = useOrganization();
+  const { data: organization } = useActiveOrganization();
   const [entitlements, setEntitlements] = useState<EntitlementsRecord>(
     {} as EntitlementsRecord,
   );

@@ -28,6 +28,7 @@ export const userRouter = {
       return user;
     }),
   current: protectedProcedure.query(({ ctx }) => {
+    if (!ctx.auth.userId) throw new Error('User ID is required');
     return ctx.db.query.Users.findFirst({
       where: eq(Users.id, ctx.auth.userId),
     });

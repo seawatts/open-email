@@ -30,7 +30,11 @@
       "!**/coverage",
       "!**/.nyc_output",
       "!**/packages/ai",
-      "!**/apps/chrome-extension/scripts/detect-obfuscation"
+      "!**/apps/chrome-extension/scripts/detect-obfuscation",
+      "!**/.grit",
+      "!**/styles.css",
+      "!**/theme.css",
+      "!**/globals.css"
     ]
   },
   "formatter": {

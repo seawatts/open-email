@@ -17,22 +17,21 @@ import {
   UserMemory,
 } from '@seawatts/db/schema';
 import { debug } from '@seawatts/logger';
-
-import {
-  analyzeNewSentMessage,
-  extractKeywordsFromEmail,
-  generateMessageSummary,
-  generateThreadSummary,
-  type ExtractionInput,
-  type ExtractionResult,
-  type ExtractedFact,
-} from '../email-extraction';
-import { getThreadWithMessages, getThreadMessages } from '../email-thread';
 import {
   getErrorMessage,
   normalizeMessage,
   normalizeThread,
 } from '../../utils';
+import {
+  analyzeNewSentMessage,
+  type ExtractedFact,
+  type ExtractionInput,
+  type ExtractionResult,
+  extractKeywordsFromEmail,
+  generateMessageSummary,
+  generateThreadSummary,
+} from '../email-extraction';
+import { getThreadMessages, getThreadWithMessages } from '../email-thread';
 
 const log = debug('seawatts:gmail:extract');
 

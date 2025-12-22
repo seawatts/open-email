@@ -3,10 +3,10 @@
 
 // Mock zod (matching the pattern the rule looks for)
 const z = {
-  object: () => ({}),
-  discriminatedUnion: () => ({}),
-  union: () => ({}),
-  array: () => ({}),
+	object: () => ({}),
+	discriminatedUnion: () => ({}),
+	union: () => ({}),
+	array: () => ({}),
 };
 
 // ✅ Should trigger: OpenAI schema without Schema suffix
@@ -16,7 +16,7 @@ export const OpenAIResponse = z.object({});
 export const OpenResponse = z.object({});
 
 // ✅ Should trigger: OpenAI discriminatedUnion without Schema suffix
-export const OpenAIChoice = z.discriminatedUnion('type', []);
+export const OpenAIChoice = z.discriminatedUnion("type", []);
 
 // ✅ Should trigger: Open union without Schema suffix
 export const OpenUnion = z.union([]);

@@ -1,7 +1,10 @@
 'use client';
 
-import { useOrganization, useOrganizationList } from '@clerk/nextjs';
 import { MetricButton } from '@seawatts/analytics/components';
+import {
+  useActiveOrganization,
+  useListOrganizations,
+} from '@seawatts/auth/client';
 import {
   Command,
   CommandGroup,
@@ -21,10 +24,8 @@ interface OrgSelectorProps {
 }
 
 export function OrgSelector({ onSelect }: OrgSelectorProps) {
-  const { organization: activeOrg } = useOrganization();
-  const { setActive, userMemberships } = useOrganizationList({
-    userMemberships: true,
-  });
+  const { data: activeOrg } = useActiveOrganization();
+  const { data: organizations } = useListOrganizations();
 
   const [open, setOpen] = React.useState(false);
   const [value, setValue] = React.useState<string>(activeOrg?.id || '');
@@ -40,27 +41,26 @@ export function OrgSelector({ onSelect }: OrgSelectorProps) {
 
   // Auto-select the first org if there is only one and none is selected
   React.useEffect(() => {
-    if (userMemberships?.data && userMemberships.data.length === 1 && !value) {
-      const firstOrg = userMemberships.data[0]?.organization;
+    if (organizations && organizations.length === 1 && !value) {
+      const firstOrg = organizations[0];
       if (firstOrg) {
         setValue(firstOrg.id);
-        if (setActive) {
-          setActive({ organization: firstOrg.id });
-        }
-      }
-      if (firstOrg?.id) {
+        // Set active org via Better Auth
+        fetch('/api/auth/organization/set-active', {
+          body: JSON.stringify({ organizationId: firstOrg.id }),
+          headers: { 'Content-Type': 'application/json' },
+          method: 'POST',
+        });
         onSelect?.(firstOrg.id);
       }
     }
-  }, [userMemberships?.data, value, setActive, onSelect]);
+  }, [organizations, value, onSelect]);
 
   const filteredOrgs = input
-    ? userMemberships?.data?.filter((membership) =>
-        membership.organization.name
-          .toLowerCase()
-          .includes(input.toLowerCase()),
+    ? organizations?.filter((org) =>
+        org.name.toLowerCase().includes(input.toLowerCase()),
       )
-    : userMemberships?.data;
+    : organizations;
 
   // Popover width logic
   const triggerRef = React.useRef<HTMLButtonElement>(null);
@@ -73,6 +73,26 @@ export function OrgSelector({ onSelect }: OrgSelectorProps) {
     }
   }, [open]);
 
+  const handleOrgSelect = async (orgId: string, orgName: string) => {
+    setValue(orgId);
+    setInput('');
+    setOpen(false);
+
+    // Set active org via Better Auth
+    await fetch('/api/auth/organization/set-active', {
+      body: JSON.stringify({ organizationId: orgId }),
+      headers: { 'Content-Type': 'application/json' },
+      method: 'POST',
+    });
+
+    onSelect?.(orgId);
+
+    posthog.capture('cli_org_selected', {
+      orgId: orgId,
+      orgName: orgName,
+    });
+  };
+
   return (
     <Popover onOpenChange={setOpen} open={open}>
       <PopoverTrigger asChild>
@@ -84,9 +104,7 @@ export function OrgSelector({ onSelect }: OrgSelectorProps) {
           variant="outline"
         >
           {value
-            ? userMemberships?.data?.find(
-                (org) => org.organization.id === value,
-              )?.organization.name
+            ? organizations?.find((org) => org.id === value)?.name
             : 'Select an organization...'}
           <ChevronsUpDown className="opacity-50 ml-2" size="sm" />
         </MetricButton>
@@ -102,71 +120,19 @@ export function OrgSelector({ onSelect }: OrgSelectorProps) {
             value={input}
           />
           <CommandList>
-            {/* <CommandEmpty>
-              <Button
-                disabled={!input.trim() || isCreating}
-                onClick={async () => {
-                  if (input.trim()) {
-                    setIsCreating(true);
-                    try {
-                      const clerkOrg = await upsertOrgAction({
-                        name: input.trim(),
-                      });
-
-                      if (clerkOrg?.data?.id && setActive) {
-                        setActive({ organization: clerkOrg.data.id });
-                        onSelect?.(clerkOrg.data.id);
-                        setValue(clerkOrg.data.id);
-                        setInput('');
-                        setOpen(false);
-
-                        posthog?.capture('cli_org_created', {
-                          orgId: clerkOrg.data.id,
-                          orgName: clerkOrg.data.name,
-                        });
-                      }
-                    } catch (error) {
-                      console.error('Failed to create organization:', error);
-                      // You might want to show an error toast here
-                    } finally {
-                      setIsCreating(false);
-                    }
-                  }
-                }}
-              >
-                {isCreating ? <Icons.Spinner /> : <Plus />}
-                Create new organization:{' '}
-                <span className="font-semibold">{input}</span>
-              </Button>
-            </CommandEmpty> */}
             <CommandGroup>
-              {filteredOrgs?.map((membership) => (
+              {filteredOrgs?.map((org) => (
                 <CommandItem
-                  key={membership.organization.id}
-                  keywords={[membership.organization.name]}
-                  onSelect={async () => {
-                    setValue(membership.organization.id);
-                    setInput('');
-                    setOpen(false);
-                    if (setActive) {
-                      setActive({ organization: membership.organization });
-                    }
-                    onSelect?.(membership.organization.id);
-
-                    posthog.capture('cli_org_selected', {
-                      orgId: membership.organization.id,
-                      orgName: membership.organization.name,
-                    });
-                  }}
-                  value={membership.organization.id}
+                  key={org.id}
+                  keywords={[org.name]}
+                  onSelect={() => handleOrgSelect(org.id, org.name)}
+                  value={org.id}
                 >
-                  {membership.organization.name}
+                  {org.name}
                   <Icons.Check
                     className={cn(
                       'ml-auto',
-                      value === membership.organization.id
-                        ? 'opacity-100'
-                        : 'opacity-0',
+                      value === org.id ? 'opacity-100' : 'opacity-0',
                     )}
                     size="sm"
                   />

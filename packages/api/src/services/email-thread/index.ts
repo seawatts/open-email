@@ -5,9 +5,9 @@
  */
 
 export {
-  getThreadWithMessages,
-  getThreadSenders,
-  getThreadMessages,
   type GetThreadOptions,
+  getThreadMessages,
+  getThreadSenders,
+  getThreadWithMessages,
   type ThreadWithRelations,
 } from './get-thread';

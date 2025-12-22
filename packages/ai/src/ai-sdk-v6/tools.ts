@@ -110,7 +110,7 @@ export const triageParams = z.object({
 
 export interface EmailToolContext {
   db: unknown;
-  gmailAccountId: string;
+  accountId: string;
   policy: {
     allowedDomainsForAutoActions: string[];
     requireApprovalForCalendar: boolean;

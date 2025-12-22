@@ -3,9 +3,9 @@
 
 // Mock zod (matching the pattern the rule looks for)
 const z = {
-  object: () => ({}),
-  union: () => ({}),
-  discriminatedUnion: () => ({}),
+	object: () => ({}),
+	union: () => ({}),
+	discriminatedUnion: () => ({}),
 };
 
 // ✅ Should trigger: OpenResponses*Schema with z.object() without satisfies
@@ -15,4 +15,7 @@ export const OpenResponsesChatSchema = z.object({});
 export const OpenResponsesUnionSchema = z.union([]);
 
 // ✅ Should trigger: OpenResponses*Schema with z.discriminatedUnion() without satisfies
-export const OpenResponsesDiscriminatedSchema = z.discriminatedUnion('type', []);
+export const OpenResponsesDiscriminatedSchema = z.discriminatedUnion(
+	"type",
+	[],
+);

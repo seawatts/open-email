@@ -13,13 +13,13 @@ export async function trackApiKeyUsage({
   type,
   metadata,
   userId,
-  orgId,
+  organizationId,
 }: {
   apiKey: string;
   type: ApiKeyUsageType;
   metadata: ApiKeyUsageMetadata;
   userId: string;
-  orgId: string;
+  organizationId: string;
 }) {
   try {
     // Find the API key record
@@ -32,7 +32,7 @@ export async function trackApiKeyUsage({
       await db.insert(ApiKeyUsage).values({
         apiKeyId: apiKeyRecord.id,
         metadata,
-        orgId,
+        organizationId,
         type,
         userId,
       });

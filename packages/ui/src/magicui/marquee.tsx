@@ -63,8 +63,7 @@ export function Marquee({
               'animate-marquee-vertical flex-col': vertical,
               'group-hover:[animation-play-state:paused]': pauseOnHover,
             })}
-            // biome-ignore lint/suspicious/noArrayIndexKey: we're mapping over a fixed slice of children
-            key={i}
+            key={`marquee-${i}`}
           >
             {children}
           </div>

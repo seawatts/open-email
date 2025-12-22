@@ -2,7 +2,8 @@
 
 import type { QueryClient } from '@tanstack/react-query';
 import { QueryClientProvider } from '@tanstack/react-query';
-import { createTRPCReact } from '@trpc/react-query';
+import { createTRPCClient } from '@trpc/client';
+import { createTRPCContext } from '@trpc/tanstack-react-query';
 import { useState } from 'react';
 
 import type { AppRouter } from '../root';
@@ -23,7 +24,46 @@ const getQueryClient = () => {
   return clientQueryClientSingleton;
 };
 
-export const api = createTRPCReact<AppRouter>();
+/**
+ * tRPC v11 TanStack React Query integration
+ *
+ * @example
+ * ```tsx
+ * import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+ * import { useTRPC } from '@seawatts/api/react';
+ *
+ * function Component() {
+ *   const trpc = useTRPC();
+ *   const queryClient = useQueryClient();
+ *
+ *   // Queries
+ *   const query = useQuery(trpc.greeting.queryOptions({ name: 'World' }));
+ *
+ *   // Mutations
+ *   const mutation = useMutation(trpc.createUser.mutationOptions());
+ *
+ *   // Invalidation
+ *   const invalidate = () => queryClient.invalidateQueries(trpc.greeting.queryFilter());
+ * }
+ * ```
+ */
+export const { TRPCProvider, useTRPC, useTRPCClient } =
+  createTRPCContext<AppRouter>();
+
+/**
+ * Hook alias for useTRPC - provides the tRPC client for use with React Query
+ * @example
+ * ```tsx
+ * import { api } from '@seawatts/api/react';
+ * import { useQuery } from '@tanstack/react-query';
+ *
+ * function Component() {
+ *   const trpc = api();
+ *   const query = useQuery(trpc.user.get.queryOptions());
+ * }
+ * ```
+ */
+export const api = useTRPC;
 
 export function TRPCReactProvider(
   props: {
@@ -33,7 +73,7 @@ export function TRPCReactProvider(
   const queryClient = getQueryClient();
 
   const [trpcClient] = useState(() =>
-    api.createClient({
+    createTRPCClient<AppRouter>({
       links: createDefaultLinks({
         authToken: props.authToken,
         sourceHeader: props.sourceHeader ?? 'nextjs-react',
@@ -43,9 +83,9 @@ export function TRPCReactProvider(
 
   return (
     <QueryClientProvider client={queryClient}>
-      <api.Provider client={trpcClient} queryClient={queryClient}>
+      <TRPCProvider queryClient={queryClient} trpcClient={trpcClient}>
         {props.children}
-      </api.Provider>
+      </TRPCProvider>
     </QueryClientProvider>
   );
 }

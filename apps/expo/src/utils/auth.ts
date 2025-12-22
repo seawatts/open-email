@@ -1,4 +1,5 @@
 import { expoClient } from '@better-auth/expo/client';
+import { lastLoginMethodClient } from '@better-auth/expo/plugins';
 import { createAuthClient } from 'better-auth/react';
 import * as SecureStore from 'expo-secure-store';
 
@@ -9,6 +10,10 @@ export const authClient = createAuthClient({
   plugins: [
     expoClient({
       scheme: 'expo',
+      storage: SecureStore,
+      storagePrefix: 'expo',
+    }),
+    lastLoginMethodClient({
       storage: SecureStore,
       storagePrefix: 'expo',
     }),

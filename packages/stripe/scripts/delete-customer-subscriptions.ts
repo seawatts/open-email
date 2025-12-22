@@ -1,7 +1,7 @@
 #!/usr/bin/env bun
 
 import Stripe from 'stripe';
-import { env } from '../src/env.server';
+import { env } from '../src/env';
 
 // Initialize Stripe with the secret key
 // Note: This script requires STRIPE_SECRET_KEY to be configured

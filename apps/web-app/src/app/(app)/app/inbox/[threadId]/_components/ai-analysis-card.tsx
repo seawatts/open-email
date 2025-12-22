@@ -72,7 +72,9 @@ export function AIAnalysisCard({
               title="Re-analyze"
               variant="ghost"
             >
-              <RefreshCw className={cn('size-4', isLoading && 'animate-spin')} />
+              <RefreshCw
+                className={cn('size-4', isLoading && 'animate-spin')}
+              />
             </Button>
           </div>
         </div>
@@ -90,7 +92,9 @@ export function AIAnalysisCard({
           <p className="mb-1 text-xs font-medium text-muted-foreground">
             SUGGESTED ACTION
           </p>
-          <p className="capitalize">{decision.suggestedAction.replace('_', ' ')}</p>
+          <p className="capitalize">
+            {decision.suggestedAction.replace('_', ' ')}
+          </p>
         </div>
 
         {decision.summary && (
@@ -116,4 +120,3 @@ export function AIAnalysisCard({
     </Card>
   );
 }
-

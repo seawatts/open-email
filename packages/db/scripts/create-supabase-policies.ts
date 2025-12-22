@@ -57,15 +57,31 @@ const createRequestingOrgIdFunction = async () => {
 
 // Common policy conditions using the requesting_user_id function
 const policyConditions = {
-  orgOwnership: (columnName = 'orgId') =>
+  // For tables that need indirect user access via account
+  gmailAccountOwnership: `EXISTS (
+    SELECT 1 FROM open_email."account"
+    WHERE open_email."account".id = "accountId"
+    AND open_email."account"."userId" = (SELECT requesting_user_id())
+  )`,
+  // For tables that need indirect user access via emailMessages -> emailThreads -> account
+  messageOwnership: `EXISTS (
+    SELECT 1 FROM open_email."emailMessages"
+    JOIN open_email."emailThreads" ON open_email."emailThreads".id = open_email."emailMessages"."threadId"
+    JOIN open_email."account" ON open_email."account".id = open_email."emailThreads"."accountId"
+    WHERE open_email."emailMessages".id = "messageId"
+    AND open_email."account"."userId" = (SELECT requesting_user_id())
+  )`,
+  orgOwnership: (columnName = 'organizationId') =>
     `(SELECT requesting_org_id()) = ("${columnName}")::text`,
+  // For tables that need indirect user access via emailThreads -> account
+  threadOwnership: `EXISTS (
+    SELECT 1 FROM open_email."emailThreads"
+    JOIN open_email."account" ON open_email."account".id = open_email."emailThreads"."accountId"
+    WHERE open_email."emailThreads".id = "threadId"
+    AND open_email."account"."userId" = (SELECT requesting_user_id())
+  )`,
   userOwnership: (columnName = 'userId') =>
     `(SELECT requesting_user_id()) = ("${columnName}")::text`,
-  webhookOwnership: `EXISTS (
-    SELECT 1 FROM webhooks
-    WHERE webhooks.id = requests."webhookId"
-    AND webhooks."orgId" = (SELECT requesting_org_id())
-  )`,
 } as const;
 
 // Helper to create a policy for user ownership
@@ -100,13 +116,13 @@ const createPolicy = async (tableName: string, policy: Policy) => {
 
   // First drop the policy if it exists
   await db.execute(sql`
-    DROP POLICY IF EXISTS ${sql.raw(`"${name}"`)} ON "public"."${sql.raw(tableName)}";
+    DROP POLICY IF EXISTS ${sql.raw(`"${name}"`)} ON "open_email"."${sql.raw(tableName)}";
   `);
 
   // Then create the new policy
   const policySql = sql`
     CREATE POLICY ${sql.raw(`"${name}"`)}
-    ON "public"."${sql.raw(tableName)}"
+    ON "open_email"."${sql.raw(tableName)}"
     ${operation === 'ALL' ? sql`FOR ALL` : sql`FOR ${sql.raw(operation)}`}
     TO authenticated
     ${using ? sql`USING (${sql.raw(using)})` : sql``}
@@ -118,127 +134,206 @@ const createPolicy = async (tableName: string, policy: Policy) => {
 
 const dropPolicy = async (tableName: string, policyName: string) => {
   await db.execute(sql`
-    DROP POLICY IF EXISTS ${sql.raw(`"${policyName}"`)} ON "public"."${sql.raw(tableName)}";
+    DROP POLICY IF EXISTS ${sql.raw(`"${policyName}"`)} ON "open_email"."${sql.raw(tableName)}";
   `);
 };
 
 const enableRLS = async (tableName: string) => {
   console.log(`Enabling RLS for table: ${tableName}`);
   await db.execute(sql`
-    ALTER TABLE "public"."${sql.raw(tableName)}" ENABLE ROW LEVEL SECURITY;
+    ALTER TABLE "open_email"."${sql.raw(tableName)}" ENABLE ROW LEVEL SECURITY;
   `);
   console.log(`RLS enabled for table: ${tableName}`);
 };
 
+// ============================================================================
+// POLICY CONFIGURATIONS FOR ALL TABLES
+// ============================================================================
+
 const policyConfigs: Record<string, PolicyConfig> = {
+  // Account table (OAuth providers) - user ownership
+  account: {
+    policies: [createUserOwnershipPolicy('ALL', 'userId')],
+    tableName: 'account',
+  },
+
+  // Agent Decisions table - indirect ownership via threadId
+  agentDecisions: {
+    policies: [
+      {
+        name: 'Users can access their agent decisions',
+        operation: 'ALL',
+        using: policyConditions.threadOwnership,
+        withCheck: policyConditions.threadOwnership,
+      },
+    ],
+    tableName: 'agentDecisions',
+  },
+
+  // API Keys table
   apiKeys: {
     policies: [
       createUserOwnershipPolicy('ALL', 'userId'),
-      createOrgOwnershipPolicy('ALL', 'orgId'),
+      createOrgOwnershipPolicy('ALL', 'organizationId'),
     ],
     tableName: 'apiKeys',
   },
+
+  // API Key Usage table
   apiKeyUsage: {
     policies: [
       createUserOwnershipPolicy('ALL', 'userId'),
-      createOrgOwnershipPolicy('ALL', 'orgId'),
+      createOrgOwnershipPolicy('ALL', 'organizationId'),
     ],
     tableName: 'apiKeyUsage',
   },
+
+  // Auth Codes table (for CLI authentication)
   authCodes: {
     policies: [
       createUserOwnershipPolicy('ALL', 'userId'),
-      createOrgOwnershipPolicy('ALL', 'orgId'),
+      createOrgOwnershipPolicy('ALL', 'organizationId'),
     ],
     tableName: 'authCodes',
   },
-  connections: {
+
+  // Email Actions table - indirect ownership via threadId
+  emailActions: {
     policies: [
-      createUserOwnershipPolicy('ALL', 'userId'),
-      createOrgOwnershipPolicy('ALL', 'orgId'),
-    ],
-    tableName: 'connections',
-  },
-  events: {
-    policies: [
-      createUserOwnershipPolicy('ALL', 'userId'),
-      createOrgOwnershipPolicy('ALL', 'orgId'),
-    ],
-    tableName: 'events',
-  },
-  forwardingDestinations: {
-    policies: [
-      createUserOwnershipPolicy('ALL', 'userId'),
-      createUserOwnershipPolicy('DELETE', 'userId'),
-      createOrgOwnershipPolicy('ALL', 'orgId'),
-    ],
-    tableName: 'forwardingDestinations',
-  },
-  forwardingExecutions: {
-    policies: [
-      createUserOwnershipPolicy('ALL', 'userId'),
-      createOrgOwnershipPolicy('ALL', 'orgId'),
-    ],
-    tableName: 'forwardingExecutions',
-  },
-  forwardingRules: {
-    policies: [
-      createUserOwnershipPolicy('ALL', 'userId'),
-      createOrgOwnershipPolicy('ALL', 'orgId'),
-    ],
-    tableName: 'forwardingRules',
-  },
-  orgMembers: {
-    policies: [
-      createUserOwnershipPolicy('ALL', 'userId'),
-      createOrgOwnershipPolicy('ALL', 'orgId'),
-    ],
-    tableName: 'orgMembers',
-  },
-  orgs: {
-    policies: [
-      // Users can access orgs they created
       {
-        name: 'Users can select orgs they created',
+        name: 'Users can access their email actions',
+        operation: 'ALL',
+        using: policyConditions.threadOwnership,
+        withCheck: policyConditions.threadOwnership,
+      },
+    ],
+    tableName: 'emailActions',
+  },
+
+  // Email Highlights table - indirect ownership via threadId
+  emailHighlights: {
+    policies: [
+      {
+        name: 'Users can access their email highlights',
+        operation: 'ALL',
+        using: policyConditions.threadOwnership,
+        withCheck: policyConditions.threadOwnership,
+      },
+    ],
+    tableName: 'emailHighlights',
+  },
+
+  // Email Keywords table - indirect ownership via threadId
+  emailKeywords: {
+    policies: [
+      {
+        name: 'Users can access their email keywords',
+        operation: 'ALL',
+        using: policyConditions.threadOwnership,
+        withCheck: policyConditions.threadOwnership,
+      },
+    ],
+    tableName: 'emailKeywords',
+  },
+
+  // Email Messages table - indirect ownership via threadId -> gmailAccountId
+  emailMessages: {
+    policies: [
+      {
+        name: 'Users can access their email messages',
+        operation: 'ALL',
+        using: policyConditions.threadOwnership,
+        withCheck: policyConditions.threadOwnership,
+      },
+    ],
+    tableName: 'emailMessages',
+  },
+
+  // Email Rules table - user ownership
+  emailRules: {
+    policies: [createUserOwnershipPolicy('ALL', 'userId')],
+    tableName: 'emailRules',
+  },
+
+  // Email Threads table - indirect ownership via gmailAccountId
+  emailThreads: {
+    policies: [
+      {
+        name: 'Users can access their email threads',
+        operation: 'ALL',
+        using: policyConditions.gmailAccountOwnership,
+        withCheck: policyConditions.gmailAccountOwnership,
+      },
+    ],
+    tableName: 'emailThreads',
+  },
+
+  // Account table - user ownership only (no org)
+  // Note: This is the OAuth account table (includes Gmail accounts)
+  account: {
+    policies: [createUserOwnershipPolicy('ALL', 'userId')],
+    tableName: 'account',
+  },
+
+  // Invitations table
+  invitation: {
+    policies: [
+      createUserOwnershipPolicy('ALL', 'inviterId'),
+      createOrgOwnershipPolicy('SELECT', 'organizationId'),
+    ],
+    tableName: 'invitation',
+  },
+
+  // Organization Members table
+  member: {
+    policies: [
+      createUserOwnershipPolicy('ALL', 'userId'),
+      createOrgOwnershipPolicy('SELECT', 'organizationId'),
+    ],
+    tableName: 'member',
+  },
+
+  // Organization table - membership based access
+  organization: {
+    policies: [
+      {
+        name: 'Users can select orgs they are members of',
         operation: 'SELECT',
-        using: policyConditions.userOwnership('createdByUserId'),
+        using: `EXISTS (
+          SELECT 1 FROM open_email.member
+          WHERE open_email.member."organizationId" = organization.id
+          AND open_email.member."userId" = (SELECT requesting_user_id())
+        )`,
       },
       {
-        name: 'Users can insert orgs',
-        operation: 'INSERT',
-        withCheck: policyConditions.userOwnership('createdByUserId'),
-      },
-      {
-        name: 'Users can update orgs they created',
+        name: 'Users can update orgs they own',
         operation: 'UPDATE',
-        using: policyConditions.userOwnership('createdByUserId'),
-        withCheck: policyConditions.userOwnership('createdByUserId'),
+        using: `EXISTS (
+          SELECT 1 FROM open_email.member
+          WHERE open_email.member."organizationId" = organization.id
+          AND open_email.member."userId" = (SELECT requesting_user_id())
+          AND open_email.member.role = 'owner'
+        )`,
       },
     ],
-    tableName: 'orgs',
+    tableName: 'organization',
   },
-  requests: {
+
+  // Session table - user ownership
+  session: {
+    policies: [createUserOwnershipPolicy('ALL', 'userId')],
+    tableName: 'session',
+  },
+
+  // Short URLs table - user and org ownership
+  shortUrls: {
     policies: [
       createUserOwnershipPolicy('ALL', 'userId'),
-      createOrgOwnershipPolicy('ALL', 'orgId'),
-      {
-        name: 'Users can access requests for their webhooks',
-        operation: 'SELECT',
-        using: policyConditions.webhookOwnership,
-      },
-      {
-        name: 'Users can delete requests for their webhooks',
-        operation: 'DELETE',
-        using: policyConditions.webhookOwnership,
-      },
-      {
-        name: 'Users can update requests for their webhooks',
-        operation: 'UPDATE',
-        using: policyConditions.webhookOwnership,
-      },
+      createOrgOwnershipPolicy('ALL', 'organizationId'),
     ],
-    tableName: 'requests',
+    tableName: 'shortUrls',
   },
+  // User table - users can only access their own record
   user: {
     policies: [
       createUserOwnershipPolicy('SELECT', 'id'),
@@ -246,42 +341,29 @@ const policyConfigs: Record<string, PolicyConfig> = {
     ],
     tableName: 'user',
   },
-  webhookAccessRequests: {
-    policies: [
-      // Users can access requests they made (as requester)
-      {
-        name: 'Users can select their own access requests',
-        operation: 'SELECT',
-        using: policyConditions.userOwnership('requesterId'),
-      },
-      {
-        name: 'Users can insert their own access requests',
-        operation: 'INSERT',
-        withCheck: policyConditions.userOwnership('requesterId'),
-      },
-      {
-        name: 'Users can update their own access requests',
-        operation: 'UPDATE',
-        using: policyConditions.userOwnership('requesterId'),
-        withCheck: policyConditions.userOwnership('requesterId'),
-      },
-      // Users can respond to requests (as responder)
-      {
-        name: 'Users can update requests they are responding to',
-        operation: 'UPDATE',
-        using: policyConditions.userOwnership('responderId'),
-        withCheck: policyConditions.userOwnership('responderId'),
-      },
-      createOrgOwnershipPolicy('ALL', 'orgId'),
-    ],
-    tableName: 'webhookAccessRequests',
+
+  // User Contact Style table - user ownership
+  userContactStyle: {
+    policies: [createUserOwnershipPolicy('ALL', 'userId')],
+    tableName: 'userContactStyle',
   },
-  webhooks: {
-    policies: [
-      createUserOwnershipPolicy('ALL', 'userId'),
-      createOrgOwnershipPolicy('ALL', 'orgId'),
-    ],
-    tableName: 'webhooks',
+
+  // User Email Settings table - userId is PK
+  userEmailSettings: {
+    policies: [createUserOwnershipPolicy('ALL', 'userId')],
+    tableName: 'userEmailSettings',
+  },
+
+  // User Memory table - user ownership
+  userMemory: {
+    policies: [createUserOwnershipPolicy('ALL', 'userId')],
+    tableName: 'userMemory',
+  },
+
+  // User Writing Profile table - userId is PK
+  userWritingProfile: {
+    policies: [createUserOwnershipPolicy('ALL', 'userId')],
+    tableName: 'userWritingProfile',
   },
 };
 

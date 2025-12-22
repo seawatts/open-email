@@ -1,6 +1,6 @@
 import { debug } from '@seawatts/logger';
 import { PostHog } from 'posthog-node';
-import { env } from '../env.client';
+import { env } from '../env';
 
 const log = debug('seawatts:vscode:posthog');
 

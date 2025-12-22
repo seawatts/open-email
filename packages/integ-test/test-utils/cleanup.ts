@@ -22,7 +22,7 @@ export async function cleanupTestData(
     await db.delete(schema.EmailThreads);
     await db.delete(schema.EmailRules);
     await db.delete(schema.UserEmailSettings);
-    await db.delete(schema.GmailAccounts);
+    await db.delete(schema.Accounts);
 
     // Original tables
     await db.delete(schema.AuthCodes);
@@ -39,7 +39,7 @@ export async function cleanupTestData(
         sql`TRUNCATE TABLE
           "userContactStyle", "userWritingProfile", "userMemory",
           "emailKeywords", "emailHighlights", "emailActions", "agentDecisions", "emailMessages",
-          "emailThreads", "emailRules", "userEmailSettings", "gmailAccounts",
+          "emailThreads", "emailRules", "userEmailSettings", "account",
           "authCodes", "apiKeyUsage", "apiKeys", "orgMembers", "orgs", "user"
           RESTART IDENTITY CASCADE`,
       );

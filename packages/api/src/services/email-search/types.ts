@@ -32,8 +32,8 @@ export interface EmailSearchFilters {
   hasAttachments?: boolean;
   // Only unread emails
   unreadOnly?: boolean;
-  // Gmail account ID filter
-  gmailAccountId?: string;
+  // Account ID filter (better-auth Google account)
+  accountId?: string;
 }
 
 // Search query parameters
@@ -87,7 +87,7 @@ export interface EmailCategoryParams {
     | 'updates'
     | 'forums'
     | 'personal';
-  gmailAccountId?: string;
+  accountId?: string;
   dateRange?: {
     start?: Date;
     end?: Date;

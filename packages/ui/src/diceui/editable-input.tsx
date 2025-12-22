@@ -347,13 +347,11 @@ const EditablePreview = React.forwardRef<HTMLDivElement, EditablePreviewProps>(
     const { asChild, className, ...previewProps } = props;
     const context = useEditableContext(PREVIEW_NAME);
 
-    // biome-ignore lint/correctness/useExhaustiveDependencies: Only specific context properties are needed to avoid unnecessary re-renders
     const onTrigger = React.useCallback(() => {
       if (context.disabled || context.readOnly) return;
       context.onEdit();
     }, [context.onEdit, context.disabled, context.readOnly]);
 
-    // biome-ignore lint/correctness/useExhaustiveDependencies: Only specific previewProps properties are needed to avoid unnecessary re-renders
     const onClick = React.useCallback(
       (event: React.MouseEvent<HTMLDivElement>) => {
         previewProps.onClick?.(event);
@@ -364,7 +362,6 @@ const EditablePreview = React.forwardRef<HTMLDivElement, EditablePreviewProps>(
       [previewProps.onClick, onTrigger, context.triggerMode],
     );
 
-    // biome-ignore lint/correctness/useExhaustiveDependencies: Only specific previewProps properties are needed to avoid unnecessary re-renders
     const onDoubleClick = React.useCallback(
       (event: React.MouseEvent<HTMLDivElement>) => {
         previewProps.onDoubleClick?.(event);
@@ -376,7 +373,6 @@ const EditablePreview = React.forwardRef<HTMLDivElement, EditablePreviewProps>(
       [previewProps.onDoubleClick, onTrigger, context.triggerMode],
     );
 
-    // biome-ignore lint/correctness/useExhaustiveDependencies: Only specific previewProps properties are needed to avoid unnecessary re-renders
     const onFocus = React.useCallback(
       (event: React.FocusEvent<HTMLDivElement>) => {
         previewProps.onFocus?.(event);
@@ -387,7 +383,6 @@ const EditablePreview = React.forwardRef<HTMLDivElement, EditablePreviewProps>(
       [previewProps.onFocus, onTrigger, context.triggerMode],
     );
 
-    // biome-ignore lint/correctness/useExhaustiveDependencies: Only specific previewProps and context properties are needed to avoid unnecessary re-renders
     const onKeyDown = React.useCallback(
       (event: React.KeyboardEvent<HTMLDivElement>) => {
         previewProps.onKeyDown?.(event);
@@ -480,7 +475,6 @@ const EditableInput = React.forwardRef<HTMLInputElement, EditableInputProps>(
       [context.autosize],
     );
 
-    // biome-ignore lint/correctness/useExhaustiveDependencies: Only specific inputProps and context properties are needed to avoid unnecessary re-renders
     const onBlur = React.useCallback(
       (event: React.FocusEvent<InputElement>) => {
         if (isDisabled || isReadOnly) return;
@@ -508,7 +502,6 @@ const EditableInput = React.forwardRef<HTMLInputElement, EditableInputProps>(
       ],
     );
 
-    // biome-ignore lint/correctness/useExhaustiveDependencies: Only specific inputProps and context properties are needed to avoid unnecessary re-renders
     const onChange = React.useCallback(
       (event: React.ChangeEvent<InputElement>) => {
         if (isDisabled || isReadOnly) return;
@@ -528,7 +521,6 @@ const EditableInput = React.forwardRef<HTMLInputElement, EditableInputProps>(
       ],
     );
 
-    // biome-ignore lint/correctness/useExhaustiveDependencies: Only specific inputProps and context properties are needed to avoid unnecessary re-renders
     const onKeyDown = React.useCallback(
       (event: React.KeyboardEvent<InputElement>) => {
         if (isDisabled || isReadOnly) return;
@@ -694,7 +686,6 @@ const EditableCancel = React.forwardRef<HTMLButtonElement, EditableCancelProps>(
     const { asChild, ...cancelProps } = props;
     const context = useEditableContext(CANCEL_NAME);
 
-    // biome-ignore lint/correctness/useExhaustiveDependencies: Only specific cancelProps and context properties are needed to avoid unnecessary re-renders
     const onClick = React.useCallback(
       (event: React.MouseEvent<HTMLButtonElement>) => {
         if (context.disabled || context.readOnly) return;
@@ -739,7 +730,6 @@ const EditableSubmit = React.forwardRef<HTMLButtonElement, EditableSubmitProps>(
     const { asChild, ...submitProps } = props;
     const context = useEditableContext(SUBMIT_NAME);
 
-    // biome-ignore lint/correctness/useExhaustiveDependencies: Only specific submitProps and context properties are needed to avoid unnecessary re-renders
     const onClick = React.useCallback(
       (event: React.MouseEvent<HTMLButtonElement>) => {
         if (context.disabled || context.readOnly) return;

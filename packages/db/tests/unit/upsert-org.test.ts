@@ -16,47 +16,13 @@ afterEach(() => {
 });
 
 // Mock external dependencies
-const mockClerkClient = {
-  organizations: {
-    createOrganization: mock(() =>
-      Promise.resolve({
-        id: 'org_db_123',
-        name: 'Test Organization',
-        slug: 'test-org-slug',
-      }),
-    ),
-    updateOrganization: mock(() =>
-      Promise.resolve({ id: 'org_db_123', name: 'Updated Organization' }),
-    ),
-  },
-  users: {
-    getUser: mock(() =>
-      Promise.resolve({
-        primaryEmailAddress: { emailAddress: 'test@example.com' },
-      }),
-    ),
-  },
-} as {
-  organizations: {
-    createOrganization: ReturnType<typeof mock>;
-    updateOrganization: ReturnType<typeof mock>;
-  };
-  users: {
-    getUser: ReturnType<typeof mock>;
-  };
-};
-
 const mockUpsertStripeCustomer = mock(() => Promise.resolve({ id: 'cus_789' }));
 const mockCreateSubscription = mock(() =>
   Promise.resolve({ id: 'sub_123', status: 'active' }),
 );
 const mockGetFreePlanPriceId = mock(() => Promise.resolve('price_free_123'));
 const mockGenerateRandomName = mock(() => 'test-org-slug');
-
-// Mock imports - these need to be at the top level to prevent module loading
-mock.module('@clerk/nextjs/server', () => ({
-  clerkClient: () => Promise.resolve(mockClerkClient),
-}));
+const mockGenerateUniqueOrgName = mock(() => 'unique-org-name');
 
 // Mock Stripe module before it gets imported
 mock.module('@seawatts/stripe', () => ({
@@ -78,6 +44,7 @@ mock.module('@seawatts/stripe/src/env.server', () => ({
 
 mock.module('@seawatts/id', () => ({
   generateRandomName: mockGenerateRandomName,
+  generateUniqueOrgName: mockGenerateUniqueOrgName,
 }));
 
 // Mock database
@@ -93,34 +60,38 @@ const mockTransaction = mock((callback) =>
 
 const mockQuery = {
   ApiKeys: {
-    findFirst: mock(() => Promise.resolve(null as Partial<ApiKeyType> | null)),
+    findFirst: mock(() =>
+      Promise.resolve(null as Partial<ApiKeyType> | null | undefined),
+    ),
   },
   OrgMembers: {
     findFirst: mock(() =>
-      Promise.resolve(null as Partial<OrgMembersType> | null),
+      Promise.resolve(null as Partial<OrgMembersType> | null | undefined),
     ),
   },
   Orgs: {
-    findFirst: mock(() => Promise.resolve(null as Partial<OrgType> | null)),
+    findFirst: mock(() =>
+      Promise.resolve(null as Partial<OrgType> | null | undefined),
+    ),
   },
   Users: {
     findFirst: mock(() =>
       Promise.resolve({
         email: 'test@example.com',
         id: 'user_123',
-      } as Partial<UserType>),
+        name: 'Test User',
+      } as Partial<UserType> | null | undefined),
     ),
   },
-} as const;
+};
 
 // Create proper mock chains for insert operations
 const mockOrgInsertResult = mock(() =>
   Promise.resolve([
     {
-      clerkOrgId: 'org_db_123',
-      createdByUserId: 'user_123',
       id: 'org_db_123',
       name: 'Test Organization',
+      slug: 'test-org-slug',
       stripeCustomerId: null,
     },
   ]),
@@ -133,7 +104,7 @@ const mockApiKeyInsertResult = mock(() =>
       id: 'key_123',
       key: 'sk_test_123',
       name: 'Default',
-      orgId: 'org_db_123',
+      organizationId: 'org_db_123',
       userId: 'user_123',
     },
   ]),
@@ -221,13 +192,11 @@ import type {
 describe('upsertOrg', () => {
   beforeEach(() => {
     // Reset all mocks
-    mockClerkClient.organizations.createOrganization.mockClear();
-    mockClerkClient.organizations.updateOrganization.mockClear();
-    mockClerkClient.users.getUser.mockClear();
     mockUpsertStripeCustomer.mockClear();
     mockCreateSubscription.mockClear();
     mockGetFreePlanPriceId.mockClear();
     mockGenerateRandomName.mockClear();
+    mockGenerateUniqueOrgName.mockClear();
     mockTransaction.mockClear();
     mockQuery.ApiKeys.findFirst.mockClear();
     mockQuery.OrgMembers.findFirst.mockClear();
@@ -240,28 +209,20 @@ describe('upsertOrg', () => {
     mockApiKeyInsertResult.mockClear();
 
     // Setup default mock implementations
-    mockClerkClient.users.getUser.mockResolvedValue({
-      primaryEmailAddress: { emailAddress: 'test@example.com' },
-    });
-
     mockGetFreePlanPriceId.mockResolvedValue('price_free_123');
     mockGenerateRandomName.mockReturnValue('test-org-slug');
+    mockGenerateUniqueOrgName.mockReturnValue('unique-org-name');
 
     // Setup database mocks
     mockQuery.Users.findFirst.mockResolvedValue({
       email: 'test@example.com',
       id: 'user_123',
+      name: 'Test User',
     });
 
     mockQuery.OrgMembers.findFirst.mockResolvedValue(null);
     mockQuery.Orgs.findFirst.mockResolvedValue(null);
     mockQuery.ApiKeys.findFirst.mockResolvedValue(null);
-
-    mockClerkClient.organizations.createOrganization.mockResolvedValue({
-      id: 'org_db_123',
-      name: 'Test Organization',
-      slug: 'test-org-slug',
-    });
 
     mockUpsertStripeCustomer.mockResolvedValue({ id: 'cus_789' });
 
@@ -277,10 +238,9 @@ describe('upsertOrg', () => {
     // Setup default return values
     mockOrgInsertResult.mockResolvedValue([
       {
-        clerkOrgId: 'org_db_123',
-        createdByUserId: 'user_123',
         id: 'org_db_123',
         name: 'Test Organization',
+        slug: 'test-org-slug',
         stripeCustomerId: null,
       },
     ]);
@@ -290,7 +250,7 @@ describe('upsertOrg', () => {
         id: 'key_123',
         key: 'sk_test_123',
         name: 'Default',
-        orgId: 'org_db_123',
+        organizationId: 'org_db_123',
         userId: 'user_123',
       },
     ]);
@@ -317,10 +277,6 @@ describe('upsertOrg', () => {
         },
       });
 
-      expect(
-        mockClerkClient.organizations.createOrganization,
-      ).not.toHaveBeenCalled(); // Should use update when orgId is provided
-
       expect(mockUpsertStripeCustomer).toHaveBeenCalledWith({
         additionalMetadata: {
           orgName: 'Test Organization',
@@ -342,14 +298,12 @@ describe('upsertOrg', () => {
     it('should handle existing user membership and return existing org', async () => {
       // Mock that user is already a member of an org
       mockQuery.OrgMembers.findFirst.mockResolvedValueOnce({
-        orgId: 'existing_org_123',
+        organizationId: 'existing_org_123',
         userId: 'user_123',
       });
 
       // Mock existing org
       mockQuery.Orgs.findFirst.mockResolvedValueOnce({
-        clerkOrgId: 'existing_org_123',
-        createdByUserId: 'user_123',
         id: 'existing_org_123',
         name: 'Existing Organization',
         stripeCustomerId: 'cus_existing',
@@ -360,7 +314,7 @@ describe('upsertOrg', () => {
         id: 'existing_key_123',
         key: 'sk_test_existing',
         name: 'Default',
-        orgId: 'existing_org_123',
+        organizationId: 'existing_org_123',
       });
 
       const result = await upsertOrg({
@@ -382,20 +336,14 @@ describe('upsertOrg', () => {
       });
 
       // Should not create new org or Stripe customer
-      expect(
-        mockClerkClient.organizations.createOrganization,
-      ).not.toHaveBeenCalled();
       expect(mockUpsertStripeCustomer).not.toHaveBeenCalled();
     });
   });
 
   describe('organization update', () => {
     it('should update existing organization when orgId is provided', async () => {
-      // When org already exists, it just returns the existing org without updating in Clerk
       // Mock existing org
       mockQuery.Orgs.findFirst.mockResolvedValueOnce({
-        clerkOrgId: 'org_db_123',
-        createdByUserId: 'user_123',
         id: 'org_db_123',
         name: 'Old Name',
         stripeCustomerId: 'cus_old',
@@ -410,20 +358,14 @@ describe('upsertOrg', () => {
       expect(result.org.name).toEqual('Old Name'); // Returns existing org data
       expect(result.org.id).toEqual('org_db_123');
       expect(result.org.stripeCustomerId).toEqual('cus_old');
-      // When org already exists, it doesn't update in Clerk
-      expect(
-        mockClerkClient.organizations.updateOrganization,
-      ).not.toHaveBeenCalled();
       // Also doesn't create new Stripe customer
       expect(mockUpsertStripeCustomer).not.toHaveBeenCalled();
     });
   });
 
   describe('error handling', () => {
-    it('should throw error when user email is not found', async () => {
-      mockClerkClient.users.getUser.mockResolvedValueOnce({
-        primaryEmailAddress: null,
-      });
+    it('should throw error when user is not found', async () => {
+      mockQuery.Users.findFirst.mockResolvedValueOnce(null);
 
       await expect(
         upsertOrg({
@@ -431,55 +373,10 @@ describe('upsertOrg', () => {
           orgId: 'org_db_123',
           userId: 'user_123',
         }),
-      ).rejects.toThrow('User email not found');
-    });
-
-    it('should handle Clerk organization creation failure', async () => {
-      mockClerkClient.organizations.updateOrganization.mockRejectedValue(
-        new Error('Failed to update organization in Clerk'),
-      );
-
-      await expect(
-        upsertOrg({
-          name: 'Test Organization',
-          orgId: 'org_db_123',
-          userId: 'user_123',
-        }),
-      ).rejects.toThrow('Failed to update organization in Clerk');
-    });
-
-    it('should handle slug collision and retry with existing org', async () => {
-      // Remove orgId to trigger create flow
-      mockClerkClient.organizations.createOrganization
-        .mockRejectedValueOnce(
-          new Error('Organization with slug already exists'),
-        )
-        .mockResolvedValueOnce({
-          id: 'org_db_123',
-          name: 'Test Organization',
-          slug: 'test-org-slug-2',
-        });
-
-      // The actual behavior when slug collision happens and no existing org is found
-      await expect(
-        upsertOrg({
-          name: 'Test Organization',
-          userId: 'user_123',
-        }),
-      ).rejects.toThrow('No existing org found, retry with new slug');
-
-      expect(
-        mockClerkClient.organizations.createOrganization,
-      ).toHaveBeenCalledTimes(1);
+      ).rejects.toThrow('User not found');
     });
 
     it('should handle Stripe customer creation failure', async () => {
-      // Reset the update organization mock to succeed
-      mockClerkClient.organizations.updateOrganization.mockResolvedValue({
-        id: 'org_db_123',
-        name: 'Test Organization',
-      });
-
       mockUpsertStripeCustomer.mockRejectedValue(
         new Error('Failed to create or get Stripe customer'),
       );
@@ -498,8 +395,6 @@ describe('upsertOrg', () => {
     it('should handle concurrent requests gracefully', async () => {
       // Mock that org already exists in database (race condition)
       mockQuery.Orgs.findFirst.mockResolvedValueOnce({
-        clerkOrgId: 'org_db_123',
-        createdByUserId: 'user_123',
         id: 'org_db_123',
         name: 'Test Organization',
         stripeCustomerId: 'cus_existing',
@@ -512,22 +407,11 @@ describe('upsertOrg', () => {
       });
 
       expect(result.org.id).toEqual('org_db_123');
-
-      // Should not create new org in Clerk
-      expect(
-        mockClerkClient.organizations.createOrganization,
-      ).not.toHaveBeenCalled();
     });
   });
 
   describe('subscription handling', () => {
     it('should auto-subscribe to free plan for new organizations', async () => {
-      // Reset the update organization mock to succeed
-      mockClerkClient.organizations.updateOrganization.mockResolvedValue({
-        id: 'org_db_123',
-        name: 'Test Organization',
-      });
-
       await upsertOrg({
         name: 'Test Organization',
         orgId: 'org_db_123',
@@ -546,8 +430,6 @@ describe('upsertOrg', () => {
     it('should skip auto-subscription if org already has subscription', async () => {
       // Mock existing subscription
       mockQuery.Orgs.findFirst.mockResolvedValueOnce({
-        clerkOrgId: 'org_db_123',
-        createdByUserId: 'user_123',
         id: 'org_db_123',
         name: 'Test Organization',
         stripeCustomerId: 'cus_789',
@@ -566,12 +448,6 @@ describe('upsertOrg', () => {
 
   describe('database operations', () => {
     it('should use onConflictDoUpdate for insert operations', async () => {
-      // Reset the update organization mock to succeed
-      mockClerkClient.organizations.updateOrganization.mockResolvedValue({
-        id: 'org_db_123',
-        name: 'Test Organization',
-      });
-
       await upsertOrg({
         name: 'Test Organization',
         orgId: 'org_db_123',
@@ -587,8 +463,6 @@ describe('upsertOrg', () => {
     it('should not create duplicate Stripe customers for the same org', async () => {
       // Mock that org already exists with a Stripe customer ID
       mockQuery.Orgs.findFirst.mockResolvedValueOnce({
-        clerkOrgId: 'org_db_123',
-        createdByUserId: 'user_123',
         id: 'org_db_123',
         name: 'Test Organization',
         stripeCustomerId: 'cus_existing_123',
@@ -605,12 +479,6 @@ describe('upsertOrg', () => {
     });
 
     it('should handle concurrent upsertOrg calls without creating duplicate customers', async () => {
-      // Reset the update organization mock to succeed
-      mockClerkClient.organizations.updateOrganization.mockResolvedValue({
-        id: 'org_db_123',
-        name: 'Test Organization',
-      });
-
       // Mock that findExistingOrg returns null for both calls (no existing org found)
       mockQuery.OrgMembers.findFirst.mockResolvedValue(null);
       mockQuery.Orgs.findFirst.mockResolvedValue(null);
@@ -651,18 +519,10 @@ describe('upsertOrg', () => {
       mockQuery.Orgs.findFirst
         .mockResolvedValueOnce(null) // First call: no existing org
         .mockResolvedValueOnce({
-          clerkOrgId: 'org_db_123',
-          createdByUserId: 'user_123',
           id: 'org_db_123',
           name: 'Test Organization',
           stripeCustomerId: 'cus_existing_456',
         }); // Second call: existing org found
-
-      // Reset the update organization mock to succeed
-      mockClerkClient.organizations.updateOrganization.mockResolvedValue({
-        id: 'org_db_123',
-        name: 'Test Organization',
-      });
 
       const result = await upsertOrg({
         name: 'Test Organization',
@@ -676,12 +536,6 @@ describe('upsertOrg', () => {
     });
 
     it('should handle database transaction rollback on Stripe customer creation failure', async () => {
-      // Reset the update organization mock to succeed
-      mockClerkClient.organizations.updateOrganization.mockResolvedValue({
-        id: 'org_db_123',
-        name: 'Test Organization',
-      });
-
       // Make upsertStripeCustomer fail
       mockUpsertStripeCustomer.mockRejectedValueOnce(
         new Error('Stripe API error'),
@@ -700,12 +554,6 @@ describe('upsertOrg', () => {
     });
 
     it('should use idempotency key when creating new Stripe customer', async () => {
-      // Reset the update organization mock to succeed
-      mockClerkClient.organizations.updateOrganization.mockResolvedValue({
-        id: 'org_db_123',
-        name: 'Test Organization',
-      });
-
       await upsertOrg({
         name: 'Test Organization',
         orgId: 'org_db_123',
@@ -729,12 +577,6 @@ describe('upsertOrg', () => {
       mockQuery.OrgMembers.findFirst.mockResolvedValue(null);
       mockQuery.Orgs.findFirst.mockResolvedValue(null);
 
-      // Reset the update organization mock to succeed
-      mockClerkClient.organizations.updateOrganization.mockResolvedValue({
-        id: 'org_db_123',
-        name: 'Test Organization',
-      });
-
       await upsertOrg({
         name: 'Test Organization',
         orgId: 'org_db_123',
@@ -746,12 +588,6 @@ describe('upsertOrg', () => {
     });
 
     it('should verify upsertStripeCustomer uses orgId for idempotency', async () => {
-      // Reset the update organization mock to succeed
-      mockClerkClient.organizations.updateOrganization.mockResolvedValue({
-        id: 'org_db_123',
-        name: 'Test Organization',
-      });
-
       // Mock upsertStripeCustomer to return a customer
       mockUpsertStripeCustomer.mockResolvedValueOnce({
         id: 'cus_789',

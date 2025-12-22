@@ -1,6 +1,6 @@
 'use client';
 
-import { signIn, signUp } from '@seawatts/auth/client';
+import { signIn } from '@seawatts/auth/client';
 import {
   Card,
   CardContent,
@@ -10,20 +10,13 @@ import {
   CardTitle,
 } from '@seawatts/ui/card';
 import { Button } from '@seawatts/ui/components/button';
-import { Input } from '@seawatts/ui/input';
-import { Label } from '@seawatts/ui/label';
-import { Separator } from '@seawatts/ui/separator';
 import Link from 'next/link';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
 import { useState } from 'react';
 
 export default function SignUpPage() {
-  const router = useRouter();
   const searchParams = useSearchParams();
   const callbackUrl = searchParams.get('callbackUrl') || '/app/onboarding';
-  const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -37,30 +30,6 @@ export default function SignUpPage() {
       });
     } catch (err) {
       setError('Failed to sign up with Google');
-      console.error(err);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleEmailSignUp = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsLoading(true);
-    setError(null);
-    try {
-      const result = await signUp.email({
-        callbackURL: callbackUrl,
-        email,
-        name,
-        password,
-      });
-      if (result.error) {
-        setError(result.error.message || 'Failed to create account');
-      } else {
-        router.push(callbackUrl);
-      }
-    } catch (err) {
-      setError('Failed to create account');
       console.error(err);
     } finally {
       setIsLoading(false);
@@ -101,69 +70,12 @@ export default function SignUpPage() {
               fill="#EA4335"
             />
           </svg>
-          Continue with Google
+          {isLoading ? 'Creating account...' : 'Continue with Google'}
         </Button>
 
-        <div className="relative">
-          <div className="absolute inset-0 flex items-center">
-            <Separator className="w-full" />
-          </div>
-          <div className="relative flex justify-center text-xs uppercase">
-            <span className="bg-card px-2 text-muted-foreground">
-              Or continue with email
-            </span>
-          </div>
-        </div>
-
-        <form className="space-y-4" onSubmit={handleEmailSignUp}>
-          <div className="space-y-2">
-            <Label htmlFor="name">Full Name</Label>
-            <Input
-              autoComplete="name"
-              disabled={isLoading}
-              id="name"
-              onChange={(e) => setName(e.target.value)}
-              placeholder="John Doe"
-              required
-              type="text"
-              value={name}
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="email">Email</Label>
-            <Input
-              autoComplete="email"
-              disabled={isLoading}
-              id="email"
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="name@example.com"
-              required
-              type="email"
-              value={email}
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="password">Password</Label>
-            <Input
-              autoComplete="new-password"
-              disabled={isLoading}
-              id="password"
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="At least 8 characters"
-              required
-              type="password"
-              value={password}
-            />
-          </div>
-
-          {error && (
-            <p className="text-sm text-destructive text-center">{error}</p>
-          )}
-
-          <Button className="w-full" disabled={isLoading} type="submit">
-            {isLoading ? 'Creating account...' : 'Create account'}
-          </Button>
-        </form>
+        {error && (
+          <p className="text-sm text-destructive text-center">{error}</p>
+        )}
       </CardContent>
       <CardFooter className="flex flex-col gap-4">
         <p className="text-sm text-muted-foreground text-center">

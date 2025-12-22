@@ -13,21 +13,20 @@ export const orgRouter = createTRPCRouter({
       }),
     )
     .query(async ({ ctx, input }) => {
+      if (!ctx.auth.userId) throw new Error('User ID is required');
+
       // First check if the user already has access to an organization with this name
       const existingOrgWithAccess = await ctx.db.query.Orgs.findFirst({
         where: eq(Orgs.name, input.name),
         with: {
-          orgMembers: {
+          members: {
             where: eq(OrgMembers.userId, ctx.auth.userId),
           },
         },
       });
 
       // If user has access to an org with this name, it's available to them
-      if (
-        existingOrgWithAccess &&
-        existingOrgWithAccess.orgMembers.length > 0
-      ) {
+      if (existingOrgWithAccess && existingOrgWithAccess.members.length > 0) {
         return {
           available: true,
           message: `You already have access to organization '${input.name}'`,
@@ -114,7 +113,7 @@ export const orgRouter = createTRPCRouter({
 
         if (existingOrg) {
           const apiKey = await ctx.db.query.ApiKeys.findFirst({
-            where: eq(ApiKeys.orgId, existingOrg.id),
+            where: eq(ApiKeys.organizationId, existingOrg.id),
           });
           return {
             apiKey: {

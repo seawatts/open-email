@@ -1,6 +1,6 @@
 'use server';
 
-import { auth } from '@clerk/nextjs/server';
+import { auth } from '@seawatts/auth/server';
 import { db } from '@seawatts/db/client';
 import { Orgs } from '@seawatts/db/schema';
 import {
@@ -25,13 +25,21 @@ const createCheckoutSchema = z.object({
   planType: z.enum(['free', 'team']).default('team'),
 });
 
+// Helper function to get session
+async function getSession() {
+  const session = await auth.api.getSession({
+    headers: await headers(),
+  });
+  return session;
+}
+
 // Create checkout session action for pricing cards
 export const createCheckoutSessionAction = action
   .inputSchema(createCheckoutSchema)
   .action(async ({ parsedInput }) => {
-    const { userId } = await auth();
+    const session = await getSession();
 
-    if (!userId) {
+    if (!session?.user?.id) {
       throw new Error('Unauthorized');
     }
 
@@ -52,14 +60,11 @@ export const createCheckoutSessionAction = action
     let customerId = org.stripeCustomerId;
 
     if (!customerId) {
-      // Get user details from Clerk for creating customer
-      const user = await auth();
-
       const customer = await getOrCreateCustomer({
-        email: user.sessionClaims?.email as string,
+        email: session.user.email || '',
         metadata: {
           orgId: org.id,
-          userId: user.userId as string,
+          userId: session.user.id,
         },
         name: org.name,
       });
@@ -80,7 +85,7 @@ export const createCheckoutSessionAction = action
     }
 
     // Create checkout session
-    const session = await createCheckoutSession({
+    const checkoutSession = await createCheckoutSession({
       billingInterval:
         parsedInput.billingInterval === 'yearly'
           ? BILLING_INTERVALS.YEARLY
@@ -94,8 +99,8 @@ export const createCheckoutSessionAction = action
     });
 
     // Redirect to Stripe Checkout
-    if (!session.url) {
+    if (!checkoutSession.url) {
       throw new Error('Failed to create checkout session');
     }
-    redirect(session.url);
+    redirect(checkoutSession.url);
   });

@@ -1,29 +1,48 @@
 'use client';
 
-import { useUser } from '@clerk/nextjs';
 import posthog from 'posthog-js';
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 export function PostHogIdentifyUser() {
-  const user = useUser();
+  const [isMounted, setIsMounted] = useState(false);
   const previousUserId = useRef<string | null>(null);
 
+  // Track mount state
   useEffect(() => {
-    if (user.user) {
-      // Only identify if the user ID has changed
-      if (previousUserId.current !== user.user.id) {
-        posthog.identify(user.user.id, {
-          email: user.user.primaryEmailAddress?.emailAddress,
-        });
-        previousUserId.current = user.user.id;
+    setIsMounted(true);
+  }, []);
+
+  // Fetch session and identify user after mount
+  useEffect(() => {
+    if (!isMounted) return;
+
+    const identifyUser = async () => {
+      try {
+        // Dynamically import auth client to avoid SSR context issues
+        const { authClient } = await import('@seawatts/auth/client');
+        const sessionResult = await authClient.getSession();
+        const user = sessionResult.data?.user;
+
+        if (user) {
+          // Only identify if the user ID has changed
+          if (previousUserId.current !== user.id) {
+            posthog.identify(user.id, {
+              email: user.email,
+              name: user.name,
+            });
+            previousUserId.current = user.id;
+          }
+        } else if (previousUserId.current && !user) {
+          // User was previously identified but is now undefined
+          previousUserId.current = null;
+        }
+      } catch (error) {
+        console.error('Error identifying user:', error);
       }
-    } else if (previousUserId.current && !user.user) {
-      // User was previously identified but is now undefined
-      // Don't automatically track this as a sign out event
-      // Only track when explicitly called via signOut()
-      previousUserId.current = null;
-    }
-  }, [user]);
+    };
+
+    identifyUser();
+  }, [isMounted]);
 
   return null;
 }

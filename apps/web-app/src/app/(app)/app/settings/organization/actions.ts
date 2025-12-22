@@ -1,11 +1,12 @@
 'use server';
 
-import { auth, clerkClient } from '@clerk/nextjs/server';
+import { auth } from '@seawatts/auth/server';
 import { db } from '@seawatts/db/client';
 import { OrgMembers, Orgs } from '@seawatts/db/schema';
 import { isEntitled } from '@seawatts/stripe/guards/server';
 import { and, eq } from 'drizzle-orm';
 import { revalidatePath } from 'next/cache';
+import { headers } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { createSafeActionClient } from 'next-safe-action';
 import { z } from 'zod';
@@ -29,7 +30,7 @@ const deleteTeamSchema = z.object({
 
 const updateMemberRoleSchema = z.object({
   memberId: z.string().min(1, 'Member ID is required'),
-  role: z.enum(['admin', 'user']),
+  role: z.enum(['admin', 'member', 'owner']),
 });
 
 const removeMemberSchema = z.object({
@@ -42,18 +43,29 @@ const leaveOrganizationSchema = z.object({
 
 const inviteMemberSchema = z.object({
   email: z.string().email('Invalid email address'),
-  role: z.enum(['admin', 'user']).default('user'),
+  role: z.enum(['admin', 'member']).default('member'),
 });
+
+// Helper function to get session
+async function getSession() {
+  const session = await auth.api.getSession({
+    headers: await headers(),
+  });
+  return session;
+}
 
 // Invite member action with Stripe entitlements check
 export const inviteMemberAction = action
   .inputSchema(inviteMemberSchema)
   .action(async ({ parsedInput }) => {
-    const { userId, orgId } = await auth();
+    const session = await getSession();
 
-    if (!userId || !orgId) {
+    if (!session?.user?.id || !session.session?.activeOrganizationId) {
       throw new Error('Unauthorized');
     }
+
+    const userId = session.user.id;
+    const orgId = session.session.activeOrganizationId;
 
     // Get the organization
     const org = await db.query.Orgs.findFirst({
@@ -64,12 +76,18 @@ export const inviteMemberAction = action
       throw new Error('Organization not found');
     }
 
-    // Check if user is admin
-    const member = await db.query.OrgMembers.findFirst({
-      where: and(eq(OrgMembers.orgId, org.id), eq(OrgMembers.userId, userId)),
+    // Check if user is admin/owner
+    const currentMember = await db.query.OrgMembers.findFirst({
+      where: and(
+        eq(OrgMembers.organizationId, org.id),
+        eq(OrgMembers.userId, userId),
+      ),
     });
 
-    if (!member || member.role !== 'admin') {
+    if (
+      !currentMember ||
+      (currentMember.role !== 'admin' && currentMember.role !== 'owner')
+    ) {
       throw new Error('Only admins can invite members');
     }
 
@@ -79,12 +97,14 @@ export const inviteMemberAction = action
       'Team member invitations require a paid plan. Please upgrade to invite team members.',
     );
 
-    // Invite the user to the organization via Clerk
-    const clerk = await clerkClient();
-    await clerk.organizations.createOrganizationInvitation({
-      emailAddress: parsedInput.email,
-      organizationId: org.clerkOrgId,
-      role: parsedInput.role,
+    // Invite the user to the organization via Better Auth
+    await auth.api.createInvitation({
+      body: {
+        email: parsedInput.email,
+        organizationId: org.id,
+        role: parsedInput.role,
+      },
+      headers: await headers(),
     });
 
     revalidatePath('/app/settings/organization');
@@ -96,11 +116,14 @@ export const inviteMemberAction = action
 export const updateTeamNameAction = action
   .inputSchema(updateTeamNameSchema)
   .action(async ({ parsedInput }) => {
-    const { userId, orgId } = await auth();
+    const session = await getSession();
 
-    if (!userId || !orgId) {
+    if (!session?.user?.id || !session.session?.activeOrganizationId) {
       throw new Error('Unauthorized');
     }
+
+    const userId = session.user.id;
+    const orgId = session.session.activeOrganizationId;
 
     // Get the organization
     const org = await db.query.Orgs.findFirst({
@@ -111,28 +134,31 @@ export const updateTeamNameAction = action
       throw new Error('Organization not found');
     }
 
-    // Check if user is admin
-    const member = await db.query.OrgMembers.findFirst({
-      where: and(eq(OrgMembers.orgId, org.id), eq(OrgMembers.userId, userId)),
+    // Check if user is admin/owner
+    const currentMember = await db.query.OrgMembers.findFirst({
+      where: and(
+        eq(OrgMembers.organizationId, org.id),
+        eq(OrgMembers.userId, userId),
+      ),
     });
 
-    if (!member || member.role !== 'admin') {
+    if (
+      !currentMember ||
+      (currentMember.role !== 'admin' && currentMember.role !== 'owner')
+    ) {
       throw new Error('Only admins can update team name');
     }
 
-    // Update organization name in Clerk
-    const clerk = await clerkClient();
-    await clerk.organizations.updateOrganization(orgId, {
-      name: parsedInput.name,
+    // Update organization name via Better Auth
+    await auth.api.updateOrganization({
+      body: {
+        data: {
+          name: parsedInput.name,
+        },
+        organizationId: orgId,
+      },
+      headers: await headers(),
     });
-
-    // Update organization name in database
-    await db
-      .update(Orgs)
-      .set({
-        name: parsedInput.name,
-      })
-      .where(eq(Orgs.id, orgId));
 
     revalidatePath('/app/settings/organization');
 
@@ -143,11 +169,14 @@ export const updateTeamNameAction = action
 export const deleteTeamAction = action
   .inputSchema(deleteTeamSchema)
   .action(async ({ parsedInput }) => {
-    const { userId, orgId } = await auth();
+    const session = await getSession();
 
-    if (!userId || !orgId) {
+    if (!session?.user?.id || !session.session?.activeOrganizationId) {
       throw new Error('Unauthorized');
     }
+
+    const userId = session.user.id;
+    const orgId = session.session.activeOrganizationId;
 
     // Validate confirmation
     if (!parsedInput.confirm) {
@@ -163,26 +192,25 @@ export const deleteTeamAction = action
       throw new Error('Organization not found');
     }
 
-    // Check if user is admin and the creator
-    const member = await db.query.OrgMembers.findFirst({
-      where: and(eq(OrgMembers.orgId, org.id), eq(OrgMembers.userId, userId)),
+    // Check if user is owner
+    const currentMember = await db.query.OrgMembers.findFirst({
+      where: and(
+        eq(OrgMembers.organizationId, org.id),
+        eq(OrgMembers.userId, userId),
+      ),
     });
 
-    if (!member || member.role !== 'admin') {
-      throw new Error('Only admins can delete the team');
+    if (!currentMember || currentMember.role !== 'owner') {
+      throw new Error('Only the organization owner can delete the team');
     }
 
-    if (org.createdByUserId !== userId) {
-      throw new Error('Only the team creator can delete the team');
-    }
-
-    // Delete organization in Clerk
-    const clerk = await clerkClient();
-    await clerk.organizations.deleteOrganization(org.clerkOrgId);
-
-    // The database will be cleaned up via Clerk webhooks
-    // But we can also clean up directly here for immediate effect
-    await db.delete(Orgs).where(eq(Orgs.id, orgId));
+    // Delete organization via Better Auth
+    await auth.api.deleteOrganization({
+      body: {
+        organizationId: orgId,
+      },
+      headers: await headers(),
+    });
 
     // Redirect to dashboard after deletion
     redirect('/app/dashboard');
@@ -190,11 +218,13 @@ export const deleteTeamAction = action
 
 // Get organization members action
 export const getOrganizationMembersAction = action.action(async () => {
-  const { userId, orgId } = await auth();
+  const session = await getSession();
 
-  if (!userId || !orgId) {
+  if (!session?.user?.id || !session.session?.activeOrganizationId) {
     throw new Error('Unauthorized');
   }
+
+  const orgId = session.session.activeOrganizationId;
 
   // Get the organization
   const org = await db.query.Orgs.findFirst({
@@ -207,19 +237,19 @@ export const getOrganizationMembersAction = action.action(async () => {
 
   // Get organization members with user details
   const members = await db.query.OrgMembers.findMany({
-    where: eq(OrgMembers.orgId, org.id),
+    where: eq(OrgMembers.organizationId, org.id),
     with: {
       user: true,
     },
   });
 
-  return members.map((member) => ({
-    createdAt: member.createdAt,
-    email: member.user?.email || 'Unknown',
-    firstName: member.user?.firstName,
-    id: member.id,
-    lastName: member.user?.lastName,
-    role: member.role,
+  return members.map((m: (typeof members)[0]) => ({
+    createdAt: m.createdAt,
+    email: m.user?.email || 'Unknown',
+    id: m.id,
+    name: m.user?.name,
+    role: m.role,
+    userId: m.userId,
   }));
 });
 
@@ -227,11 +257,14 @@ export const getOrganizationMembersAction = action.action(async () => {
 export const removeMemberAction = action
   .inputSchema(removeMemberSchema)
   .action(async ({ parsedInput }) => {
-    const { userId, orgId } = await auth();
+    const session = await getSession();
 
-    if (!userId || !orgId) {
+    if (!session?.user?.id || !session.session?.activeOrganizationId) {
       throw new Error('Unauthorized');
     }
+
+    const userId = session.user.id;
+    const orgId = session.session.activeOrganizationId;
 
     // Get the organization
     const org = await db.query.Orgs.findFirst({
@@ -242,48 +275,43 @@ export const removeMemberAction = action
       throw new Error('Organization not found');
     }
 
-    // Check if user is admin
+    // Check if user is admin/owner
     const currentMember = await db.query.OrgMembers.findFirst({
-      where: and(eq(OrgMembers.orgId, org.id), eq(OrgMembers.userId, userId)),
+      where: and(
+        eq(OrgMembers.organizationId, org.id),
+        eq(OrgMembers.userId, userId),
+      ),
     });
 
-    if (!currentMember || currentMember.role !== 'admin') {
+    if (
+      !currentMember ||
+      (currentMember.role !== 'admin' && currentMember.role !== 'owner')
+    ) {
       throw new Error('Only admins can remove members');
     }
 
     // Get the member to be removed
     const memberToRemove = await db.query.OrgMembers.findFirst({
       where: eq(OrgMembers.id, parsedInput.memberId),
-      with: {
-        user: true,
-      },
     });
 
-    if (!memberToRemove || memberToRemove.orgId !== org.id) {
+    if (!memberToRemove || memberToRemove.organizationId !== org.id) {
       throw new Error('Member not found');
     }
 
-    // Prevent removing the last admin
-    if (memberToRemove.role === 'admin') {
-      const adminCount = await db.query.OrgMembers.findMany({
-        where: and(eq(OrgMembers.orgId, org.id), eq(OrgMembers.role, 'admin')),
-      });
-
-      if (adminCount.length <= 1) {
-        throw new Error('Cannot remove the last admin');
-      }
+    // Prevent removing the owner
+    if (memberToRemove.role === 'owner') {
+      throw new Error('Cannot remove the organization owner');
     }
 
-    // Remove from database - Clerk webhooks will handle synchronization
-    // The user will be removed from Clerk via the webhook system
-    const clerk = await clerkClient();
-    await clerk.organizations.deleteOrganizationMembership({
-      organizationId: org.clerkOrgId,
-      userId: memberToRemove.userId,
+    // Remove member via Better Auth
+    await auth.api.removeMember({
+      body: {
+        memberIdOrEmail: memberToRemove.userId,
+        organizationId: org.id,
+      },
+      headers: await headers(),
     });
-
-    // Remove from database
-    await db.delete(OrgMembers).where(eq(OrgMembers.id, parsedInput.memberId));
 
     revalidatePath('/app/settings/organization');
 
@@ -294,11 +322,14 @@ export const removeMemberAction = action
 export const updateMemberRoleAction = action
   .inputSchema(updateMemberRoleSchema)
   .action(async ({ parsedInput }) => {
-    const { userId, orgId } = await auth();
+    const session = await getSession();
 
-    if (!userId || !orgId) {
+    if (!session?.user?.id || !session.session?.activeOrganizationId) {
       throw new Error('Unauthorized');
     }
+
+    const userId = session.user.id;
+    const orgId = session.session.activeOrganizationId;
 
     // Get the organization
     const org = await db.query.Orgs.findFirst({
@@ -309,53 +340,44 @@ export const updateMemberRoleAction = action
       throw new Error('Organization not found');
     }
 
-    // Check if user is admin
+    // Check if user is admin/owner
     const currentMember = await db.query.OrgMembers.findFirst({
-      where: and(eq(OrgMembers.orgId, org.id), eq(OrgMembers.userId, userId)),
+      where: and(
+        eq(OrgMembers.organizationId, org.id),
+        eq(OrgMembers.userId, userId),
+      ),
     });
 
-    if (!currentMember || currentMember.role !== 'admin') {
+    if (
+      !currentMember ||
+      (currentMember.role !== 'admin' && currentMember.role !== 'owner')
+    ) {
       throw new Error('Only admins can update member roles');
     }
 
     // Get the member to be updated
     const memberToUpdate = await db.query.OrgMembers.findFirst({
       where: eq(OrgMembers.id, parsedInput.memberId),
-      with: {
-        user: true,
-      },
     });
 
-    if (!memberToUpdate || memberToUpdate.orgId !== org.id) {
+    if (!memberToUpdate || memberToUpdate.organizationId !== org.id) {
       throw new Error('Member not found');
     }
 
-    // Prevent changing the last admin to user
-    if (memberToUpdate.role === 'admin' && parsedInput.role === 'user') {
-      const adminCount = await db.query.OrgMembers.findMany({
-        where: and(eq(OrgMembers.orgId, org.id), eq(OrgMembers.role, 'admin')),
-      });
-
-      if (adminCount.length <= 1) {
-        throw new Error('Cannot change the last admin to user');
-      }
+    // Prevent changing owner role unless you're the owner
+    if (memberToUpdate.role === 'owner' && currentMember.role !== 'owner') {
+      throw new Error('Only the owner can change owner role');
     }
 
-    // Update member role in Clerk
-    const clerk = await clerkClient();
-    await clerk.organizations.updateOrganizationMembership({
-      organizationId: org.clerkOrgId,
-      role: parsedInput.role,
-      userId: memberToUpdate.userId,
-    });
-
-    // Update member role in database
-    await db
-      .update(OrgMembers)
-      .set({
+    // Update member role via Better Auth
+    await auth.api.updateMemberRole({
+      body: {
+        memberId: memberToUpdate.id,
+        organizationId: org.id,
         role: parsedInput.role,
-      })
-      .where(eq(OrgMembers.id, parsedInput.memberId));
+      },
+      headers: await headers(),
+    });
 
     revalidatePath('/app/settings/organization');
 
@@ -366,11 +388,13 @@ export const updateMemberRoleAction = action
 export const leaveOrganizationAction = action
   .inputSchema(leaveOrganizationSchema)
   .action(async ({ parsedInput }) => {
-    const { userId } = await auth();
+    const session = await getSession();
 
-    if (!userId) {
+    if (!session?.user?.id) {
       throw new Error('Unauthorized');
     }
+
+    const userId = session.user.id;
 
     // Get the organization
     const org = await db.query.Orgs.findFirst({
@@ -382,29 +406,32 @@ export const leaveOrganizationAction = action
     }
 
     // Get the user's membership
-    const member = await db.query.OrgMembers.findFirst({
-      where: and(eq(OrgMembers.orgId, org.id), eq(OrgMembers.userId, userId)),
+    const currentMember = await db.query.OrgMembers.findFirst({
+      where: and(
+        eq(OrgMembers.organizationId, org.id),
+        eq(OrgMembers.userId, userId),
+      ),
     });
 
-    if (!member) {
+    if (!currentMember) {
       throw new Error('You are not a member of this organization');
     }
 
-    // Prevent the last admin from leaving
-    if (member.role === 'admin') {
-      const adminCount = await db.query.OrgMembers.findMany({
-        where: and(eq(OrgMembers.orgId, org.id), eq(OrgMembers.role, 'admin')),
-      });
-
-      if (adminCount.length <= 1) {
-        throw new Error(
-          'Cannot leave organization as the last admin. Please transfer ownership or delete the organization.',
-        );
-      }
+    // Prevent the owner from leaving
+    if (currentMember.role === 'owner') {
+      throw new Error(
+        'Cannot leave organization as the owner. Please transfer ownership or delete the organization.',
+      );
     }
 
-    // Remove from database - Clerk webhooks will handle synchronization
-    await db.delete(OrgMembers).where(eq(OrgMembers.id, member.id));
+    // Remove self from organization via Better Auth
+    await auth.api.removeMember({
+      body: {
+        memberIdOrEmail: userId,
+        organizationId: org.id,
+      },
+      headers: await headers(),
+    });
 
     revalidatePath('/app/settings/organization');
 

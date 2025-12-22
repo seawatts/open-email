@@ -6,11 +6,12 @@ import {
   type HighlightData,
   type HighlightType,
 } from '@seawatts/api/email/types';
-import { api } from '@seawatts/api/react';
+import { useTRPC } from '@seawatts/api/react';
 import { Button } from '@seawatts/ui/button';
 import { Checkbox } from '@seawatts/ui/checkbox';
 import { cn } from '@seawatts/ui/lib/utils';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@seawatts/ui/tooltip';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { formatDistanceToNow } from 'date-fns';
 import {
   Archive,
@@ -113,13 +114,16 @@ export function EmailRow({
 }: EmailRowProps) {
   const decision = thread.latestDecision;
   const hasPendingActions = (thread.pendingActions?.length ?? 0) > 0;
-  const utils = api.useUtils();
+  const trpc = useTRPC();
+  const queryClient = useQueryClient();
 
-  const pinMutation = api.email.threads.pin.useMutation({
-    onSuccess: () => {
-      utils.email.threads.invalidate();
-    },
-  });
+  const pinMutation = useMutation(
+    trpc.email.threads.pin.mutationOptions({
+      onSuccess: () => {
+        queryClient.invalidateQueries(trpc.email.threads.list.queryFilter());
+      },
+    }),
+  );
 
   const handlePin = (e: React.MouseEvent) => {
     e.stopPropagation();

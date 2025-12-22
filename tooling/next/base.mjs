@@ -11,13 +11,9 @@ const nextConfig = {
     // Forward browser logs to the terminal for easier debugging
     browserDebugInfoInTerminal: true,
 
-    // cacheLife: true,
-    // cacheComponents: true,
-    // Activate new client-side router improvements
-    clientSegmentCache: true, // will be renamed to cacheComponents in Next.js 16
-
     // Enable support for `global-not-found`, which allows you to more easily define a global 404 page.
     globalNotFound: true,
+
     scrollRestoration: true,
     // turbopackPersistentCaching: true,
     useCache: true,
@@ -51,10 +47,12 @@ const nextConfig = {
   transpilePackages: [
     '@seawatts/analytics',
     '@seawatts/api',
+    '@seawatts/auth',
     '@seawatts/db',
     '@seawatts/id',
     '@seawatts/ui',
     '@seawatts/logger',
+    '@seawatts/stripe',
     '@seawatts/zustand',
   ],
   turbopack: {
@@ -77,7 +75,9 @@ const configWithPlugins = withPlugins.reduce(
 
 /** @type {import('next').NextConfig} */
 const finalConfig =
-  process.env.POSTHOG_PERSONAL_API_KEY && process.env.POSTHOG_ENV_ID
+  process.env.POSTHOG_PERSONAL_API_KEY &&
+  process.env.POSTHOG_ENV_ID &&
+  process.env.CI
     ? withPostHogConfig(configWithPlugins, {
         envId: process.env.POSTHOG_ENV_ID, // Environment ID
         host: process.env.NEXT_PUBLIC_POSTHOG_HOST, // (optional), defaults to https://us.posthog.com

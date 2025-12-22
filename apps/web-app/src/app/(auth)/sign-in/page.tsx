@@ -10,19 +10,13 @@ import {
   CardTitle,
 } from '@seawatts/ui/card';
 import { Button } from '@seawatts/ui/components/button';
-import { Input } from '@seawatts/ui/input';
-import { Label } from '@seawatts/ui/label';
-import { Separator } from '@seawatts/ui/separator';
 import Link from 'next/link';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
 import { useState } from 'react';
 
 export default function SignInPage() {
-  const router = useRouter();
   const searchParams = useSearchParams();
   const callbackUrl = searchParams.get('callbackUrl') || '/app';
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -36,29 +30,6 @@ export default function SignInPage() {
       });
     } catch (err) {
       setError('Failed to sign in with Google');
-      console.error(err);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleEmailSignIn = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsLoading(true);
-    setError(null);
-    try {
-      const result = await signIn.email({
-        callbackURL: callbackUrl,
-        email,
-        password,
-      });
-      if (result.error) {
-        setError(result.error.message || 'Invalid credentials');
-      } else {
-        router.push(callbackUrl);
-      }
-    } catch (err) {
-      setError('Failed to sign in');
       console.error(err);
     } finally {
       setIsLoading(false);
@@ -99,55 +70,12 @@ export default function SignInPage() {
               fill="#EA4335"
             />
           </svg>
-          Continue with Google
+          {isLoading ? 'Signing in...' : 'Continue with Google'}
         </Button>
 
-        <div className="relative">
-          <div className="absolute inset-0 flex items-center">
-            <Separator className="w-full" />
-          </div>
-          <div className="relative flex justify-center text-xs uppercase">
-            <span className="bg-card px-2 text-muted-foreground">
-              Or continue with email
-            </span>
-          </div>
-        </div>
-
-        <form className="space-y-4" onSubmit={handleEmailSignIn}>
-          <div className="space-y-2">
-            <Label htmlFor="email">Email</Label>
-            <Input
-              autoComplete="email"
-              disabled={isLoading}
-              id="email"
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="name@example.com"
-              required
-              type="email"
-              value={email}
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="password">Password</Label>
-            <Input
-              autoComplete="current-password"
-              disabled={isLoading}
-              id="password"
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              type="password"
-              value={password}
-            />
-          </div>
-
-          {error && (
-            <p className="text-sm text-destructive text-center">{error}</p>
-          )}
-
-          <Button className="w-full" disabled={isLoading} type="submit">
-            {isLoading ? 'Signing in...' : 'Sign in'}
-          </Button>
-        </form>
+        {error && (
+          <p className="text-sm text-destructive text-center">{error}</p>
+        )}
       </CardContent>
       <CardFooter className="flex flex-col gap-4">
         <p className="text-sm text-muted-foreground text-center">

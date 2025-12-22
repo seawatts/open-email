@@ -11,7 +11,7 @@ import {
   type PriceLookupKey,
   type ProductId,
 } from './billing-ids.generated';
-import { env } from './env.server';
+import { env } from './env';
 
 // Initialize Stripe with the secret key
 // Note: This will fail at runtime if STRIPE_SECRET_KEY is not configured

@@ -9,12 +9,12 @@ import { eq } from '@seawatts/db';
 import { db } from '@seawatts/db/client';
 import {
   EmailHighlights,
-  EmailKeywords,
-  EmailMessages,
-  EmailThreads,
   type EmailHighlightType,
+  EmailKeywords,
   type EmailKeywordType,
+  EmailMessages,
   type EmailMessageType,
+  EmailThreads,
   type EmailThreadType,
 } from '@seawatts/db/schema';
 
@@ -108,31 +108,36 @@ export async function getThreadSenders(
     return new Map();
   }
 
-  const messages = await db
-    .select({
-      fromEmail: EmailMessages.fromEmail,
-      fromName: EmailMessages.fromName,
-      threadId: EmailMessages.threadId,
-    })
-    .from(EmailMessages)
-    .where(
-      eq(
-        EmailMessages.threadId,
-        // Use first thread ID to start, then filter in JS
-        // This is a workaround - in production use inArray
-        threadIds[0]!,
-      ),
-    )
-    .orderBy(EmailMessages.internalDate);
-
-  // For multiple threads, we need to query differently
-  // Using raw SQL with inArray would be better
   const senderMap = new Map<
     string,
     { fromEmail: string; fromName: string | null }
   >();
 
-  // Batch query all messages for all threads
+  // Optimization: for single thread, use direct query
+  const singleThreadId = threadIds[0];
+  if (threadIds.length === 1 && singleThreadId) {
+    const messages = await db
+      .select({
+        fromEmail: EmailMessages.fromEmail,
+        fromName: EmailMessages.fromName,
+        threadId: EmailMessages.threadId,
+      })
+      .from(EmailMessages)
+      .where(eq(EmailMessages.threadId, singleThreadId))
+      .orderBy(EmailMessages.internalDate);
+
+    const firstMessage = messages[0];
+    if (firstMessage) {
+      senderMap.set(firstMessage.threadId, {
+        fromEmail: firstMessage.fromEmail,
+        fromName: firstMessage.fromName,
+      });
+    }
+    return senderMap;
+  }
+
+  // For multiple threads, batch query all messages
+  // TODO: Use inArray for better performance in production
   const allMessages = await db
     .select({
       fromEmail: EmailMessages.fromEmail,

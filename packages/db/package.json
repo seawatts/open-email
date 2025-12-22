@@ -1,12 +1,10 @@
 {
   "dependencies": {
-    "@clerk/nextjs": "catalog:",
     "@seawatts/id": "workspace:*",
     "@seawatts/logger": "workspace:*",
     "@seawatts/zustand": "workspace:*",
     "@supabase/ssr": "0.8.0",
     "@supabase/supabase-js": "catalog:",
-    "@t3-oss/env-core": "catalog:",
     "@vercel/postgres": "0.10.0",
     "date-fns": "catalog:",
     "drizzle-orm": "catalog:",
@@ -22,22 +20,21 @@
   },
   "devDependencies": {
     "@seawatts/tsconfig": "workspace:*",
-    "@t3-oss/env-core": "catalog:",
     "@t3-oss/env-nextjs": "catalog:",
     "@types/lodash-es": "4.17.12",
     "@types/react": "catalog:",
     "@types/react-dom": "catalog:",
     "chokidar": "5.0.0",
     "drizzle-kit": "0.31.8",
-    "supabase": "2.67.2",
+    "supabase": "2.67.3",
     "tsx": "4.21.0",
     "typescript": "catalog:",
-    "zx": "8.8.5"
+    "zx": "^8.8.5"
   },
   "exports": {
     ".": "./src/index.ts",
     "./client": "./src/client.ts",
-    "./schema": "./src/schema.ts",
+    "./schema": "./src/schema/index.ts",
     "./supabase/cli": "./src/supabase/cli.ts",
     "./supabase/client": "./src/supabase/client-exports.ts",
     "./supabase/create-channel": "./src/supabase/create-channel.ts",
@@ -57,7 +54,7 @@
     "enable-supabase-realtime": "tsx scripts/enable-supabase-realtime.ts",
     "gen-migration": "drizzle-kit generate",
     "gen-supabase-types": "tsx ./scripts/generate-supabase-types.ts",
-    "migrate": "drizzle-kit migrate && bun gen-supabase-types && bun create-supabase-policies && bun enable-supabase-realtime",
+    "migrate": "tsx scripts/ensure-schema.ts && drizzle-kit migrate && bun gen-supabase-types && bun create-supabase-policies && bun enable-supabase-realtime",
     "push": "drizzle-kit push && bun gen-supabase-types && bun create-supabase-policies && bun enable-supabase-realtime",
     "seed": "tsx src/seed.ts",
     "studio": "drizzle-kit studio",

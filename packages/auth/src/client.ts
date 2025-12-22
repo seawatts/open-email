@@ -1,11 +1,14 @@
 'use client';
 
-import { organizationClient } from 'better-auth/client/plugins';
+import {
+  lastLoginMethodClient,
+  organizationClient,
+} from 'better-auth/client/plugins';
 import { createAuthClient } from 'better-auth/react';
 import { useEffect, useState } from 'react';
 
 export const authClient = createAuthClient({
-  plugins: [organizationClient()],
+  plugins: [organizationClient(), lastLoginMethodClient()],
 });
 
 // Export action functions directly (these don't use React context)

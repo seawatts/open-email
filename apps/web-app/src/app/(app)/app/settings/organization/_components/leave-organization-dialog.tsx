@@ -1,6 +1,6 @@
 'use client';
 
-import { useOrganization } from '@clerk/nextjs';
+import { useActiveOrganization } from '@seawatts/auth/client';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -28,7 +28,7 @@ export function LeaveOrganizationDialog({
   isLeaving,
   organizationName,
 }: LeaveOrganizationDialogProps) {
-  const { organization: activeOrg } = useOrganization();
+  const { data: activeOrg } = useActiveOrganization();
 
   const handleConfirm = async () => {
     try {

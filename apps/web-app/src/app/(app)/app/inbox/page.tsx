@@ -1,26 +1,45 @@
 'use client';
 
-import { api } from '@seawatts/api/react';
+import { useTRPC } from '@seawatts/api/react';
 import { Button } from '@seawatts/ui/button';
 import { Skeleton } from '@seawatts/ui/skeleton';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { RefreshCw } from 'lucide-react';
+import { useEffect } from 'react';
 
 import { EmailList } from './_components/email-list';
-import { GmailConnect } from './_components/gmail-connect';
+import { GmailSetup } from './_components/gmail-setup';
 
 export default function InboxPage() {
-  const utils = api.useUtils();
+  const trpc = useTRPC();
+  const queryClient = useQueryClient();
 
-  const { data: accounts, isLoading: accountsLoading } =
-    api.email.gmail.accounts.useQuery();
+  // Get the user's Google account from better-auth
+  const { data: account, isLoading: accountLoading } = useQuery(
+    trpc.email.gmail.account.queryOptions(),
+  );
 
-  const syncMutation = api.email.gmail.sync.useMutation({
-    onSuccess: () => {
-      utils.email.threads.list.invalidate();
-    },
-  });
+  const syncMutation = useMutation(
+    trpc.email.gmail.sync.mutationOptions({
+      onSuccess: () => {
+        queryClient.invalidateQueries(trpc.email.threads.list.queryFilter());
+      },
+    }),
+  );
 
-  if (accountsLoading) {
+  // Setup Gmail watch for push notifications when account is available
+  const setupWatchMutation = useMutation(
+    trpc.email.gmail.setupWatch.mutationOptions(),
+  );
+
+  useEffect(() => {
+    // Auto-setup Gmail watch if account exists but watch isn't active
+    if (account && !account.watchExpiration) {
+      setupWatchMutation.mutate();
+    }
+  }, [account, setupWatchMutation]);
+
+  if (accountLoading) {
     return (
       <div className="space-y-6 p-6">
         <div className="flex items-center justify-between">
@@ -32,20 +51,15 @@ export default function InboxPage() {
     );
   }
 
-  // No Gmail account connected
-  if (!accounts || accounts.length === 0) {
-    return <GmailConnect />;
+  // No Google account connected - user needs to sign in with Google
+  if (!account) {
+    return <GmailSetup />;
   }
 
-  const primaryAccount = accounts[0];
-
   const handleSync = () => {
-    if (primaryAccount) {
-      syncMutation.mutate({
-        fullSync: false,
-        gmailAccountId: primaryAccount.id,
-      });
-    }
+    syncMutation.mutate({
+      fullSync: false,
+    });
   };
 
   return (
@@ -55,11 +69,11 @@ export default function InboxPage() {
         <div>
           <h1 className="text-2xl font-bold">Inbox</h1>
           <p className="text-sm text-muted-foreground">
-            {primaryAccount?.email}
-            {primaryAccount?.lastSyncAt && (
+            {account.email}
+            {account.lastSyncAt && (
               <span className="ml-2">
                 · Last synced{' '}
-                {new Date(primaryAccount.lastSyncAt).toLocaleTimeString()}
+                {new Date(account.lastSyncAt).toLocaleTimeString()}
               </span>
             )}
           </p>
@@ -79,13 +93,8 @@ export default function InboxPage() {
 
       {/* Email list */}
       <div className="flex-1 overflow-hidden">
-        {primaryAccount && <EmailList gmailAccountId={primaryAccount.id} />}
+        <EmailList accountId={account.id} />
       </div>
     </div>
   );
 }
-
-
-
-
-

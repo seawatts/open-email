@@ -1,38 +1,38 @@
 import { z } from '@openrouter-monorepo/type-utils/zod';
 
 export const BenchmarkResultSchema = z.object({
-  name: z.string(),
   category: z.string(),
-  severity: z.string(),
-  description: z.string(),
   config: z.string(),
-  samples: z.array(z.number()),
+  description: z.string(),
+  max: z.number(),
   mean: z.number(),
   median: z.number(),
-  p95: z.number(),
-  stddev: z.number(),
   min: z.number(),
-  max: z.number(),
+  name: z.string(),
+  p95: z.number(),
+  samples: z.array(z.number()),
+  severity: z.string(),
+  stddev: z.number(),
 });
 
 export type BenchmarkResult = z.infer<typeof BenchmarkResultSchema>;
 
 export const BenchmarkEnvironmentSchema = z.object({
-  node: z.string(),
-  pnpm: z.string(),
   biome: z.string(),
-  os: z.string(),
-  cpu: z.string(),
   commit: z.string(),
+  cpu: z.string(),
+  node: z.string(),
+  os: z.string(),
+  pnpm: z.string(),
 });
 
 export const BenchmarkDataSchema = z.object({
-  timestamp: z.string(),
+  allTogether: BenchmarkResultSchema,
+  baseline: BenchmarkResultSchema,
   environment: BenchmarkEnvironmentSchema,
   filesChecked: z.number(),
-  baseline: BenchmarkResultSchema,
   rules: z.array(BenchmarkResultSchema),
-  allTogether: BenchmarkResultSchema,
+  timestamp: z.string(),
 });
 
 export type BenchmarkData = z.infer<typeof BenchmarkDataSchema>;

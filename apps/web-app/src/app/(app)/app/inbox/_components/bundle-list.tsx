@@ -1,13 +1,14 @@
 'use client';
 
 import { BUNDLE_CONFIG, type BundleType } from '@seawatts/api/email/types';
-import { api } from '@seawatts/api/react';
+import { useTRPC } from '@seawatts/api/react';
 import { Badge } from '@seawatts/ui/badge';
 import { Button } from '@seawatts/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@seawatts/ui/card';
 import { cn } from '@seawatts/ui/lib/utils';
 import { ScrollArea, ScrollBar } from '@seawatts/ui/scroll-area';
 import { Skeleton } from '@seawatts/ui/skeleton';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   Bell,
   Calendar,
@@ -72,7 +73,7 @@ const BUNDLE_ORDER: BundleType[] = [
 ];
 
 interface BundleListProps {
-  gmailAccountId: string;
+  accountId: string;
 }
 
 // Highlight type icons for bundle previews
@@ -86,7 +87,7 @@ const HIGHLIGHT_ICONS = {
 
 interface BundleCardProps {
   bundleType: BundleType;
-  gmailAccountId: string;
+  accountId: string;
   isExpanded: boolean;
   onToggle: () => void;
   totalCount: number;
@@ -95,14 +96,15 @@ interface BundleCardProps {
 
 function BundleCard({
   bundleType,
-  gmailAccountId,
+  accountId,
   isExpanded,
   onToggle,
   totalCount,
   unreadCount,
 }: BundleCardProps) {
   const router = useRouter();
-  const utils = api.useUtils();
+  const trpc = useTRPC();
+  const queryClient = useQueryClient();
   const Icon = BUNDLE_ICONS[bundleType];
   const config = BUNDLE_CONFIG[bundleType];
   const colorClass = BUNDLE_COLORS[bundleType];
@@ -112,15 +114,17 @@ function BundleCard({
     Set<string>
   >(new Set());
 
-  const { data: threads, isLoading } = api.email.threads.byBundle.useQuery(
-    {
-      bundleType,
-      gmailAccountId,
-      limit: isExpanded ? 10 : 3,
-    },
-    {
-      enabled: totalCount > 0,
-    },
+  const { data: threads, isLoading } = useQuery(
+    trpc.email.threads.byBundle.queryOptions(
+      {
+        accountId,
+        bundleType,
+        limit: isExpanded ? 10 : 3,
+      },
+      {
+        enabled: totalCount > 0,
+      },
+    ),
   );
 
   // Filter out optimistically removed threads
@@ -129,21 +133,27 @@ function BundleCard({
     [threads, optimisticallyRemovedIds],
   );
 
-  const createAction = api.email.actions.create.useMutation({
-    onError: (_err, variables) => {
-      // Rollback: remove from optimistically removed set
-      setOptimisticallyRemovedIds((prev) => {
-        const next = new Set(prev);
-        next.delete(variables.threadId);
-        return next;
-      });
-    },
-    onSettled: () => {
-      // Refetch to ensure consistency
-      utils.email.threads.byBundle.invalidate();
-      utils.email.threads.bundleCounts.invalidate();
-    },
-  });
+  const createAction = useMutation(
+    trpc.email.actions.create.mutationOptions({
+      onError: (_err, variables) => {
+        // Rollback: remove from optimistically removed set
+        setOptimisticallyRemovedIds((prev) => {
+          const next = new Set(prev);
+          next.delete(variables.threadId);
+          return next;
+        });
+      },
+      onSettled: () => {
+        // Refetch to ensure consistency
+        queryClient.invalidateQueries(
+          trpc.email.threads.byBundle.queryFilter(),
+        );
+        queryClient.invalidateQueries(
+          trpc.email.threads.bundleCounts.queryFilter(),
+        );
+      },
+    }),
+  );
 
   // Optimistic archive all
   const handleArchiveAll = useCallback(() => {
@@ -386,13 +396,15 @@ function BundleCard({
   );
 }
 
-export function BundleList({ gmailAccountId }: BundleListProps) {
+export function BundleList({ accountId }: BundleListProps) {
   const [expandedBundle, setExpandedBundle] = useState<BundleType | null>(null);
+  const trpc = useTRPC();
 
-  const { data: bundleCounts, isLoading } =
-    api.email.threads.bundleCounts.useQuery({
-      gmailAccountId,
-    });
+  const { data: bundleCounts, isLoading } = useQuery(
+    trpc.email.threads.bundleCounts.queryOptions({
+      accountId,
+    }),
+  );
 
   const toggleBundle = (bundleType: BundleType) => {
     setExpandedBundle(expandedBundle === bundleType ? null : bundleType);
@@ -502,8 +514,8 @@ export function BundleList({ gmailAccountId }: BundleListProps) {
 
             return (
               <BundleCard
+                accountId={accountId}
                 bundleType={bundleType}
-                gmailAccountId={gmailAccountId}
                 isExpanded={expandedBundle === bundleType}
                 key={bundleType}
                 onToggle={() => toggleBundle(bundleType)}

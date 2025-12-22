@@ -1,6 +1,6 @@
 import { debug } from '@seawatts/logger';
 import { createClient as createSupabaseClient } from '@supabase/supabase-js';
-import { env } from '../env.client';
+import { env } from '../env';
 import type { Database } from './types';
 
 const log = debug('seawatts:lib:supabase:realtime-client');

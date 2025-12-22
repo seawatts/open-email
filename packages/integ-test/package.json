@@ -5,8 +5,7 @@
     "@seawatts/db": "workspace:*",
     "@seawatts/id": "workspace:*",
     "drizzle-orm": "catalog:",
-    "postgres": "3.4.7",
-    "zod": "catalog:"
+    "postgres": "3.4.7"
   },
   "devDependencies": {
     "@faker-js/faker": "10.1.0",

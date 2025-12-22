@@ -4,7 +4,7 @@ import { Analytics } from '@vercel/analytics/react';
 import { SpeedInsights } from '@vercel/speed-insights/next';
 import type { PropsWithChildren } from 'react';
 
-import { env } from './env.client';
+import { env } from './env';
 import { PostHogIdentifyUser } from './posthog/client';
 import { WebVitals } from './web-vitals';
 

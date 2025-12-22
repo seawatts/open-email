@@ -35,9 +35,9 @@ describe('Email Agent Integration Tests', () => {
       const account = await factories.createGmailAccount(user.id);
 
       expect(account).toBeDefined();
-      expect(account.id).toMatch(/^gmail_/);
+      expect(account.id).toMatch(/^acct_/);
       expect(account.userId).toBe(user.id);
-      expect(account.email).toBeDefined();
+      expect(account.accountId).toBeDefined(); // accountId stores the email
     });
 
     it('should create an email thread', async () => {
@@ -47,7 +47,7 @@ describe('Email Agent Integration Tests', () => {
 
       expect(thread).toBeDefined();
       expect(thread.id).toMatch(/^thread_/);
-      expect(thread.gmailAccountId).toBe(account.id);
+      expect(thread.accountId).toBe(account.id);
       expect(thread.subject).toBeDefined();
       expect(thread.bundleType).toBe('personal');
     });

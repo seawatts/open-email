@@ -9,15 +9,15 @@
 }
 
 html {
+  box-sizing: border-box;
   height: 100%;
   /* biome-ignore lint/suspicious/noDuplicateProperties: Intentional fallback for browser compatibility */
   height: -webkit-fill-available;
-  box-sizing: border-box;
-  touch-action: manipulation;
   font-feature-settings:
     'case' 1,
     'rlig' 1,
     'calt' 0;
+  touch-action: manipulation;
 }
 
 html,
@@ -32,8 +32,8 @@ body {
   min-height: 100vh;
   /* biome-ignore lint/suspicious/noDuplicateProperties: Intentional fallback for browser compatibility */
   min-height: -webkit-fill-available;
-  margin: 0;
   padding: 0;
+  margin: 0;
 }
 
 #root {
@@ -157,8 +157,8 @@ body {
   /* Ensure SVG icons render properly */
   svg {
     display: inline-block;
-    vertical-align: middle;
     flex-shrink: 0;
+    vertical-align: middle;
   }
 
   /* Ensure size utilities work for icons */
@@ -174,8 +174,8 @@ body {
 
   /* Ensure checkbox checked state is visible */
   [data-state='checked'] {
-    background-color: hsl(var(--primary));
     color: hsl(var(--primary-foreground));
+    background-color: hsl(var(--primary));
   }
 
   /* Ensure checkbox border is visible */

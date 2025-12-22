@@ -1,7 +1,7 @@
 'use client';
 
-import { useOrganization } from '@clerk/nextjs';
 import { MetricLink } from '@seawatts/analytics';
+import { useActiveOrganization } from '@seawatts/auth/client';
 import {
   createContext,
   type ReactNode,
@@ -36,7 +36,7 @@ interface SubscriptionProviderProps {
 }
 
 export function SubscriptionProvider({ children }: SubscriptionProviderProps) {
-  const { organization } = useOrganization();
+  const { data: organization } = useActiveOrganization();
   const [subscriptionInfo, setSubscriptionInfo] = useState<{
     status: string | null;
     customerId: string | null;

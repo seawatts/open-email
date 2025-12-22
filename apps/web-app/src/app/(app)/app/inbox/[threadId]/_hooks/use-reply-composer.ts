@@ -1,6 +1,7 @@
 'use client';
 
-import { api } from '@seawatts/api/react';
+import { useTRPC } from '@seawatts/api/react';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useCallback, useState } from 'react';
 
 interface UseReplyComposerProps {
@@ -14,18 +15,23 @@ export function useReplyComposer({
   threadSubject,
   lastMessageFromEmail,
 }: UseReplyComposerProps) {
-  const utils = api.useUtils();
+  const trpc = useTRPC();
+  const queryClient = useQueryClient();
 
   const [editedBody, setEditedBody] = useState('');
   const [selectedDraftId, setSelectedDraftId] = useState<string | null>(null);
 
-  const sendReply = api.email.sendReply.useMutation({
-    onSuccess: () => {
-      utils.email.threads.byId.invalidate({ id: threadId });
-      setEditedBody('');
-      setSelectedDraftId(null);
-    },
-  });
+  const sendReply = useMutation(
+    trpc.email.sendReply.mutationOptions({
+      onSuccess: () => {
+        queryClient.invalidateQueries(
+          trpc.email.threads.byId.queryFilter({ id: threadId }),
+        );
+        setEditedBody('');
+        setSelectedDraftId(null);
+      },
+    }),
+  );
 
   const handleSendReply = useCallback(async () => {
     if (!editedBody) return;
@@ -57,17 +63,16 @@ export function useReplyComposer({
   );
 
   return {
+    clearDraft,
     // State
     editedBody,
-    selectedDraftId,
+    handleSendReply,
     isSending: sendReply.isPending,
+    selectDraft,
+    selectedDraftId,
+    setDraftFromAgent,
 
     // Actions
     setEditedBody,
-    handleSendReply,
-    selectDraft,
-    clearDraft,
-    setDraftFromAgent,
   };
 }
-

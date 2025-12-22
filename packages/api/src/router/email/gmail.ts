@@ -1,86 +1,57 @@
 /**
  * Gmail Router
- * Handles Gmail OAuth and sync operations
+ * Handles Gmail sync operations using better-auth's Google OAuth tokens
  */
 
-import { GmailAccounts } from '@seawatts/db/schema';
+import { Accounts } from '@seawatts/db/schema';
 import { and, eq } from 'drizzle-orm';
 import { z } from 'zod';
 
 import { syncRequestSchema } from '../../email/types';
 import {
   createGmailLabel,
-  exchangeCodeForTokens,
-  getAuthUrl,
   getGmailLabels,
+  getGmailUserEmail,
+  setupGmailWatch,
   syncGmailAccount,
 } from '../../services/gmail';
 import { createTRPCRouter, protectedProcedure } from '../../trpc';
 
 export const gmailRouter = createTRPCRouter({
-  accounts: protectedProcedure.query(async ({ ctx }) => {
+  /**
+   * Get the user's Google account (from better-auth)
+   * This replaces the old GmailAccounts table
+   */
+  account: protectedProcedure.query(async ({ ctx }) => {
     if (!ctx.auth.userId) throw new Error('User ID is required');
 
-    const accounts = await ctx.db.query.GmailAccounts.findMany({
-      where: eq(GmailAccounts.userId, ctx.auth.userId),
+    const account = await ctx.db.query.Accounts.findFirst({
+      where: and(
+        eq(Accounts.userId, ctx.auth.userId),
+        eq(Accounts.providerId, 'google'),
+      ),
     });
 
+    if (!account) {
+      return null;
+    }
+
+    // Get email from Gmail API if not stored
+    let email = account.accountId; // accountId is usually the email for Google
+    try {
+      email = await getGmailUserEmail(account.id);
+    } catch {
+      // Fall back to accountId
+    }
+
     // Don't return tokens to client
-    return accounts.map((a) => ({
-      createdAt: a.createdAt,
-      email: a.email,
-      id: a.id,
-      lastSyncAt: a.lastSyncAt,
-    }));
-  }),
-
-  callback: protectedProcedure
-    .input(z.object({ code: z.string() }))
-    .mutation(async ({ ctx, input }) => {
-      if (!ctx.auth.userId) throw new Error('User ID is required');
-
-      const tokens = await exchangeCodeForTokens(input.code);
-
-      // Check if account already exists
-      const existing = await ctx.db.query.GmailAccounts.findFirst({
-        where: and(
-          eq(GmailAccounts.userId, ctx.auth.userId),
-          eq(GmailAccounts.email, tokens.email),
-        ),
-      });
-
-      if (existing) {
-        // Update existing account
-        await ctx.db
-          .update(GmailAccounts)
-          .set({
-            accessToken: tokens.accessToken,
-            refreshToken: tokens.refreshToken,
-            tokenExpiry: tokens.expiry,
-          })
-          .where(eq(GmailAccounts.id, existing.id));
-
-        return { accountId: existing.id, email: tokens.email };
-      }
-
-      // Create new account
-      const [account] = await ctx.db
-        .insert(GmailAccounts)
-        .values({
-          accessToken: tokens.accessToken,
-          email: tokens.email,
-          refreshToken: tokens.refreshToken,
-          tokenExpiry: tokens.expiry,
-          userId: ctx.auth.userId,
-        })
-        .returning();
-
-      return { accountId: account?.id, email: tokens.email };
-    }),
-
-  connect: protectedProcedure.query(() => {
-    const authUrl = getAuthUrl();
-    return { authUrl };
+    return {
+      createdAt: account.createdAt,
+      email,
+      id: account.id,
+      lastSyncAt: account.lastSyncAt,
+      watchExpiration: account.watchExpiration,
+    };
   }),
 
   createLabel: protectedProcedure
@@ -95,10 +66,59 @@ export const gmailRouter = createTRPCRouter({
       return getGmailLabels(input.accountId);
     }),
 
+  /**
+   * Setup Gmail watch for push notifications
+   * Call this after the user signs in to enable real-time sync
+   */
+  setupWatch: protectedProcedure.mutation(async ({ ctx }) => {
+    if (!ctx.auth.userId) throw new Error('User ID is required');
+
+    const account = await ctx.db.query.Accounts.findFirst({
+      where: and(
+        eq(Accounts.userId, ctx.auth.userId),
+        eq(Accounts.providerId, 'google'),
+      ),
+    });
+
+    if (!account) {
+      throw new Error('No Google account found. Please sign in with Google.');
+    }
+
+    const result = await setupGmailWatch(account.id);
+    return {
+      expiration: result.expiration,
+      historyId: result.historyId,
+    };
+  }),
+
   sync: protectedProcedure
     .input(syncRequestSchema)
-    .mutation(async ({ input }) => {
-      const result = await syncGmailAccount(input.gmailAccountId, {
+    .mutation(async ({ ctx, input }) => {
+      // If no accountId provided, use the user's Google account
+      let accountId = input.gmailAccountId;
+
+      if (!accountId && ctx.auth.userId) {
+        const account = await ctx.db.query.Accounts.findFirst({
+          where: and(
+            eq(Accounts.userId, ctx.auth.userId),
+            eq(Accounts.providerId, 'google'),
+          ),
+        });
+
+        if (!account) {
+          throw new Error(
+            'No Google account found. Please sign in with Google.',
+          );
+        }
+
+        accountId = account.id;
+      }
+
+      if (!accountId) {
+        throw new Error('Account ID is required');
+      }
+
+      const result = await syncGmailAccount(accountId, {
         fullSync: input.fullSync,
       });
       return result;

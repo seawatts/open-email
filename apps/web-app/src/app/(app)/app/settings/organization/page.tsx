@@ -1,9 +1,12 @@
+import { HydrationBoundary } from '@seawatts/api/server';
 import { OrganizationSettings } from './_components/organization-settings';
 
-export default function OrganizationSettingsPage() {
+export default async function OrganizationSettingsPage() {
   return (
-    <div className="flex-1 xl:max-w-1/2">
-      <OrganizationSettings />
-    </div>
+    <HydrationBoundary>
+      <div className="flex-1 xl:max-w-1/2">
+        <OrganizationSettings />
+      </div>
+    </HydrationBoundary>
   );
 }

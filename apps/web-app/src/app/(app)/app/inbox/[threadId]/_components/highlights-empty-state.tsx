@@ -23,11 +23,15 @@ export function HighlightsEmptyState({
           Process this email to extract key information
         </p>
       </div>
-      <Button disabled={isProcessing} onClick={onExtract} size="sm" variant="outline">
+      <Button
+        disabled={isProcessing}
+        onClick={onExtract}
+        size="sm"
+        variant="outline"
+      >
         <Sparkles className="mr-1 size-4" />
         Extract Highlights
       </Button>
     </div>
   );
 }
-

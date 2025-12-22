@@ -1,8 +1,15 @@
-import type { BenchmarkData } from '../types';
-
 import { formatMedianLatency } from '@openrouter-monorepo/db/featured-models';
 import { useMemo } from 'react';
-import { Bar, BarChart, Cell, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
+import {
+  Bar,
+  BarChart,
+  Cell,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from 'recharts';
+import type { BenchmarkData } from '../types';
 import { CATEGORY_COLORS } from '../utils';
 
 interface BenchmarkChartProps {
@@ -49,11 +56,11 @@ export function BenchmarkChart({
 }: BenchmarkChartProps) {
   const chartData = useMemo(() => {
     // Filter and sort rules
-    const filteredRules = data.rules.filter((r) => selectedCategories.has(r.category));
+    const filteredRules = data.rules.filter((r) =>
+      selectedCategories.has(r.category),
+    );
 
-    const sortedRules = [
-      ...filteredRules,
-    ].sort((a, b) => {
+    const sortedRules = [...filteredRules].sort((a, b) => {
       switch (sortBy) {
         case 'slowest':
           return b.mean - a.mean;
@@ -84,9 +91,9 @@ export function BenchmarkChart({
       const baselineColor = CATEGORY_COLORS.baseline;
       if (baselineColor) {
         result.push({
+          color: baselineColor,
           name: 'Baseline (no rules)',
           value: showRelative ? 0 : baselineValue,
-          color: baselineColor,
         });
       }
     }
@@ -95,14 +102,15 @@ export function BenchmarkChart({
       const ruleValue = showRelative ? rule.mean - baselineValue : rule.mean;
       // Calculate position: 0 = worst (highest value = red), 1 = best (lowest value = green)
       // For relative mode, negative values are better, so we invert
-      const position = valueRange > 0 ? (maxValue - ruleValue) / valueRange : 0.5; // Default to middle if all values are the same
+      const position =
+        valueRange > 0 ? (maxValue - ruleValue) / valueRange : 0.5; // Default to middle if all values are the same
       const color = interpolateColor(position);
 
       result.push({
-        name: rule.name,
-        value: ruleValue,
         color,
+        name: rule.name,
         rule,
+        value: ruleValue,
       });
     });
 
@@ -110,9 +118,11 @@ export function BenchmarkChart({
       const combinedColor = CATEGORY_COLORS.combined;
       if (combinedColor) {
         result.push({
-          name: 'All rules together',
-          value: showRelative ? data.allTogether.mean - baselineValue : data.allTogether.mean,
           color: combinedColor,
+          name: 'All rules together',
+          value: showRelative
+            ? data.allTogether.mean - baselineValue
+            : data.allTogether.mean,
         });
       }
     }
@@ -128,37 +138,34 @@ export function BenchmarkChart({
   ]);
 
   return (
-    <div className='relative h-[600px] rounded-lg border bg-card shadow-sm'>
-      <ResponsiveContainer
-        width='100%'
-        height='100%'
-      >
+    <div className="relative h-[600px] rounded-lg border bg-card shadow-sm">
+      <ResponsiveContainer height="100%" width="100%">
         <BarChart
           data={chartData}
-          layout='vertical'
+          layout="vertical"
           margin={{
+            bottom: 8,
             left: 8,
             right: 30,
             top: 8,
-            bottom: 8,
           }}
         >
           <XAxis
-            type='number'
-            tickFormatter={(value: number) => formatMedianLatency(value)}
             label={{
-              value: showRelative ? 'Time above baseline (ms)' : 'Time (ms)',
-              position: 'insideBottom',
               offset: -5,
+              position: 'insideBottom',
+              value: showRelative ? 'Time above baseline (ms)' : 'Time (ms)',
             }}
+            tickFormatter={(value: number) => formatMedianLatency(value)}
+            type="number"
           />
           <YAxis
-            type='category'
-            dataKey='name'
-            width={200}
+            dataKey="name"
             tick={{
               fontSize: 12,
             }}
+            type="category"
+            width={200}
           />
           <Tooltip
             content={({
@@ -173,22 +180,30 @@ export function BenchmarkChart({
               if (!active || !payload || payload.length === 0) {
                 return null;
               }
-              const dataPoint = payload[0]?.payload as ChartDataPoint | undefined;
+              const dataPoint = payload[0]?.payload as
+                | ChartDataPoint
+                | undefined;
               if (!dataPoint) {
                 return null;
               }
 
               if (dataPoint.rule) {
                 return (
-                  <div className='rounded-md border bg-background p-3 shadow-md'>
-                    <p className='mb-2 font-semibold'>{dataPoint.name}</p>
-                    <div className='space-y-1 text-sm'>
-                      <div>Mean: {formatMedianLatency(dataPoint.rule.mean)}</div>
-                      <div>Median: {formatMedianLatency(dataPoint.rule.median)}</div>
+                  <div className="rounded-md border bg-background p-3 shadow-md">
+                    <p className="mb-2 font-semibold">{dataPoint.name}</p>
+                    <div className="space-y-1 text-sm">
+                      <div>
+                        Mean: {formatMedianLatency(dataPoint.rule.mean)}
+                      </div>
+                      <div>
+                        Median: {formatMedianLatency(dataPoint.rule.median)}
+                      </div>
                       <div>P95: {formatMedianLatency(dataPoint.rule.p95)}</div>
                       <div>Min: {formatMedianLatency(dataPoint.rule.min)}</div>
                       <div>Max: {formatMedianLatency(dataPoint.rule.max)}</div>
-                      <div>Stddev: {formatMedianLatency(dataPoint.rule.stddev)}</div>
+                      <div>
+                        Stddev: {formatMedianLatency(dataPoint.rule.stddev)}
+                      </div>
                       <div>Category: {dataPoint.rule.category}</div>
                       <div>Severity: {dataPoint.rule.severity}</div>
                     </div>
@@ -197,35 +212,29 @@ export function BenchmarkChart({
               }
 
               return (
-                <div className='rounded-md border bg-background p-3 shadow-md'>
-                  <p className='font-semibold'>{dataPoint.name}</p>
-                  <p className='text-sm'>{formatMedianLatency(dataPoint.value)}</p>
+                <div className="rounded-md border bg-background p-3 shadow-md">
+                  <p className="font-semibold">{dataPoint.name}</p>
+                  <p className="text-sm">
+                    {formatMedianLatency(dataPoint.value)}
+                  </p>
                 </div>
               );
             }}
           />
           <Bar
-            dataKey='value'
-            radius={[
-              0,
-              4,
-              4,
-              0,
-            ]}
+            dataKey="value"
             onClick={(data: { payload?: ChartDataPoint }) => {
               if (data.payload?.rule && onRuleClick) {
                 onRuleClick(data.payload.rule.name);
               }
             }}
+            radius={[0, 4, 4, 0]}
             style={{
               cursor: onRuleClick ? 'pointer' : 'default',
             }}
           >
             {chartData.map((entry, index) => (
-              <Cell
-                key={`cell-${index}`}
-                fill={entry.color}
-              />
+              <Cell fill={entry.color} key={`cell-${index}`} />
             ))}
           </Bar>
         </BarChart>

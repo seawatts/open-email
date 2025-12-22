@@ -1,6 +1,7 @@
 'use client';
 
-import { api } from '@seawatts/api/react';
+import { useTRPC } from '@seawatts/api/react';
+import { useQuery } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 
@@ -15,7 +16,7 @@ import { AgentPanel } from './agent-panel';
 import { ThreadHeader } from './thread-header';
 import { ThreadMessages } from './thread-messages';
 import { ThreadNotFound } from './thread-not-found';
-import type { FormattedHighlight, Thread } from './types';
+import type { FormattedHighlight } from './types';
 
 interface ThreadDetailClientProps {
   threadId: string;
@@ -47,16 +48,21 @@ function formatHighlights(
 
 export function ThreadDetailClient({ threadId }: ThreadDetailClientProps) {
   const router = useRouter();
+  const trpc = useTRPC();
 
   // Tab state
   const [activeTab, setActiveTab] = useState('agent');
   const [showShortcutsDialog, setShowShortcutsDialog] = useState(false);
 
   // Fetch thread data
-  const { data: thread } = api.email.threads.byId.useQuery({ id: threadId });
-  const { data: highlights } = api.email.highlights.byThread.useQuery({
-    threadId,
-  });
+  const { data: thread } = useQuery(
+    trpc.email.threads.byId.queryOptions({ id: threadId }),
+  );
+  const { data: highlights } = useQuery(
+    trpc.email.highlights.byThread.queryOptions({
+      threadId,
+    }),
+  );
 
   // Custom hooks for actions and processing
   const threadActions = useThreadActions({ threadId });
@@ -207,35 +213,35 @@ export function ThreadDetailClient({ threadId }: ThreadDetailClientProps) {
 
         <AgentPanel
           // Agent state
+          activeTab={activeTab}
           agentEvents={agentProcessing.agentEvents}
+          decision={latestDecision}
+          editedBody={replyComposer.editedBody}
+          highlights={formattedHighlights}
+          // Thread data
           isProcessing={agentProcessing.isProcessing}
           isRetriaging={agentProcessing.isRetriaging}
-          streamingDraft={agentProcessing.streamingDraft}
-          thinkingContent={agentProcessing.thinkingContent}
-          // Thread data
-          decision={latestDecision}
-          highlights={formattedHighlights}
-          pendingActions={pendingActions}
-          // Reply state
-          editedBody={replyComposer.editedBody}
           isSending={replyComposer.isSending}
-          selectedDraftId={replyComposer.selectedDraftId}
-          // Tab state
-          activeTab={activeTab}
-          onTabChange={setActiveTab}
-          // Agent actions
-          onRetriage={agentProcessing.handleRetriage}
-          onSmartProcess={agentProcessing.handleSmartProcess}
-          // Thread actions
+          // Reply state
           onApproveAction={threadActions.handleApproveAction}
           onArchive={threadActions.handleArchive}
-          onSnooze={threadActions.handleSnooze}
-          onStar={threadActions.handleStar}
-          // Reply actions
           onBodyChange={replyComposer.setEditedBody}
+          // Tab state
           onClearDraft={handleClearDraft}
+          onRetriage={agentProcessing.handleRetriage}
+          // Agent actions
           onSelectDraft={replyComposer.selectDraft}
           onSendReply={replyComposer.handleSendReply}
+          // Thread actions
+          onSmartProcess={agentProcessing.handleSmartProcess}
+          onSnooze={threadActions.handleSnooze}
+          onStar={threadActions.handleStar}
+          onTabChange={setActiveTab}
+          // Reply actions
+          pendingActions={pendingActions}
+          selectedDraftId={replyComposer.selectedDraftId}
+          streamingDraft={agentProcessing.streamingDraft}
+          thinkingContent={agentProcessing.thinkingContent}
         />
       </div>
 
@@ -246,4 +252,3 @@ export function ThreadDetailClient({ threadId }: ThreadDetailClientProps) {
     </div>
   );
 }
-

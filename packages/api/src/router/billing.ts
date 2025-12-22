@@ -109,9 +109,14 @@ export const billingRouter = createTRPCRouter({
       let customerId = org.stripeCustomerId;
 
       if (!customerId) {
-        // Get user details from Clerk for creating customer
+        // Get user details from database for creating customer
+        const user = ctx.user;
+        if (!user || !user.email) {
+          throw new Error('User email is required to create Stripe customer');
+        }
+
         const customer = await getOrCreateCustomer({
-          email: ctx.auth.sessionClaims?.email as string,
+          email: user.email,
           metadata: {
             orgId: org.id,
             userId: ctx.auth.userId as string,

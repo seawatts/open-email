@@ -4,11 +4,11 @@
  */
 
 import {
+  Accounts,
   AgentDecisions,
   EmailActions,
   EmailMessages,
   EmailThreads,
-  GmailAccounts,
 } from '@seawatts/db/schema';
 import { and, desc, eq } from 'drizzle-orm';
 import { z } from 'zod';
@@ -21,12 +21,12 @@ export const threadsRouter = createTRPCRouter({
    * Get bundle counts for an account
    */
   bundleCounts: protectedProcedure
-    .input(z.object({ gmailAccountId: z.string() }))
+    .input(z.object({ accountId: z.string() }))
     .query(async ({ ctx, input }) => {
       // Get all threads for the account
       const threads = await ctx.db.query.EmailThreads.findMany({
         columns: { bundleType: true, isRead: true },
-        where: eq(EmailThreads.gmailAccountId, input.gmailAccountId),
+        where: eq(EmailThreads.accountId, input.accountId),
       });
 
       // Count by bundle type
@@ -52,8 +52,8 @@ export const threadsRouter = createTRPCRouter({
   byBundle: protectedProcedure
     .input(
       z.object({
+        accountId: z.string(),
         bundleType: bundleTypeSchema,
-        gmailAccountId: z.string(),
         limit: z.number().default(50),
         offset: z.number().default(0),
       }),
@@ -64,7 +64,7 @@ export const threadsRouter = createTRPCRouter({
         offset: input.offset,
         orderBy: [desc(EmailThreads.lastMessageAt)],
         where: and(
-          eq(EmailThreads.gmailAccountId, input.gmailAccountId),
+          eq(EmailThreads.accountId, input.accountId),
           eq(EmailThreads.bundleType, input.bundleType),
         ),
         with: {
@@ -102,14 +102,14 @@ export const threadsRouter = createTRPCRouter({
         where: eq(EmailActions.threadId, thread.id),
       });
 
-      // Get account email
-      const account = await ctx.db.query.GmailAccounts.findFirst({
-        where: eq(GmailAccounts.id, thread.gmailAccountId),
+      // Get account email (accountId is the email for Google OAuth)
+      const account = await ctx.db.query.Accounts.findFirst({
+        where: eq(Accounts.id, thread.accountId),
       });
 
       return {
         ...thread,
-        accountEmail: account?.email ?? '',
+        accountEmail: account?.accountId ?? '', // accountId is the email for Google
         actions,
         decisions,
         messages,
@@ -119,10 +119,10 @@ export const threadsRouter = createTRPCRouter({
   list: protectedProcedure
     .input(
       z.object({
+        accountId: z.string(),
         category: z
           .enum(['urgent', 'needs_reply', 'awaiting_other', 'fyi', 'spam_like'])
           .optional(),
-        gmailAccountId: z.string(),
         limit: z.number().min(1).max(100).default(50),
         offset: z.number().min(0).default(0),
       }),
@@ -133,7 +133,7 @@ export const threadsRouter = createTRPCRouter({
         limit: input.limit,
         offset: input.offset,
         orderBy: [desc(EmailThreads.lastMessageAt)],
-        where: eq(EmailThreads.gmailAccountId, input.gmailAccountId),
+        where: eq(EmailThreads.accountId, input.accountId),
       });
 
       // For each thread, get the latest decision and pending actions
@@ -172,7 +172,7 @@ export const threadsRouter = createTRPCRouter({
   needingTriage: protectedProcedure
     .input(
       z.object({
-        gmailAccountId: z.string(),
+        accountId: z.string(),
         limit: z.number().min(1).max(100).default(20),
       }),
     )
@@ -181,7 +181,7 @@ export const threadsRouter = createTRPCRouter({
       const threads = await ctx.db.query.EmailThreads.findMany({
         limit: input.limit,
         orderBy: [desc(EmailThreads.lastMessageAt)],
-        where: eq(EmailThreads.gmailAccountId, input.gmailAccountId),
+        where: eq(EmailThreads.accountId, input.accountId),
       });
 
       // Filter to only those without decisions
@@ -222,12 +222,12 @@ export const threadsRouter = createTRPCRouter({
    * Get pinned threads
    */
   pinned: protectedProcedure
-    .input(z.object({ gmailAccountId: z.string() }))
+    .input(z.object({ accountId: z.string() }))
     .query(async ({ ctx, input }) => {
       const threads = await ctx.db.query.EmailThreads.findMany({
         orderBy: [desc(EmailThreads.lastMessageAt)],
         where: and(
-          eq(EmailThreads.gmailAccountId, input.gmailAccountId),
+          eq(EmailThreads.accountId, input.accountId),
           eq(EmailThreads.isPinned, true),
         ),
         with: {

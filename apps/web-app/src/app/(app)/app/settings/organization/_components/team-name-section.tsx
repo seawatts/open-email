@@ -1,7 +1,7 @@
 'use client';
 
-import { useOrganization } from '@clerk/nextjs';
 import { MetricButton } from '@seawatts/analytics/components';
+import { useActiveOrganization } from '@seawatts/auth/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@seawatts/ui/card';
 import { Input } from '@seawatts/ui/input';
 import { toast } from '@seawatts/ui/sonner';
@@ -10,7 +10,7 @@ import { useEffect, useState } from 'react';
 import { updateTeamNameAction } from '../actions';
 
 export function TeamNameSection() {
-  const { organization: activeOrg } = useOrganization();
+  const { data: activeOrg } = useActiveOrganization();
   const [name, setName] = useState(activeOrg?.name || 'Personal');
 
   useEffect(() => {

@@ -1,6 +1,5 @@
-import type { Config } from 'tailwindcss';
-
 import { createConfig } from '@openrouter-monorepo/theme/tailwind.web';
+import type { Config } from 'tailwindcss';
 
 const baseConfig = createConfig(import.meta.url);
 

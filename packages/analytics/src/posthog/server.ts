@@ -1,6 +1,6 @@
 import { PostHog } from 'posthog-node';
 
-import { env } from '../env.server';
+import { env } from '../env';
 
 class PostHogServer {
   private static instance: PostHog | null = null;
