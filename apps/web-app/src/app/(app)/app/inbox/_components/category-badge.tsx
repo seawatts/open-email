@@ -85,9 +85,3 @@ export function CategoryBadge({
     </Badge>
   );
 }
-
-
-
-
-
-

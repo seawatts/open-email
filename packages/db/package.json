@@ -1,6 +1,5 @@
 {
   "dependencies": {
-    "@clerk/nextjs": "catalog:",
     "@seawatts/id": "workspace:*",
     "@seawatts/logger": "workspace:*",
     "@seawatts/zustand": "workspace:*",

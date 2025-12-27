@@ -14,6 +14,8 @@
   },
   "exports": {
     ".": "./src/index.ts",
+    "./clerk-compat": "./src/clerk-compat.tsx",
+    "./clerk-compat-server": "./src/clerk-compat-server.ts",
     "./client": "./src/client.ts",
     "./env": "./src/env.ts",
     "./middleware": "./src/middleware.ts",

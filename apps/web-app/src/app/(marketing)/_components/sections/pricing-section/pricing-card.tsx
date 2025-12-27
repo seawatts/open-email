@@ -1,7 +1,11 @@
 'use client';
 
-import { SignedIn, SignedOut, useOrganization } from '@clerk/nextjs';
 import { MetricLink } from '@seawatts/analytics/components';
+import {
+  SignedIn,
+  SignedOut,
+  useOrganization,
+} from '@seawatts/auth/clerk-compat';
 import {
   SubscriptionActive,
   SubscriptionPastDue,

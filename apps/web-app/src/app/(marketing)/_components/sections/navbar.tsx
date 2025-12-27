@@ -1,6 +1,6 @@
 'use client';
 
-import { SignedIn, SignedOut } from '@clerk/nextjs';
+import { SignedIn, SignedOut } from '@seawatts/auth/clerk-compat';
 import { Button } from '@seawatts/ui/components/button';
 import { GitHubStarsButtonWrapper } from '@seawatts/ui/custom/github-stars-button/button-wrapper';
 import { ThemeToggle } from '@seawatts/ui/custom/theme';

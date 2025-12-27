@@ -1,4 +1,4 @@
-import { auth } from '@clerk/nextjs/server';
+import { auth } from '@seawatts/auth/clerk-compat-server';
 import { redirect } from 'next/navigation';
 import { LocalDevelopmentSetup } from './_components/local-development-setup';
 

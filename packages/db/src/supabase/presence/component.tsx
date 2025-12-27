@@ -1,6 +1,6 @@
 'use client';
 
-import { useUser } from '@clerk/nextjs';
+import { useUser } from '@seawatts/auth/clerk-compat';
 import { useEffect } from 'react';
 
 import { useClient } from '../client';

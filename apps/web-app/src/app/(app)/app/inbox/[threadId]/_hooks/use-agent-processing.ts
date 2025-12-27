@@ -35,8 +35,8 @@ export function useAgentProcessing({
         case 'draft_complete':
           if (event.draft && onDraftComplete) {
             onDraftComplete({
-              draftId: event.draft.draftId,
               body: event.draft.body,
+              draftId: event.draft.draftId,
             });
           }
           break;
@@ -79,15 +79,14 @@ export function useAgentProcessing({
   return {
     // State
     agentEvents,
-    streamingDraft,
-    thinkingContent,
-    isProcessing,
-    isRetriaging: agentMutation.isPending,
 
     // Actions
     handleRetriage,
     handleSmartProcess,
+    isProcessing,
+    isRetriaging: agentMutation.isPending,
     resetDraft,
+    streamingDraft,
+    thinkingContent,
   };
 }
-

@@ -1,6 +1,6 @@
 'use client';
 
-import { useOrganization } from '@clerk/nextjs';
+import { useOrganization } from '@seawatts/auth/clerk-compat';
 import {
   AlertDialog,
   AlertDialogAction,

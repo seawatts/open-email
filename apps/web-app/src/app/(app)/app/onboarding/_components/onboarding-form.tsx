@@ -1,8 +1,12 @@
 'use client';
 
-import { useOrganization, useOrganizationList, useUser } from '@clerk/nextjs';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { api } from '@seawatts/api/react';
+import {
+  useOrganization,
+  useOrganizationList,
+  useUser,
+} from '@seawatts/auth/clerk-compat';
 import {
   Card,
   CardContent,

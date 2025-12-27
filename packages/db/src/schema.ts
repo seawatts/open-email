@@ -21,6 +21,7 @@ const tsvector = customType<{ data: string }>({
     return 'tsvector';
   },
 });
+
 import { createInsertSchema, createUpdateSchema } from 'drizzle-zod';
 import { z } from 'zod';
 
@@ -151,16 +152,19 @@ export const KeywordTypeType = z.enum(keywordTypeEnum.enumValues).enum;
 
 export const Users = pgTable('user', {
   avatarUrl: text('avatarUrl'),
-  clerkId: text('clerkId').unique().notNull(),
+  clerkId: text('clerkId').unique(), // Legacy, optional for Better-Auth migration
   createdAt: timestamp('createdAt').defaultNow().notNull(),
   email: text('email').notNull(),
+  emailVerified: boolean('emailVerified').default(false).notNull(),
   firstName: text('firstName'),
   id: varchar('id', { length: 128 }).notNull().primaryKey(),
+  image: text('image'), // Better-Auth compatible
   lastLoggedInAt: timestamp('lastLoggedInAt', {
     mode: 'date',
     withTimezone: true,
   }),
   lastName: text('lastName'),
+  name: text('name'), // Better-Auth compatible
   online: boolean('online').default(false).notNull(),
   updatedAt: timestamp('updatedAt', {
     mode: 'date',
@@ -189,8 +193,105 @@ export const CreateUserSchema = createInsertSchema(Users).omit({
   updatedAt: true,
 });
 
+// Better-Auth Tables
+export const Accounts = pgTable('account', {
+  accessToken: text('accessToken'),
+  accountId: text('accountId').notNull(),
+  createdAt: timestamp('createdAt', { mode: 'date', withTimezone: true })
+    .defaultNow()
+    .notNull(),
+  expiresAt: timestamp('expiresAt', { mode: 'date', withTimezone: true }),
+  id: varchar('id', { length: 128 })
+    .notNull()
+    .primaryKey()
+    .$defaultFn(() => createId({ prefix: 'acc' })),
+  idToken: text('idToken'),
+  password: text('password'),
+  providerId: text('providerId').notNull(),
+  refreshToken: text('refreshToken'),
+  updatedAt: timestamp('updatedAt', {
+    mode: 'date',
+    withTimezone: true,
+  }).$onUpdateFn(() => new Date()),
+  userId: varchar('userId', { length: 128 })
+    .notNull()
+    .references(() => Users.id, { onDelete: 'cascade' }),
+});
+
+export const Sessions = pgTable('session', {
+  createdAt: timestamp('createdAt', { mode: 'date', withTimezone: true })
+    .defaultNow()
+    .notNull(),
+  expiresAt: timestamp('expiresAt', {
+    mode: 'date',
+    withTimezone: true,
+  }).notNull(),
+  id: varchar('id', { length: 128 })
+    .notNull()
+    .primaryKey()
+    .$defaultFn(() => createId({ prefix: 'session' })),
+  ipAddress: text('ipAddress'),
+  token: text('token').notNull().unique(),
+  updatedAt: timestamp('updatedAt', {
+    mode: 'date',
+    withTimezone: true,
+  }).$onUpdateFn(() => new Date()),
+  userAgent: text('userAgent'),
+  userId: varchar('userId', { length: 128 })
+    .notNull()
+    .references(() => Users.id, { onDelete: 'cascade' }),
+});
+
+export const Verifications = pgTable('verification', {
+  createdAt: timestamp('createdAt', {
+    mode: 'date',
+    withTimezone: true,
+  }).defaultNow(),
+  expiresAt: timestamp('expiresAt', {
+    mode: 'date',
+    withTimezone: true,
+  }).notNull(),
+  id: varchar('id', { length: 128 })
+    .notNull()
+    .primaryKey()
+    .$defaultFn(() => createId({ prefix: 'ver' })),
+  identifier: text('identifier').notNull(),
+  updatedAt: timestamp('updatedAt', {
+    mode: 'date',
+    withTimezone: true,
+  }).$onUpdateFn(() => new Date()),
+  value: text('value').notNull(),
+});
+
+export const Invitations = pgTable('invitation', {
+  createdAt: timestamp('createdAt', { mode: 'date', withTimezone: true })
+    .defaultNow()
+    .notNull(),
+  email: text('email').notNull(),
+  expiresAt: timestamp('expiresAt', {
+    mode: 'date',
+    withTimezone: true,
+  }).notNull(),
+  id: varchar('id', { length: 128 })
+    .notNull()
+    .primaryKey()
+    .$defaultFn(() => createId({ prefix: 'inv' })),
+  inviterId: varchar('inviterId', { length: 128 }).references(() => Users.id, {
+    onDelete: 'set null',
+  }),
+  organizationId: varchar('organizationId', { length: 128 })
+    .notNull()
+    .references(() => Orgs.id, { onDelete: 'cascade' }),
+  role: text('role'),
+  status: text('status').notNull().default('pending'),
+  updatedAt: timestamp('updatedAt', {
+    mode: 'date',
+    withTimezone: true,
+  }).$onUpdateFn(() => new Date()),
+});
+
 export const Orgs = pgTable('orgs', {
-  clerkOrgId: text('clerkOrgId').unique().notNull(),
+  clerkOrgId: text('clerkOrgId').unique(), // Legacy, optional for Better-Auth migration
   createdAt: timestamp('createdAt', {
     mode: 'date',
     withTimezone: true,
@@ -950,7 +1051,10 @@ export const EmailKeywords = pgTable(
     // Index for type-based filtering
     index('idx_email_keywords_type').on(table.keywordType),
     // Composite index for thread + type queries
-    index('idx_email_keywords_thread_type').on(table.threadId, table.keywordType),
+    index('idx_email_keywords_thread_type').on(
+      table.threadId,
+      table.keywordType,
+    ),
   ],
 );
 
@@ -1324,6 +1428,8 @@ export type VocabularyProfileJson = {
 export const UserWritingProfile = pgTable('userWritingProfile', {
   // Analyzed message count for statistics
   analyzedMessageCount: integer('analyzedMessageCount').default(0),
+  // Average message length in characters
+  averageMessageLength: integer('averageMessageLength'),
   // Common phrases the user frequently uses
   commonPhrases: json('commonPhrases').$type<string[]>(),
   // Global default formality (0 = casual, 1 = formal)
@@ -1335,8 +1441,6 @@ export const UserWritingProfile = pgTable('userWritingProfile', {
     mode: 'date',
     withTimezone: true,
   }),
-  // Average message length in characters
-  averageMessageLength: integer('averageMessageLength'),
   // Preferred greeting (e.g., "Hi", "Hey", "Dear")
   preferredGreeting: text('preferredGreeting'),
   // Preferred sign-off (e.g., "Best", "Thanks", "Cheers")
@@ -1391,10 +1495,10 @@ export const UserContactStyle = pgTable(
   {
     // Common phrases used with this contact
     commonPhrases: json('commonPhrases').$type<string[]>(),
-    // Specific person email (e.g., john@company.com)
-    contactEmail: text('contactEmail'),
     // Entire domain (e.g., company.com)
     contactDomain: text('contactDomain'),
+    // Specific person email (e.g., john@company.com)
+    contactEmail: text('contactEmail'),
     createdAt: timestamp('createdAt', {
       mode: 'date',
       withTimezone: true,

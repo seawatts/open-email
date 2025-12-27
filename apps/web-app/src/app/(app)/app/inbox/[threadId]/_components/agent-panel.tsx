@@ -19,7 +19,6 @@ import { QuickActionsCard } from './quick-actions-card';
 import { ReplyComposer } from './reply-composer';
 import type {
   AgentEvent,
-  EmailCategory,
   FormattedHighlight,
   ThreadAction,
   ThreadDecision,
@@ -64,9 +63,7 @@ interface AgentPanelProps {
   onClearDraft: () => void;
 }
 
-function generateSmartActions(
-  decision: ThreadDecision | null,
-): SmartAction[] {
+function generateSmartActions(decision: ThreadDecision | null): SmartAction[] {
   if (!decision) return [];
 
   const actions: SmartAction[] = [];
@@ -81,10 +78,7 @@ function generateSmartActions(
     });
   }
 
-  if (
-    decision.suggestedAction === 'archive' ||
-    decision.category === 'fyi'
-  ) {
+  if (decision.suggestedAction === 'archive' || decision.category === 'fyi') {
     actions.push({
       confidence: decision.confidence,
       description: 'Archive this email to clean up your inbox',
@@ -218,7 +212,9 @@ export function AgentPanel({
             {highlights && highlights.length > 0 ? (
               <HighlightList
                 highlights={
-                  highlights as Parameters<typeof HighlightList>[0]['highlights']
+                  highlights as Parameters<
+                    typeof HighlightList
+                  >[0]['highlights']
                 }
               />
             ) : (
@@ -251,4 +247,3 @@ export function AgentPanel({
     </div>
   );
 }
-

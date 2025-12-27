@@ -29,7 +29,11 @@ export interface KeyboardShortcut {
 export const KEYBOARD_SHORTCUTS: KeyboardShortcut[] = [
   // Navigation
   { category: 'navigation', description: 'Move down / Next email', keys: 'j' },
-  { category: 'navigation', description: 'Move up / Previous email', keys: 'k' },
+  {
+    category: 'navigation',
+    description: 'Move up / Previous email',
+    keys: 'k',
+  },
   { category: 'navigation', description: 'Open selected email', keys: 'Enter' },
   { category: 'navigation', description: 'Go back', keys: 'Escape' },
   { category: 'navigation', description: 'Go to inbox', keys: 'g i' },
@@ -169,7 +173,10 @@ export function useKeySequence(
         }
 
         // If buffer is longer than any sequence, reset
-        if (sequenceBuffer.current.length > Math.max(...sequences.map((s) => s.keys.length))) {
+        if (
+          sequenceBuffer.current.length >
+          Math.max(...sequences.map((s) => s.keys.length))
+        ) {
           sequenceBuffer.current = [];
         }
       }

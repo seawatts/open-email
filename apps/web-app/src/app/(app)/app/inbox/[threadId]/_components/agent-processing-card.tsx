@@ -64,4 +64,3 @@ export function AgentProcessingCard({
     </Card>
   );
 }
-

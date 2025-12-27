@@ -2,7 +2,7 @@ import {
   clerkClient,
   type Organization,
   type User,
-} from '@clerk/nextjs/server';
+} from '@seawatts/auth/clerk-compat-server';
 import { db } from '@seawatts/db/client';
 import { ApiKeys, OrgMembers, Orgs, Users } from '@seawatts/db/schema';
 import { generateRandomName, generateUniqueOrgName } from '@seawatts/id';

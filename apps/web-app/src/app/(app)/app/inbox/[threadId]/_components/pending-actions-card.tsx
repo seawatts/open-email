@@ -32,7 +32,9 @@ export function PendingActionsCard({
             key={action.id}
           >
             <div>
-              <p className="text-sm font-medium capitalize">{action.actionType}</p>
+              <p className="text-sm font-medium capitalize">
+                {action.actionType}
+              </p>
               <p className="text-xs text-muted-foreground">
                 {formatDistanceToNow(new Date(action.createdAt), {
                   addSuffix: true,
@@ -61,4 +63,3 @@ export function PendingActionsCard({
     </Card>
   );
 }
-

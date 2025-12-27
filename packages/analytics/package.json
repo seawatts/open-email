@@ -1,7 +1,6 @@
 {
   "dependencies": {
     "@clerk/chrome-extension": "2.8.12",
-    "@clerk/nextjs": "catalog:",
     "@seawatts/logger": "workspace:*",
     "@seawatts/ui": "workspace:*",
     "@t3-oss/env-nextjs": "catalog:",

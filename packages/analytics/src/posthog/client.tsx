@@ -1,6 +1,6 @@
 'use client';
 
-import { useUser } from '@clerk/nextjs';
+import { useUser } from '@seawatts/auth/clerk-compat';
 import posthog from 'posthog-js';
 import { useEffect, useRef } from 'react';
 

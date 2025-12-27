@@ -1,4 +1,4 @@
-import { clerkClient } from '@clerk/nextjs/server';
+import { clerkClient } from '@seawatts/auth/clerk-compat-server';
 import { db } from '@seawatts/db/client';
 import { AuthCodes } from '@seawatts/db/schema';
 import { TRPCError } from '@trpc/server';

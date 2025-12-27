@@ -1,6 +1,6 @@
 'use server';
 
-import { auth } from '@clerk/nextjs/server';
+import { auth } from '@seawatts/auth/clerk-compat-server';
 import { db } from '@seawatts/db/client';
 import { Orgs } from '@seawatts/db/schema';
 import {

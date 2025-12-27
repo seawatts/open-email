@@ -1,6 +1,6 @@
 'use client';
 
-import { SignOutButton, useUser } from '@clerk/nextjs';
+import { SignOutButton, useUser } from '@seawatts/auth/clerk-compat';
 import { Icons } from '@seawatts/ui/custom/icons';
 import {
   DropdownMenu,

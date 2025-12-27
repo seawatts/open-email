@@ -84,8 +84,3 @@ export default function InboxPage() {
     </div>
   );
 }
-
-
-
-
-

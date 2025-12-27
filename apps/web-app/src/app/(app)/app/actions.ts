@@ -1,7 +1,7 @@
 'use server';
 
-import { auth, currentUser } from '@clerk/nextjs/server';
 import { upsertOrg } from '@seawatts/api/services';
+import { auth, currentUser } from '@seawatts/auth/clerk-compat-server';
 import { db } from '@seawatts/db/client';
 import { Orgs } from '@seawatts/db/schema';
 import { eq } from 'drizzle-orm';

@@ -57,17 +57,16 @@ export function useReplyComposer({
   );
 
   return {
+    clearDraft,
     // State
     editedBody,
-    selectedDraftId,
+    handleSendReply,
     isSending: sendReply.isPending,
+    selectDraft,
+    selectedDraftId,
+    setDraftFromAgent,
 
     // Actions
     setEditedBody,
-    handleSendReply,
-    selectDraft,
-    clearDraft,
-    setDraftFromAgent,
   };
 }
-

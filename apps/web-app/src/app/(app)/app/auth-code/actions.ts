@@ -1,6 +1,6 @@
 'use server';
 
-import { auth, currentUser } from '@clerk/nextjs/server';
+import { auth, currentUser } from '@seawatts/auth/clerk-compat-server';
 import { db } from '@seawatts/db/client';
 import { AuthCodes } from '@seawatts/db/schema';
 import { createSafeActionClient } from 'next-safe-action';

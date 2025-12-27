@@ -1,7 +1,10 @@
 'use client';
 
-import { useOrganization, useOrganizationList } from '@clerk/nextjs';
 import { MetricButton } from '@seawatts/analytics/components';
+import {
+  useOrganization,
+  useOrganizationList,
+} from '@seawatts/auth/clerk-compat';
 import {
   Command,
   CommandGroup,

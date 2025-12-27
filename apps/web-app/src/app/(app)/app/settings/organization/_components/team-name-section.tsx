@@ -1,7 +1,7 @@
 'use client';
 
-import { useOrganization } from '@clerk/nextjs';
 import { MetricButton } from '@seawatts/analytics/components';
+import { useOrganization } from '@seawatts/auth/clerk-compat';
 import { Card, CardContent, CardHeader, CardTitle } from '@seawatts/ui/card';
 import { Input } from '@seawatts/ui/input';
 import { toast } from '@seawatts/ui/sonner';

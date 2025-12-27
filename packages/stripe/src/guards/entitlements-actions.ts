@@ -1,6 +1,6 @@
 'use server';
 
-import { auth } from '@clerk/nextjs/server';
+import { auth } from '@seawatts/auth/clerk-compat-server';
 import { createSafeActionClient } from 'next-safe-action';
 import { z } from 'zod';
 import type { EntitlementKey, EntitlementsRecord } from './entitlement-types';
