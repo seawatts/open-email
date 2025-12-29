@@ -10,7 +10,7 @@ export const env = createEnv({
     POSTGRES_URL: process.env.POSTGRES_URL,
   },
   server: {
-    CLERK_SECRET_KEY: z.string(),
+    CLERK_SECRET_KEY: z.string().optional(), // Legacy - using Better-Auth now
     POSTGRES_URL: z.string().url(),
   },
   skipValidation: !!process.env.CI,

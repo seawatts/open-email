@@ -15,8 +15,8 @@ export const env = createEnv({
    * This way you can ensure the app isn't built with invalid env vars.
    */
   server: {
-    POSTHOG_HOST: z.string(),
-    POSTHOG_KEY: z.string(),
+    POSTHOG_HOST: z.string().optional(),
+    POSTHOG_KEY: z.string().optional(),
   },
 
   skipValidation:

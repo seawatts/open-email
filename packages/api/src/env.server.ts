@@ -18,7 +18,7 @@ export const env = createEnv({
   server: {
     EMAIL_FROM: z.string().default('noreply@seawatts.sh'),
     EMAIL_REPLY_TO: z.string().default('noreply@seawatts.sh'),
-    RESEND_API_KEY: z.string(),
+    RESEND_API_KEY: z.string().optional(),
   },
 
   skipValidation:

@@ -17,7 +17,7 @@ export function withPosthog<TEvent = unknown, TResult = unknown>(
     try {
       return handler(event, context, callback) as TResult;
     } finally {
-      await posthog.shutdown();
+      await posthog?.shutdown();
     }
   };
 }
