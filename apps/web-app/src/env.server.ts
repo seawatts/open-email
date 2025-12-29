@@ -15,13 +15,13 @@ export const env = createEnv({
    * This way you can ensure the app isn't built with invalid env vars.
    */
   server: {
-    CLERK_SECRET_KEY: z.string(),
-    CLERK_WEBHOOK_SECRET: z.string(),
+    CLERK_SECRET_KEY: z.string().optional(),
+    CLERK_WEBHOOK_SECRET: z.string().optional(),
     NODE_ENV: z
       .enum(['development', 'production', 'test'])
       .default('development'),
     POSTGRES_URL: z.string().url(),
-    POSTHOG_KEY: z.string(),
+    POSTHOG_KEY: z.string().optional(),
     STRIPE_SECRET_KEY: z.string().optional(),
     STRIPE_WEBHOOK_SECRET: z.string().optional(),
   },

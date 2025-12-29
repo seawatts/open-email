@@ -4,9 +4,9 @@ import { z } from 'zod';
 
 export const env = createEnv({
   client: {
-    NEXT_PUBLIC_APP_ENV: z.string(),
-    NEXT_PUBLIC_POSTHOG_HOST: z.string(),
-    NEXT_PUBLIC_POSTHOG_KEY: z.string(),
+    NEXT_PUBLIC_APP_ENV: z.string().optional(),
+    NEXT_PUBLIC_POSTHOG_HOST: z.string().optional(),
+    NEXT_PUBLIC_POSTHOG_KEY: z.string().optional(),
     NEXT_PUBLIC_VERCEL_ENV: z.string().optional(),
   },
   extends: [vercel()],
@@ -22,8 +22,8 @@ export const env = createEnv({
   },
 
   server: {
-    POSTHOG_HOST: z.string(),
-    POSTHOG_KEY: z.string(),
+    POSTHOG_HOST: z.string().optional(),
+    POSTHOG_KEY: z.string().optional(),
   },
 
   shared: {

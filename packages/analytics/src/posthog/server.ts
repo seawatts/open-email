@@ -7,8 +7,8 @@ class PostHogServer {
 
   private constructor() {}
 
-  public static getInstance(): PostHog {
-    if (!PostHogServer.instance) {
+  public static getInstance(): PostHog | null {
+    if (!PostHogServer.instance && env.POSTHOG_KEY && env.POSTHOG_HOST) {
       PostHogServer.instance = new PostHog(env.POSTHOG_KEY, {
         flushAt: 1,
         flushInterval: 0,

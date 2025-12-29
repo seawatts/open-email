@@ -44,6 +44,9 @@ yarn-error.log*
 .env*.local
 .env.sentry-build-plugin
 
+# claude code local settings
+.claude/settings.local.json
+
 # vercel
 .vercel
 
