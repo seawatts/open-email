@@ -5,10 +5,9 @@
  * This enables fast, structured search queries without relying on RAG.
  */
 
+import { getDefaultAdapter, getModel } from '@seawatts/ai';
 import { chat, toolDefinition } from '@tanstack/ai';
 import { z } from 'zod';
-
-import { getDefaultAdapter, getModel } from '@seawatts/ai';
 
 import type {
   ExtractedKeyword,
@@ -57,6 +56,7 @@ const extractKeywordsTool = toolDefinition({
   inputSchema: z.object({
     keywords: z.array(
       z.object({
+        confidence: z.number().min(0).max(1).describe('Confidence score 0-1'),
         keyword: z.string().describe('The normalized keyword (lowercase)'),
         keywordType: z
           .enum([
@@ -71,15 +71,14 @@ const extractKeywordsTool = toolDefinition({
             'product',
           ])
           .describe('Type of keyword'),
-        originalText: z
-          .string()
-          .optional()
-          .describe('Original text as it appeared'),
-        confidence: z.number().min(0).max(1).describe('Confidence score 0-1'),
         metadata: z
           .record(z.string(), z.unknown())
           .optional()
           .describe('Type-specific metadata'),
+        originalText: z
+          .string()
+          .optional()
+          .describe('Original text as it appeared'),
       }),
     ),
   }),

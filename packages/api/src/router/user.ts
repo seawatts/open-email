@@ -28,8 +28,14 @@ export const userRouter = {
       return user;
     }),
   current: protectedProcedure.query(({ ctx }) => {
+    const userId = ctx.auth.userId;
+
+    if (!userId) {
+      throw new Error('Authentication required');
+    }
+
     return ctx.db.query.Users.findFirst({
-      where: eq(Users.id, ctx.auth.userId),
+      where: eq(Users.id, userId),
     });
   }),
   delete: publicProcedure.input(z.string()).mutation(async ({ input, ctx }) => {

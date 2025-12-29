@@ -61,7 +61,7 @@ export function MyOrganizationsSection() {
     setTargetOrganization(organization);
     setIsLeaveDialogOpen(true);
   };
-  const loading = userMemberships.isLoading;
+  const loading = userMemberships?.isLoading ?? false;
 
   return (
     <>

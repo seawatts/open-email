@@ -152,7 +152,7 @@ export function OrgSelector({ onSelect }: OrgSelectorProps) {
                     setInput('');
                     setOpen(false);
                     if (setActive) {
-                      setActive({ organization: membership.organization });
+                      setActive({ organization: membership.organization.id });
                     }
                     onSelect?.(membership.organization.id);
 

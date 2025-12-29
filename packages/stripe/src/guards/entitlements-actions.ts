@@ -1,6 +1,7 @@
 'use server';
 
-import { auth } from '@seawatts/auth/clerk-compat-server';
+import { auth } from '@seawatts/auth/server';
+import { headers } from 'next/headers';
 import { createSafeActionClient } from 'next-safe-action';
 import { z } from 'zod';
 import type { EntitlementKey, EntitlementsRecord } from './entitlement-types';
@@ -8,6 +9,16 @@ import { getOrgEntitlements } from './entitlements-server';
 
 // Create the action client
 const action = createSafeActionClient();
+
+// Helper to get authenticated session
+async function getAuthSession() {
+  const headersList = await headers();
+  const session = await auth.api.getSession({ headers: headersList });
+  return {
+    orgId: session?.session?.activeOrganizationId || null,
+    userId: session?.user?.id || null,
+  };
+}
 
 // Validation schema for entitlement check
 const checkEntitlementSchema = z.object({
@@ -20,7 +31,7 @@ const checkEntitlementSchema = z.object({
 export const checkEntitlementAction = action
   .inputSchema(checkEntitlementSchema)
   .action(async ({ parsedInput }) => {
-    const { userId, orgId } = await auth();
+    const { userId, orgId } = await getAuthSession();
 
     if (!userId || !orgId) {
       return { entitled: false, reason: 'Unauthorized' };
@@ -46,7 +57,7 @@ export const checkEntitlementAction = action
 
 // Action to get all entitlements for the current organization
 export const getEntitlementsAction = action.action(async () => {
-  const { userId, orgId } = await auth();
+  const { userId, orgId } = await getAuthSession();
 
   if (!userId || !orgId) {
     return { entitlements: {} as EntitlementsRecord, reason: 'Unauthorized' };

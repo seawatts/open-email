@@ -320,9 +320,7 @@ export async function fetchServiceSecrets(
 /**
  * Fetch existing secrets from Infisical project
  */
-async function fetchExistingInfisicalSecrets(
-  projectId: string,
-): Promise<{
+async function fetchExistingInfisicalSecrets(projectId: string): Promise<{
   secrets: SecretInfo[];
   byEnv: Record<Environment, Record<string, string>>;
 }> {

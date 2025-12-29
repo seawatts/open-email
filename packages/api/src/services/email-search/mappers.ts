@@ -5,10 +5,9 @@
  * into search result format.
  */
 
-import { inArray } from 'drizzle-orm';
-
 import { db } from '@seawatts/db/client';
 import { EmailMessages } from '@seawatts/db/schema';
+import { inArray } from 'drizzle-orm';
 
 import type { EmailSearchResult } from './types';
 

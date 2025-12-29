@@ -71,28 +71,6 @@ const threadInputSchema = z.object({
 
 export const searchRouter = createTRPCRouter({
   /**
-   * Search emails by keywords, entities, or text
-   * Used by AI agent's search_emails tool
-   */
-  search: protectedProcedure
-    .input(searchInputSchema)
-    .query(async ({ input }) => {
-      const filters = input.filters
-        ? {
-            ...input.filters,
-            dateRange: parseDateRange(input.filters.dateRange),
-          }
-        : undefined;
-
-      return searchEmails({
-        filters,
-        limit: input.limit,
-        offset: input.offset,
-        query: input.query,
-      });
-    }),
-
-  /**
    * List emails by category/bundle type
    * Used by AI agent's list_emails_by_category tool
    */
@@ -163,6 +141,27 @@ export const searchRouter = createTRPCRouter({
       // Use shared mapper
       const keywordMap = buildKeywordsByThreadMap(keywords);
       return Object.fromEntries(keywordMap);
+    }),
+  /**
+   * Search emails by keywords, entities, or text
+   * Used by AI agent's search_emails tool
+   */
+  search: protectedProcedure
+    .input(searchInputSchema)
+    .query(async ({ input }) => {
+      const filters = input.filters
+        ? {
+            ...input.filters,
+            dateRange: parseDateRange(input.filters.dateRange),
+          }
+        : undefined;
+
+      return searchEmails({
+        filters,
+        limit: input.limit,
+        offset: input.offset,
+        query: input.query,
+      });
     }),
 
   /**

@@ -43,11 +43,11 @@ const watcher = watch(['src/schema.ts'], {
   ignoreInitial: true,
 });
 
-// Run type generation on file changes
-watcher.on('all', (event, path) => {
-  console.log(`📁 ${event} detected in ${path}`);
-  debouncedGenerateTypes();
-});
+// Run type generation on file changes - disabled for plain Postgres
+// watcher.on('all', (event, path) => {
+//   console.log(`📁 ${event} detected in ${path}`);
+//   debouncedGenerateTypes();
+// });
 
 // Handle process termination
 process.on('SIGINT', () => {
@@ -64,5 +64,5 @@ process.on('SIGTERM', () => {
   process.exit(0);
 });
 
-// Initial type generation
-generateTypes();
+// Initial type generation - disabled for plain Postgres
+// generateTypes();

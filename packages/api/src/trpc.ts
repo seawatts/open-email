@@ -92,7 +92,12 @@ const isAuthed = t.middleware(({ next, ctx }) => {
 
   return next({
     ctx: {
-      auth: ctx.auth,
+      auth: {
+        ...ctx.auth,
+        orgId: ctx.auth.orgId,
+        sessionId: ctx.auth.sessionId,
+        userId: ctx.auth.userId,
+      },
     },
   });
 });

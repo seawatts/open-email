@@ -52,10 +52,11 @@ export function InviteMembersSection() {
 
     // Check if user is admin
     const organizationId = organization.id;
-    const { data: organizationMemberships } =
-      (await user?.getOrganizationMemberships()) || { data: [] };
+    const result = (await user?.getOrganizationMemberships()) || { data: [] };
+    const organizationMemberships = 'data' in result ? result.data : [];
     const currentMembership = organizationMemberships?.find(
-      (membership) => membership.organization.id === organizationId,
+      (membership: { organization: { id: string }; role: string }) =>
+        membership.organization.id === organizationId,
     );
 
     if (!currentMembership || currentMembership.role !== 'org:admin') {

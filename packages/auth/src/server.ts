@@ -32,6 +32,7 @@ export const auth = betterAuth({
         return createId({ prefix });
       },
     },
+    debug: process.env.NODE_ENV === 'development',
   },
   baseURL: env.BETTER_AUTH_URL,
   database: drizzleAdapter(db, {
@@ -48,7 +49,7 @@ export const auth = betterAuth({
   }),
 
   emailAndPassword: {
-    enabled: false, // Only using Google OAuth
+    enabled: true,
   },
 
   plugins: [
@@ -57,6 +58,13 @@ export const auth = betterAuth({
       invitationExpiresIn: 60 * 60 * 24 * 7, // 7 days
       membershipLimit: 50,
       organizationLimit: 10,
+      schema: {
+        member: {
+          fields: {
+            organizationId: 'orgId',
+          },
+        },
+      },
       sendInvitationEmail: async ({ email, organization, inviter }) => {
         // TODO: Implement email sending using @seawatts/email package
         console.log(

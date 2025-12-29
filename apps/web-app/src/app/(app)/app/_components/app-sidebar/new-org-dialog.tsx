@@ -190,7 +190,7 @@ export function NewOrgDialog({ open, onOpenChange }: NewOrgDialogProps) {
 
       // Invalidate queries to refresh data
       apiUtils.invalidate();
-      userMemberships.revalidate();
+      userMemberships?.revalidate();
     } catch (error) {
       console.error('Failed to complete setup:', error);
       setErrors([

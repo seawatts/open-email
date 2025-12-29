@@ -1,4 +1,5 @@
-import { auth } from '@seawatts/auth/clerk-compat-server';
+import { auth } from '@seawatts/auth/server';
+import { headers } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { OnboardingForm } from './_components/onboarding-form';
 
@@ -10,7 +11,10 @@ export default async function Page(props: {
   }>;
 }) {
   const searchParams = await props.searchParams;
-  const { orgId, userId } = await auth();
+  const headersList = await headers();
+  const session = await auth.api.getSession({ headers: headersList });
+  const userId = session?.user?.id;
+  const orgId = session?.session?.activeOrganizationId;
 
   if (!userId) {
     return redirect('/');

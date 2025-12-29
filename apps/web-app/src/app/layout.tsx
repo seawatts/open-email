@@ -1,4 +1,3 @@
-import { ReactScan } from '@seawatts/ui/custom/react-scan';
 import { ThemeProvider } from '@seawatts/ui/custom/theme';
 import { cn } from '@seawatts/ui/lib/utils';
 import { Toaster } from '@seawatts/ui/sonner';
@@ -56,7 +55,7 @@ export default function RootLayout(props: { children: React.ReactNode }) {
         )}
       >
         <ThemeProvider attribute="class" defaultTheme="dark" enableSystem>
-          {isDevelopment && <ReactScan />}
+          {/* {isDevelopment && <ReactScan />} */}
           <NuqsAdapter>
             <TRPCReactProvider>
               <Suspense>

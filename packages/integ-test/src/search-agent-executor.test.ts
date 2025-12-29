@@ -1,12 +1,11 @@
-import { sql } from 'drizzle-orm';
-import { beforeEach, describe, expect, it } from 'vitest';
-
 import {
   listEmailsByCategory,
   searchEmails,
 } from '@seawatts/api/services/email-search';
 import { getThreadWithMessages } from '@seawatts/api/services/email-thread';
-import { EmailThreads, type EmailKeywordType } from '@seawatts/db/schema';
+import { type EmailKeywordType, EmailThreads } from '@seawatts/db/schema';
+import { sql } from 'drizzle-orm';
+import { beforeEach, describe, expect, it } from 'vitest';
 
 import { TestFactories } from '../test-utils/factories';
 import { testDb } from './setup';
@@ -29,8 +28,8 @@ describe('Search Agent Executor Integration Tests', () => {
 
       // Create thread with searchable content
       const thread = await factories.createEmailThread(account.id, {
-        subject: 'Project deadline reminder',
         snippet: 'The project deadline is approaching',
+        subject: 'Project deadline reminder',
       });
       await factories.createEmailMessage(thread.id);
 
@@ -43,8 +42,8 @@ describe('Search Agent Executor Integration Tests', () => {
         .where(sql`${EmailThreads.id} = ${thread.id}`);
 
       const result = await searchEmails({
-        query: 'project deadline',
         filters: { gmailAccountId: account.id },
+        query: 'project deadline',
       });
 
       expect(result.results.length).toBeGreaterThan(0);
@@ -84,11 +83,11 @@ describe('Search Agent Executor Integration Tests', () => {
         .where(sql`${EmailThreads.id} = ${financeThread.id}`);
 
       const result = await searchEmails({
-        query: 'confirmation statement',
         filters: {
-          gmailAccountId: account.id,
           bundleTypes: ['travel'],
+          gmailAccountId: account.id,
         },
+        query: 'confirmation statement',
       });
 
       expect(result.results).toHaveLength(1);
@@ -122,14 +121,14 @@ describe('Search Agent Executor Integration Tests', () => {
         .where(sql`${EmailThreads.id} = ${recentThread.id}`);
 
       const result = await searchEmails({
-        query: 'email',
         filters: {
-          gmailAccountId: account.id,
           dateRange: {
-            start: new Date('2024-12-01'),
             end: new Date('2024-12-31'),
+            start: new Date('2024-12-01'),
           },
+          gmailAccountId: account.id,
         },
+        query: 'email',
       });
 
       expect(result.results).toHaveLength(1);
@@ -158,8 +157,8 @@ describe('Search Agent Executor Integration Tests', () => {
         .where(sql`${EmailThreads.id} = ${thread.id}`);
 
       const result = await searchEmails({
-        query: 'amazon order',
         filters: { gmailAccountId: account.id },
+        query: 'amazon order',
       });
 
       expect(result.results[0]?.matchingKeywords.length).toBeGreaterThan(0);
@@ -187,9 +186,9 @@ describe('Search Agent Executor Integration Tests', () => {
       }
 
       const result = await searchEmails({
-        query: 'test',
         filters: { gmailAccountId: account.id },
         limit: 2,
+        query: 'test',
       });
 
       expect(result.results).toHaveLength(2);
@@ -207,18 +206,18 @@ describe('Search Agent Executor Integration Tests', () => {
       });
 
       await factories.createEmailMessage(thread.id, {
-        fromEmail: 'sender@example.com',
         bodyPreview: 'This is the first message',
+        fromEmail: 'sender@example.com',
       });
 
       await factories.createEmailMessage(thread.id, {
-        fromEmail: 'reply@example.com',
         bodyPreview: 'This is a reply',
+        fromEmail: 'reply@example.com',
       });
 
       const result = await getThreadWithMessages(thread.id, {
-        includeMessages: true,
         includeKeywords: true,
+        includeMessages: true,
       });
 
       expect(result).not.toBeNull();
@@ -301,11 +300,11 @@ describe('Search Agent Executor Integration Tests', () => {
 
       const result = await listEmailsByCategory({
         category: 'purchases',
-        gmailAccountId: account.id,
         dateRange: {
-          start: new Date('2024-12-01'),
           end: new Date('2024-12-31'),
+          start: new Date('2024-12-01'),
         },
+        gmailAccountId: account.id,
       });
 
       expect(result.results).toHaveLength(1);
@@ -360,12 +359,12 @@ describe('Search Agent Executor Integration Tests', () => {
       // Create diverse email set
       const travelThread = await factories.createEmailThread(account.id, {
         bundleType: 'travel',
-        subject: 'Flight to New York JFK',
         lastMessageAt: new Date('2024-12-20'),
+        subject: 'Flight to New York JFK',
       });
       await factories.createEmailMessage(travelThread.id, {
-        fromEmail: 'united@airlines.com',
         bodyPreview: 'Your United flight UA123 confirmation',
+        fromEmail: 'united@airlines.com',
       });
       await factories.createEmailKeywords(travelThread.id, [
         { keyword: 'new york', keywordType: 'location' },
@@ -382,11 +381,11 @@ describe('Search Agent Executor Integration Tests', () => {
 
       // Step 1: Agent searches for flights
       const searchResult = await searchEmails({
-        query: 'flight new york',
         filters: {
-          gmailAccountId: account.id,
           bundleTypes: ['travel'],
+          gmailAccountId: account.id,
         },
+        query: 'flight new york',
       });
 
       expect(searchResult.results.length).toBeGreaterThan(0);
@@ -394,8 +393,8 @@ describe('Search Agent Executor Integration Tests', () => {
 
       // Step 2: Agent gets full thread content
       const threadContent = await getThreadWithMessages(foundThreadId!, {
-        includeMessages: true,
         includeKeywords: true,
+        includeMessages: true,
       });
 
       expect(threadContent).not.toBeNull();

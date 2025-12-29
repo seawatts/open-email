@@ -1,9 +1,7 @@
 // TODO: Update test utils for Better-Auth
 // import { createClerkClient } from '@clerk/backend';
 import { db } from '@seawatts/db/client';
-import { ApiKeys, AuthCodes, Orgs, Users } from '@seawatts/db/schema';
-import { createId } from '@seawatts/id';
-import { eq } from 'drizzle-orm';
+import { ApiKeys } from '@seawatts/db/schema';
 // import { env } from './env';
 
 // TODO: These test utilities need to be rewritten for Better-Auth
@@ -57,9 +55,9 @@ export interface TestSetup {
  * Creates a test user in Clerk and the database
  */
 export async function createTestUser(
-  email = `test-${Date.now()}@example.com`,
-  firstName = 'Test',
-  lastName = 'User',
+  _email = `test-${Date.now()}@example.com`,
+  _firstName = 'Test',
+  _lastName = 'User',
 ): Promise<TestUser> {
   throw new Error(
     'Test utilities need to be rewritten for Better-Auth - Clerk removed',
@@ -70,8 +68,8 @@ export async function createTestUser(
  * Creates a test organization in Clerk and the database
  */
 export async function createTestOrg(
-  ownerId: string,
-  name = `Test Organization ${Date.now()}`,
+  _ownerId: string,
+  _name = `Test Organization ${Date.now()}`,
 ): Promise<TestOrg> {
   throw new Error(
     'Test utilities need to be rewritten for Better-Auth - Clerk removed',
@@ -82,9 +80,9 @@ export async function createTestOrg(
  * Creates a test auth code in the database with a real Clerk session
  */
 export async function createTestAuthCode(
-  userId: string,
-  orgId: string,
-  expiresInMinutes = 30,
+  _userId: string,
+  _orgId: string,
+  _expiresInMinutes = 30,
 ): Promise<TestAuthCode> {
   throw new Error(
     'Test utilities need to be rewritten for Better-Auth - Clerk removed',
@@ -125,7 +123,7 @@ export async function createTestApiKey(
  * Creates a complete test setup with user, org, API key, webhook, and optional auth code
  */
 export async function createTestSetup(
-  options: {
+  _options: {
     userEmail?: string;
     userName?: { firstName?: string; lastName?: string };
     orgName?: string;
@@ -143,8 +141,8 @@ export async function createTestSetup(
  * Utility to create an expired auth code for testing
  */
 export async function createExpiredAuthCode(
-  userId: string,
-  orgId: string,
+  _userId: string,
+  _orgId: string,
 ): Promise<TestAuthCode> {
   throw new Error(
     'Test utilities need to be rewritten for Better-Auth - Clerk removed',
@@ -155,8 +153,8 @@ export async function createExpiredAuthCode(
  * Utility to create a used auth code for testing
  */
 export async function createUsedAuthCode(
-  userId: string,
-  orgId: string,
+  _userId: string,
+  _orgId: string,
 ): Promise<TestAuthCode> {
   throw new Error(
     'Test utilities need to be rewritten for Better-Auth - Clerk removed',

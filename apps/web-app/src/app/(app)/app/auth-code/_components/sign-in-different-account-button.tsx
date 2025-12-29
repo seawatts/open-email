@@ -16,11 +16,12 @@ export function SignInDifferentAccountButton() {
     <MetricButton
       className="w-fit"
       metric="auth_code_sign_in_different_account_clicked"
-      onClick={() =>
-        signOut({
-          redirectUrl,
-        })
-      }
+      onClick={async () => {
+        await signOut();
+        if (redirectUrl) {
+          window.location.href = redirectUrl;
+        }
+      }}
       variant="link"
     >
       Sign in with different account

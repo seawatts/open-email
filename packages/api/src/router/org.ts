@@ -13,12 +13,18 @@ export const orgRouter = createTRPCRouter({
       }),
     )
     .query(async ({ ctx, input }) => {
+      const userId = ctx.auth.userId;
+
+      if (!userId) {
+        throw new Error('Authentication required');
+      }
+
       // First check if the user already has access to an organization with this name
       const existingOrgWithAccess = await ctx.db.query.Orgs.findFirst({
         where: eq(Orgs.name, input.name),
         with: {
           orgMembers: {
-            where: eq(OrgMembers.userId, ctx.auth.userId),
+            where: eq(OrgMembers.userId, userId),
           },
         },
       });

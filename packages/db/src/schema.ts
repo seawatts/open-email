@@ -1,5 +1,5 @@
 import { createId } from '@seawatts/id';
-import { relations, sql } from 'drizzle-orm';
+import { relations } from 'drizzle-orm';
 import {
   boolean,
   customType,
@@ -25,11 +25,11 @@ const tsvector = customType<{ data: string }>({
 import { createInsertSchema, createUpdateSchema } from 'drizzle-zod';
 import { z } from 'zod';
 
-// Helper function to get user ID from Clerk JWT
-const requestingUserId = () => sql`requesting_user_id()`;
+// Helper function to get user ID from JWT (Supabase only)
+// const requestingUserId = () => sql`requesting_user_id()`;
 
-// Helper function to get org ID from Clerk JWT
-const requestingOrgId = () => sql`requesting_org_id()`;
+// Helper function to get org ID from JWT (Supabase only)
+// const requestingOrgId = () => sql`requesting_org_id()`;
 
 export const userRoleEnum = pgEnum('userRole', ['admin', 'superAdmin', 'user']);
 export const localConnectionStatusEnum = pgEnum('localConnectionStatus', [
@@ -152,7 +152,8 @@ export const KeywordTypeType = z.enum(keywordTypeEnum.enumValues).enum;
 
 export const Users = pgTable('user', {
   avatarUrl: text('avatarUrl'),
-  clerkId: text('clerkId').unique(), // Legacy, optional for Better-Auth migration
+  // DEPRECATED: Legacy Clerk field - remove after full Better-Auth migration
+  clerkId: text('clerkId').unique(),
   createdAt: timestamp('createdAt').defaultNow().notNull(),
   email: text('email').notNull(),
   emailVerified: boolean('emailVerified').default(false).notNull(),
@@ -219,6 +220,9 @@ export const Accounts = pgTable('account', {
 });
 
 export const Sessions = pgTable('session', {
+  activeOrganizationId: varchar('activeOrganizationId', {
+    length: 128,
+  }).references(() => Orgs.id, { onDelete: 'cascade' }),
   createdAt: timestamp('createdAt', { mode: 'date', withTimezone: true })
     .defaultNow()
     .notNull(),
@@ -291,7 +295,8 @@ export const Invitations = pgTable('invitation', {
 });
 
 export const Orgs = pgTable('orgs', {
-  clerkOrgId: text('clerkOrgId').unique(), // Legacy, optional for Better-Auth migration
+  // DEPRECATED: Legacy Clerk field - remove after full Better-Auth migration
+  clerkOrgId: text('clerkOrgId').unique(),
   createdAt: timestamp('createdAt', {
     mode: 'date',
     withTimezone: true,
@@ -354,8 +359,7 @@ export const OrgMembers = pgTable(
       .references(() => Orgs.id, {
         onDelete: 'cascade',
       })
-      .notNull()
-      .default(requestingOrgId()),
+      .notNull(),
     role: userRoleEnum('role').default('user').notNull(),
     updatedAt: timestamp('updatedAt', {
       mode: 'date',
@@ -365,8 +369,7 @@ export const OrgMembers = pgTable(
       .references(() => Users.id, {
         onDelete: 'cascade',
       })
-      .notNull()
-      .default(requestingUserId()),
+      .notNull(),
   },
   (table) => [
     // Add unique constraint for userId and orgId combination using the simpler syntax
@@ -411,8 +414,7 @@ export const AuthCodes = pgTable('authCodes', {
     .references(() => Orgs.id, {
       onDelete: 'cascade',
     })
-    .notNull()
-    .default(requestingOrgId()),
+    .notNull(),
   sessionId: text('sessionId').notNull(),
   updatedAt: timestamp('updatedAt', {
     mode: 'date',
@@ -426,8 +428,7 @@ export const AuthCodes = pgTable('authCodes', {
     .references(() => Users.id, {
       onDelete: 'cascade',
     })
-    .notNull()
-    .default(requestingUserId()),
+    .notNull(),
 });
 
 export type AuthCodeType = typeof AuthCodes.$inferSelect;
@@ -473,8 +474,7 @@ export const ApiKeys = pgTable('apiKeys', {
     .references(() => Orgs.id, {
       onDelete: 'cascade',
     })
-    .notNull()
-    .default(requestingOrgId()),
+    .notNull(),
   updatedAt: timestamp('updatedAt', {
     mode: 'date',
     withTimezone: true,
@@ -483,8 +483,7 @@ export const ApiKeys = pgTable('apiKeys', {
     .references(() => Users.id, {
       onDelete: 'cascade',
     })
-    .notNull()
-    .default(requestingUserId()),
+    .notNull(),
 });
 
 export type ApiKeyType = typeof ApiKeys.$inferSelect;
@@ -541,8 +540,7 @@ export const ApiKeyUsage = pgTable('apiKeyUsage', {
     .references(() => Orgs.id, {
       onDelete: 'cascade',
     })
-    .notNull()
-    .default(requestingOrgId()),
+    .notNull(),
   type: apiKeyUsageTypeEnum('type').notNull(),
   updatedAt: timestamp('updatedAt', {
     mode: 'date',
@@ -552,8 +550,7 @@ export const ApiKeyUsage = pgTable('apiKeyUsage', {
     .references(() => Users.id, {
       onDelete: 'cascade',
     })
-    .notNull()
-    .default(requestingUserId()),
+    .notNull(),
 });
 
 export type ApiKeyUsageType = typeof ApiKeyUsage.$inferSelect;
@@ -600,8 +597,7 @@ export const ShortUrls = pgTable('shortUrls', {
     .references(() => Orgs.id, {
       onDelete: 'cascade',
     })
-    .notNull()
-    .default(requestingOrgId()),
+    .notNull(),
   redirectUrl: text('redirectUrl').notNull(),
   updatedAt: timestamp('updatedAt', {
     mode: 'date',
@@ -611,8 +607,7 @@ export const ShortUrls = pgTable('shortUrls', {
     .references(() => Users.id, {
       onDelete: 'cascade',
     })
-    .notNull()
-    .default(requestingUserId()),
+    .notNull(),
 });
 
 export type ShortUrlType = typeof ShortUrls.$inferSelect;

@@ -60,7 +60,9 @@ export function StripeProvider({ children }: StripeProviderProps) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!organization) {
+    const orgId = organization?.id;
+
+    if (!orgId) {
       setSubscriptionInfo({
         customerId: null,
         hasAny: false,
@@ -127,7 +129,7 @@ export function StripeProvider({ children }: StripeProviderProps) {
     };
 
     checkStripeData();
-  }, [organization]);
+  }, [organization?.id]);
 
   const checkEntitlement = (entitlement: EntitlementKey): boolean => {
     return entitlements[entitlement] || false;
