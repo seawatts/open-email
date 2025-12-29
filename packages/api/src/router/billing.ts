@@ -1,4 +1,4 @@
-import { Orgs } from '@seawatts/db/schema';
+import { Orgs, Users } from '@seawatts/db/schema';
 import {
   BILLING_INTERVALS,
   createBillingPortalSession,
@@ -95,10 +95,15 @@ export const billingRouter = createTRPCRouter({
       }),
     )
     .mutation(async ({ ctx, input }) => {
-      if (!ctx.auth.orgId) throw new Error('Organization ID is required');
+      const userId = ctx.auth.userId;
+      const orgId = ctx.auth.orgId;
+
+      if (!userId || !orgId) {
+        throw new Error('Authentication required');
+      }
 
       const org = await ctx.db.query.Orgs.findFirst({
-        where: eq(Orgs.id, ctx.auth.orgId),
+        where: eq(Orgs.id, orgId),
       });
 
       if (!org) {
@@ -109,12 +114,16 @@ export const billingRouter = createTRPCRouter({
       let customerId = org.stripeCustomerId;
 
       if (!customerId) {
-        // Get user details from Clerk for creating customer
+        // Get user email from database
+        const user = await ctx.db.query.Users.findFirst({
+          where: eq(Users.id, userId),
+        });
+
         const customer = await getOrCreateCustomer({
-          email: ctx.auth.sessionClaims?.email as string,
+          email: user?.email || '',
           metadata: {
             orgId: org.id,
-            userId: ctx.auth.userId as string,
+            userId,
           },
           name: org.name,
         });
@@ -131,7 +140,7 @@ export const billingRouter = createTRPCRouter({
           .set({
             stripeCustomerId: customerId,
           })
-          .where(eq(Orgs.id, ctx.auth.orgId));
+          .where(eq(Orgs.id, orgId));
       }
 
       // Create checkout session
@@ -142,7 +151,7 @@ export const billingRouter = createTRPCRouter({
             : BILLING_INTERVALS.MONTHLY,
         cancelUrl: input.cancelUrl,
         customerId,
-        orgId: ctx.auth.orgId,
+        orgId,
         planType: input.planType === 'free' ? PLAN_TYPES.FREE : PLAN_TYPES.TEAM,
         successUrl: input.successUrl,
       });

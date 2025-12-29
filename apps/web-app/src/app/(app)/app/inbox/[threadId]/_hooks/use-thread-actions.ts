@@ -113,22 +113,20 @@ export function useThreadActions({ threadId }: UseThreadActionsProps) {
   );
 
   return {
-    // State
-    optimisticActionComplete,
-    optimisticallyApprovedIds,
-    isCreatingAction: createAction.isPending,
-    isApprovingAction: approveAction.isPending,
-
     // Actions
     handleAction,
     handleApproveAction,
     handleArchive,
-    handleDelete,
-    handleSnooze,
-    handleStar,
     handleArchiveAndNavigate,
+    handleDelete,
     handleDeleteAndNavigate,
+    handleSnooze,
     handleSnoozeAndNavigate,
+    handleStar,
+    isApprovingAction: approveAction.isPending,
+    isCreatingAction: createAction.isPending,
+    // State
+    optimisticActionComplete,
+    optimisticallyApprovedIds,
   };
 }
-

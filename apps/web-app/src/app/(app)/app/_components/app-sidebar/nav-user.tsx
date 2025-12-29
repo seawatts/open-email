@@ -1,8 +1,12 @@
 'use client';
 
-import { useAuth, useOrganizationList, useUser } from '@clerk/nextjs';
 import { MetricLink } from '@seawatts/analytics/components';
 import { api } from '@seawatts/api/react';
+import {
+  useAuth,
+  useOrganizationList,
+  useUser,
+} from '@seawatts/auth/clerk-compat';
 import { Avatar, AvatarFallback, AvatarImage } from '@seawatts/ui/avatar';
 import {
   DropdownMenu,

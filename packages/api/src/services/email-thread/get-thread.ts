@@ -9,12 +9,12 @@ import { eq } from '@seawatts/db';
 import { db } from '@seawatts/db/client';
 import {
   EmailHighlights,
-  EmailKeywords,
-  EmailMessages,
-  EmailThreads,
   type EmailHighlightType,
+  EmailKeywords,
   type EmailKeywordType,
+  EmailMessages,
   type EmailMessageType,
+  EmailThreads,
   type EmailThreadType,
 } from '@seawatts/db/schema';
 

@@ -7,10 +7,9 @@
  * 3. Standard SQL filters for dates, senders, etc.
  */
 
-import { and, desc, eq, gte, ilike, inArray, lte, or, sql } from 'drizzle-orm';
-
 import { db } from '@seawatts/db/client';
 import { EmailKeywords, EmailThreads } from '@seawatts/db/schema';
+import { and, desc, eq, gte, ilike, inArray, lte, or, sql } from 'drizzle-orm';
 
 import {
   buildKeywordsByThreadMap,

@@ -1,8 +1,12 @@
 'use client';
 
-import { useOrganization, useOrganizationList, useUser } from '@clerk/nextjs';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { api } from '@seawatts/api/react';
+import {
+  useOrganization,
+  useOrganizationList,
+  useUser,
+} from '@seawatts/auth/clerk-compat';
 import {
   Card,
   CardContent,
@@ -463,7 +467,7 @@ export function OnboardingForm({
                           <Input
                             placeholder="e.g., my-company"
                             {...field}
-                            autoCapitalize="off"
+                            autoCapitalize="none"
                             autoComplete="off"
                             autoCorrect="off"
                             autoFocus
@@ -500,7 +504,7 @@ export function OnboardingForm({
                           <Input
                             placeholder="e.g., my-project"
                             {...field}
-                            autoCapitalize="off"
+                            autoCapitalize="none"
                             autoComplete="off"
                             autoCorrect="off"
                             autoSave="off"

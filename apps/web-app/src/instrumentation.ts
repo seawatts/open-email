@@ -29,6 +29,6 @@ export const onRequestError: Instrumentation.onRequestError = async (
       }
     }
 
-    posthog.captureException(err, distinctId || undefined);
+    posthog?.captureException(err, distinctId || undefined);
   }
 };

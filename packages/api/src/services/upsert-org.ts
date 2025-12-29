@@ -1,11 +1,6 @@
-import {
-  clerkClient,
-  type Organization,
-  type User,
-} from '@clerk/nextjs/server';
 import { db } from '@seawatts/db/client';
 import { ApiKeys, OrgMembers, Orgs, Users } from '@seawatts/db/schema';
-import { generateRandomName, generateUniqueOrgName } from '@seawatts/id';
+import { createId, generateUniqueOrgName } from '@seawatts/id';
 import {
   BILLING_INTERVALS,
   createSubscription,
@@ -14,7 +9,6 @@ import {
   upsertStripeCustomer,
 } from '@seawatts/stripe';
 import { eq } from 'drizzle-orm';
-import type Stripe from 'stripe';
 
 type Transaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
 
@@ -47,7 +41,7 @@ async function ensureOrgMembership({
   userId: string;
   tx: Transaction;
 }) {
-  await tx
+  const result = await tx
     .insert(OrgMembers)
     .values({
       orgId,
@@ -59,7 +53,9 @@ async function ensureOrgMembership({
         updatedAt: new Date(),
       },
       target: [OrgMembers.orgId, OrgMembers.userId],
-    });
+    })
+    .returning();
+  return result[0];
 }
 
 async function ensureDefaultApiKey({
@@ -104,13 +100,13 @@ async function ensureDefaultApiKey({
 }
 
 async function upsertOrgInDatabase({
-  clerkOrgId,
+  orgId,
   name,
   userId,
   stripeCustomerId,
   tx,
 }: {
-  clerkOrgId: string;
+  orgId: string;
   name: string;
   userId: string;
   stripeCustomerId?: string;
@@ -119,9 +115,8 @@ async function upsertOrgInDatabase({
   const [org] = await tx
     .insert(Orgs)
     .values({
-      clerkOrgId,
       createdByUserId: userId,
-      id: clerkOrgId,
+      id: orgId,
       name,
       stripeCustomerId,
     })
@@ -131,13 +126,13 @@ async function upsertOrgInDatabase({
         stripeCustomerId,
         updatedAt: new Date(),
       },
-      target: [Orgs.clerkOrgId],
+      target: [Orgs.id],
     })
     .returning();
 
   if (!org) {
     throw new Error(
-      `Failed to create or update organization for clerkOrgId: ${clerkOrgId}, name: ${name}, userId: ${userId}`,
+      `Failed to create or update organization for orgId: ${orgId}, name: ${name}, userId: ${userId}`,
     );
   }
 
@@ -255,7 +250,6 @@ async function ensureUserExists({
     .insert(Users)
     .values({
       avatarUrl: userAvatarUrl ?? null,
-      clerkId: userId,
       email: userEmail,
       firstName: userFirstName ?? null,
       id: userId,
@@ -271,7 +265,7 @@ async function ensureUserExists({
         lastName: userLastName ?? null,
         updatedAt: new Date(),
       },
-      target: Users.clerkId,
+      target: Users.id,
     })
     .returning();
 
@@ -292,7 +286,6 @@ async function buildOrgResult({
 }: {
   org: {
     id: string;
-    clerkOrgId: string;
     name: string;
     stripeCustomerId: string | null;
   };
@@ -312,7 +305,7 @@ async function buildOrgResult({
       name: apiKey.name,
     },
     org: {
-      id: org.clerkOrgId,
+      id: org.id,
       name: org.name,
       stripeCustomerId: org.stripeCustomerId || '',
     },
@@ -331,7 +324,6 @@ async function findExistingOrg({
 }): Promise<{
   org: {
     id: string;
-    clerkOrgId: string;
     name: string;
     stripeCustomerId: string | null;
   };
@@ -347,7 +339,7 @@ async function findExistingOrg({
       // Check 2: If orgId is provided, check if organization already exists
       orgId
         ? tx.query.Orgs.findFirst({
-            where: eq(Orgs.clerkOrgId, orgId),
+            where: eq(Orgs.id, orgId),
           })
         : null,
       // Check 3: User has created any organization
@@ -416,184 +408,58 @@ export async function upsertOrg({
       });
     }
 
-    // Run Clerk client initialization and user existence check in parallel
-    const [client, existingUser] = await Promise.all([
-      clerkClient(),
-      tx.query.Users.findFirst({
-        where: eq(Users.id, userId),
-      }),
-    ]);
-
-    let user: User;
-    let userEmail: string;
-
-    try {
-      user = await client.users.getUser(userId);
-      const emailAddress = user.primaryEmailAddress?.emailAddress;
-      if (!emailAddress) {
-        throw new Error(`User email not found for userId: ${userId}`);
-      }
-      userEmail = emailAddress;
-    } catch (error) {
-      if (error instanceof Error) {
-        throw new Error(
-          `Failed to retrieve user from Clerk for userId: ${userId}. Original error: ${error.message}`,
-        );
-      }
-      throw new Error(
-        `Failed to retrieve user from Clerk for userId: ${userId}`,
-      );
-    }
-
-    // Ensure user exists in database before proceeding (only if user doesn't exist)
-    if (!existingUser) {
-      await ensureUserExists({
-        tx,
-        userAvatarUrl: user.imageUrl,
-        userEmail,
-        userFirstName: user.firstName,
-        userId,
-        userLastName: user.lastName,
-      });
-    }
-
-    let clerkOrg: Organization | undefined;
-    let slug: string | undefined;
-    let finalOrgName = name; // Track the final organization name
-
-    if (orgId) {
-      // Update org in Clerk
-      try {
-        clerkOrg = await client.organizations.updateOrganization(orgId, {
-          name,
-        });
-        if (!clerkOrg) {
-          throw new Error(
-            `Failed to update organization in Clerk for orgId: ${orgId}, name: ${name}`,
-          );
-        }
-      } catch (error) {
-        if (error instanceof Error) {
-          throw new Error(
-            `Failed to update organization in Clerk for orgId: ${orgId}, name: ${name}. Original error: ${error.message}`,
-          );
-        }
-        throw new Error(
-          `Failed to update organization in Clerk for orgId: ${orgId}, name: ${name}`,
-        );
-      }
-    } else {
-      // Create new org in Clerk with unique name and slug
-      let orgName = name;
-      let attempts = 0;
-      const maxAttempts = 5;
-
-      while (attempts < maxAttempts) {
-        try {
-          // Check if organization name already exists in database
-          const existingOrgByName = await tx.query.Orgs.findFirst({
-            where: eq(Orgs.name, orgName),
-          });
-
-          if (existingOrgByName) {
-            // Generate a new unique name
-            orgName = generateUniqueOrgName();
-            attempts++;
-            continue;
-          }
-
-          // Generate unique slug
-          slug = generateRandomName();
-
-          clerkOrg = await client.organizations.createOrganization({
-            createdBy: userId,
-            name: orgName,
-            slug,
-          });
-
-          if (!clerkOrg) {
-            throw new Error(
-              `Failed to create organization in Clerk for name: ${orgName}, slug: ${slug}, userId: ${userId}`,
-            );
-          }
-
-          // Successfully created, break out of the loop
-          finalOrgName = orgName; // Update the final name
-          break;
-        } catch (error: unknown) {
-          // Handle case where organization with same slug already exists
-          if (error && typeof error === 'object' && 'message' in error) {
-            const errorMessage = (error as { message: string }).message;
-            if (
-              errorMessage.indexOf('slug') !== -1 ||
-              errorMessage.indexOf('already exists') !== -1
-            ) {
-              // Try with a different slug
-              attempts++;
-              continue;
-            }
-          }
-
-          // For other errors, throw immediately
-          if (error instanceof Error) {
-            throw new Error(
-              `Failed to create organization in Clerk for name: ${orgName}, slug: ${slug}, userId: ${userId}. Original error: ${error.message}`,
-            );
-          }
-          throw new Error(
-            `Failed to create organization in Clerk for name: ${orgName}, slug: ${slug}, userId: ${userId}`,
-          );
-        }
-      }
-
-      if (attempts >= maxAttempts) {
-        throw new Error(
-          `Failed to create organization after ${maxAttempts} attempts. Please try again.`,
-        );
-      }
-    }
-
-    // Ensure clerkOrg is assigned
-    if (!clerkOrg) {
-      throw new Error('Failed to create or update organization in Clerk');
-    }
-
-    // Final check: Double-check that the organization wasn't created by another process
-    const finalCheckOrg = await tx.query.Orgs.findFirst({
-      where: eq(Orgs.clerkOrgId, clerkOrg.id),
+    // Get user from database
+    const existingUser = await tx.query.Users.findFirst({
+      where: eq(Users.id, userId),
     });
 
-    if (finalCheckOrg) {
-      console.log(
-        'Organization was created by another process (likely webhook), using existing org:',
-        finalCheckOrg.id,
-      );
-      return buildOrgResult({
-        org: finalCheckOrg,
-        tx,
-        userId,
-      });
+    if (!existingUser) {
+      throw new Error(`User not found for userId: ${userId}`);
     }
 
-    // Upsert org in database (no Stripe customer ID initially)
+    const userEmail = existingUser.email;
+
+    // Generate unique org ID and name if needed
+    const finalOrgId = orgId || createId({ prefix: 'org' });
+    let finalOrgName = name;
+
+    // Check if organization name already exists in database
+    let attempts = 0;
+    const maxAttempts = 5;
+
+    while (attempts < maxAttempts) {
+      const existingOrgByName = await tx.query.Orgs.findFirst({
+        where: eq(Orgs.name, finalOrgName),
+      });
+
+      if (!existingOrgByName) {
+        break;
+      }
+
+      // Generate a new unique name
+      finalOrgName = generateUniqueOrgName();
+      attempts++;
+    }
+
+    if (attempts >= maxAttempts) {
+      throw new Error(
+        `Failed to create organization after ${maxAttempts} attempts. Please try again.`,
+      );
+    }
+
+    // Create org in database
     const org = await upsertOrgInDatabase({
-      clerkOrgId: clerkOrg.id,
-      name: finalOrgName, // Use the final organization name
+      name: finalOrgName,
+      orgId: finalOrgId,
       tx,
       userId,
     });
 
-    // Create or update Stripe customer
-    console.log(
-      'Creating/updating Stripe customer for org:',
-      org.id,
-      'name:',
-      name,
-    );
+    // Create or update Stripe customer (optional - skip if Stripe not configured)
+    let stripeCustomerId: string | null = null;
 
-    let stripeCustomer: Stripe.Customer;
     try {
-      stripeCustomer = await upsertStripeCustomer({
+      const stripeCustomer = await upsertStripeCustomer({
         additionalMetadata: {
           orgName: name,
           userId,
@@ -602,57 +468,42 @@ export async function upsertOrg({
         name,
         orgId: org.id,
       });
-      if (!stripeCustomer) {
-        throw new Error(
-          `Failed to create or get Stripe customer for orgId: ${org.id}, name: ${name}, email: ${userEmail}`,
+
+      if (stripeCustomer) {
+        stripeCustomerId = stripeCustomer.id;
+
+        // Update org in database with Stripe customer ID
+        await updateOrgWithStripeCustomerId({
+          orgId: org.id,
+          stripeCustomerId,
+          tx,
+        });
+
+        // Auto-subscribe to free plan only if org doesn't already have a subscription
+        if (!org.stripeSubscriptionId) {
+          await autoSubscribeToFreePlan({
+            customerId: stripeCustomerId,
+            orgId: org.id,
+            tx,
+          });
+        }
+
+        console.log(
+          'Stripe customer created:',
+          stripeCustomerId,
+          'for org:',
+          org.id,
         );
       }
     } catch (error) {
-      if (error instanceof Error) {
-        throw new Error(
-          `Failed to create or get Stripe customer for orgId: ${org.id}, name: ${name}, email: ${userEmail}. Original error: ${error.message}`,
-        );
-      }
-      throw new Error(
-        `Failed to create or get Stripe customer for orgId: ${org.id}, name: ${name}, email: ${userEmail}`,
+      console.warn(
+        'Skipping Stripe setup (not configured):',
+        error instanceof Error ? error.message : error,
       );
     }
 
-    console.log(
-      'Stripe customer created/updated:',
-      stripeCustomer.id,
-      'for org:',
-      org.id,
-    );
-
-    // Run database updates and Clerk update in parallel
-    await Promise.all([
-      // Update org in database with Stripe customer ID
-      updateOrgWithStripeCustomerId({
-        orgId: org.id,
-        stripeCustomerId: stripeCustomer.id,
-        tx,
-      }),
-      // Update org in Clerk with Stripe customer ID
-      client.organizations.updateOrganization(clerkOrg.id, {
-        name,
-        privateMetadata: {
-          stripeCustomerId: stripeCustomer.id,
-        },
-      }),
-    ]);
-
-    // Auto-subscribe to free plan only if org doesn't already have a subscription
-    if (!org.stripeSubscriptionId) {
-      await autoSubscribeToFreePlan({
-        customerId: stripeCustomer.id,
-        orgId: org.id,
-        tx,
-      });
-    }
-
     return buildOrgResult({
-      org: { ...org, stripeCustomerId: stripeCustomer.id },
+      org: { ...org, stripeCustomerId },
       tx,
       userId,
     });

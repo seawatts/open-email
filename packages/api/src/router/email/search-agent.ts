@@ -5,15 +5,14 @@
  * Connects the AI search agent to the database search service.
  */
 
-import { z } from 'zod';
-import { observable } from '@trpc/server/observable';
-
 import type {
+  EmailSearchResult,
   SearchAgentEvent,
   SearchToolExecutor,
-  EmailSearchResult,
 } from '@seawatts/ai/tanstack-ai';
 import { searchAgent } from '@seawatts/ai/tanstack-ai';
+import { observable } from '@trpc/server/observable';
+import { z } from 'zod';
 
 import {
   listEmailsByCategory,
@@ -21,8 +20,8 @@ import {
 } from '../../services/email-search';
 import { getThreadWithMessages } from '../../services/email-thread';
 import { createTRPCRouter, protectedProcedure } from '../../trpc';
-import { parseDateRange } from '../../utils';
 import type { BundleType } from '../../utils';
+import { parseDateRange } from '../../utils';
 
 /**
  * Create a SearchToolExecutor that connects to our database.
@@ -30,27 +29,6 @@ import type { BundleType } from '../../utils';
  */
 function createSearchExecutor(gmailAccountId: string): SearchToolExecutor {
   return {
-    async searchEmails(params) {
-      const result = await searchEmails({
-        query: params.query,
-        filters: {
-          gmailAccountId,
-          bundleTypes: params.filters?.bundleTypes as BundleType[] | undefined,
-          dateRange: parseDateRange(params.filters?.dateRange),
-          senders: params.filters?.senders,
-          hasAttachments: params.filters?.hasAttachments,
-          unreadOnly: params.filters?.unreadOnly,
-        },
-        limit: params.limit,
-      });
-
-      // Results already in correct format from service
-      return {
-        results: result.results,
-        totalCount: result.totalCount,
-      };
-    },
-
     async getEmailThread(params) {
       const result = await getThreadWithMessages(params.threadId, {
         includeKeywords: true,
@@ -62,29 +40,49 @@ function createSearchExecutor(gmailAccountId: string): SearchToolExecutor {
       }
 
       return {
-        threadId: result.thread.id,
-        subject: result.thread.subject,
-        messages: result.messages.map((m) => ({
-          id: m.id,
-          from: m.fromEmail,
-          to: m.toEmails,
-          date: m.internalDate,
-          body: m.bodyPreview || '',
-          snippet: m.snippet || '',
-        })),
         keywords: result.keywords.map((k) => ({
           keyword: k.keyword,
           keywordType: k.keywordType,
         })),
+        messages: result.messages.map((m) => ({
+          body: m.bodyPreview || '',
+          date: m.internalDate,
+          from: m.fromEmail,
+          id: m.id,
+          snippet: m.snippet || '',
+          to: m.toEmails,
+        })),
+        subject: result.thread.subject,
+        threadId: result.thread.id,
       };
     },
 
     async listEmailsByCategory(params) {
       const result = await listEmailsByCategory({
         category: params.category,
-        gmailAccountId,
         dateRange: parseDateRange(params.dateRange),
+        gmailAccountId,
         limit: params.limit,
+      });
+
+      // Results already in correct format from service
+      return {
+        results: result.results,
+        totalCount: result.totalCount,
+      };
+    },
+    async searchEmails(params) {
+      const result = await searchEmails({
+        filters: {
+          bundleTypes: params.filters?.bundleTypes as BundleType[] | undefined,
+          dateRange: parseDateRange(params.filters?.dateRange),
+          gmailAccountId,
+          hasAttachments: params.filters?.hasAttachments,
+          senders: params.filters?.senders,
+          unreadOnly: params.filters?.unreadOnly,
+        },
+        limit: params.limit,
+        query: params.query,
       });
 
       // Results already in correct format from service
@@ -98,64 +96,18 @@ function createSearchExecutor(gmailAccountId: string): SearchToolExecutor {
 
 export const searchAgentRouter = createTRPCRouter({
   /**
-   * Stream search agent responses
-   * Uses tRPC subscriptions for real-time streaming
-   */
-  askStream: protectedProcedure
-    .input(
-      z.object({
-        query: z
-          .string()
-          .min(1)
-          .describe('Natural language question about emails'),
-        gmailAccountId: z.string().describe('Gmail account to search'),
-        maxIterations: z.number().min(1).max(10).default(5).optional(),
-        maxToolCalls: z.number().min(1).max(30).default(15).optional(),
-      }),
-    )
-    .subscription(({ input }) => {
-      return observable<SearchAgentEvent>((emit) => {
-        // Create executor with gmailAccountId baked in
-        const executor = createSearchExecutor(input.gmailAccountId);
-
-        const runAgent = async () => {
-          try {
-            for await (const event of searchAgent(input.query, executor, {
-              gmailAccountId: input.gmailAccountId,
-              maxIterations: input.maxIterations,
-              maxToolCalls: input.maxToolCalls,
-            })) {
-              emit.next(event);
-            }
-            emit.complete();
-          } catch (error) {
-            emit.error(
-              error instanceof Error ? error : new Error('Search agent failed'),
-            );
-          }
-        };
-
-        runAgent();
-
-        return () => {
-          // Cleanup if needed
-        };
-      });
-    }),
-
-  /**
    * Non-streaming version - runs agent and returns final result
    */
   ask: protectedProcedure
     .input(
       z.object({
+        gmailAccountId: z.string().describe('Gmail account to search'),
+        maxIterations: z.number().min(1).max(10).default(5).optional(),
+        maxToolCalls: z.number().min(1).max(30).default(15).optional(),
         query: z
           .string()
           .min(1)
           .describe('Natural language question about emails'),
-        gmailAccountId: z.string().describe('Gmail account to search'),
-        maxIterations: z.number().min(1).max(10).default(5).optional(),
-        maxToolCalls: z.number().min(1).max(30).default(15).optional(),
       }),
     )
     .mutation(async ({ input }) => {
@@ -192,10 +144,55 @@ export const searchAgentRouter = createTRPCRouter({
 
       return {
         answer: finalAnswer,
-        sources,
-        totalToolCalls,
         iterations,
+        sources,
         thinking: thinkingLog.join('\n'),
+        totalToolCalls,
       };
+    }),
+  /**
+   * Stream search agent responses
+   * Uses tRPC subscriptions for real-time streaming
+   */
+  askStream: protectedProcedure
+    .input(
+      z.object({
+        gmailAccountId: z.string().describe('Gmail account to search'),
+        maxIterations: z.number().min(1).max(10).default(5).optional(),
+        maxToolCalls: z.number().min(1).max(30).default(15).optional(),
+        query: z
+          .string()
+          .min(1)
+          .describe('Natural language question about emails'),
+      }),
+    )
+    .subscription(({ input }) => {
+      return observable<SearchAgentEvent>((emit) => {
+        // Create executor with gmailAccountId baked in
+        const executor = createSearchExecutor(input.gmailAccountId);
+
+        const runAgent = async () => {
+          try {
+            for await (const event of searchAgent(input.query, executor, {
+              gmailAccountId: input.gmailAccountId,
+              maxIterations: input.maxIterations,
+              maxToolCalls: input.maxToolCalls,
+            })) {
+              emit.next(event);
+            }
+            emit.complete();
+          } catch (error) {
+            emit.error(
+              error instanceof Error ? error : new Error('Search agent failed'),
+            );
+          }
+        };
+
+        runAgent();
+
+        return () => {
+          // Cleanup if needed
+        };
+      });
     }),
 });

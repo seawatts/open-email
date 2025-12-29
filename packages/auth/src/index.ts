@@ -13,6 +13,13 @@ export {
   useListOrganizations,
   useSession,
 } from './client';
+// Re-export JWT signing utilities
+export {
+  type CustomJwtClaims,
+  type JwtPayload,
+  signCustomJwt,
+  verifyCustomJwt,
+} from './jwt-signer';
 // Re-export middleware utilities
 export {
   type AuthMiddlewareOptions,

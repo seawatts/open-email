@@ -1,11 +1,10 @@
-import { eq } from 'drizzle-orm';
-import { beforeEach, describe, expect, it } from 'vitest';
-
 import {
   UserContactStyle,
   UserMemory,
   UserWritingProfile,
 } from '@seawatts/db/schema';
+import { eq } from 'drizzle-orm';
+import { beforeEach, describe, expect, it } from 'vitest';
 
 import { TestFactories } from '../test-utils/factories';
 import { testDb } from './setup';
@@ -22,9 +21,9 @@ describe('User Profile and Memory Integration Tests', () => {
       const user = await factories.createUser();
 
       const memory = await factories.createUserMemory(user.id, {
+        confidence: 0.95,
         content: 'Works at Google as a software engineer',
         memoryType: 'fact',
-        confidence: 0.95,
       });
 
       expect(memory).toBeDefined();

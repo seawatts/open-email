@@ -1,4 +1,4 @@
-import { useSession } from '@clerk/nextjs';
+import { useSession } from '@seawatts/auth/clerk-compat';
 import { debug } from '@seawatts/logger';
 import { createBrowserClient } from '@supabase/ssr';
 import { useEffect, useMemo } from 'react';

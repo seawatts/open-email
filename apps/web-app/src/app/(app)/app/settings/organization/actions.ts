@@ -1,14 +1,25 @@
 'use server';
 
-import { auth, clerkClient } from '@clerk/nextjs/server';
+import { auth } from '@seawatts/auth/server';
 import { db } from '@seawatts/db/client';
 import { OrgMembers, Orgs } from '@seawatts/db/schema';
 import { isEntitled } from '@seawatts/stripe/guards/server';
 import { and, eq } from 'drizzle-orm';
 import { revalidatePath } from 'next/cache';
+import { headers } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { createSafeActionClient } from 'next-safe-action';
 import { z } from 'zod';
+
+// Helper to get authenticated session
+async function getAuthSession() {
+  const headersList = await headers();
+  const session = await auth.api.getSession({ headers: headersList });
+  return {
+    orgId: session?.session?.activeOrganizationId || null,
+    userId: session?.user?.id || null,
+  };
+}
 
 // Create the action client
 const action = createSafeActionClient();
@@ -49,7 +60,7 @@ const inviteMemberSchema = z.object({
 export const inviteMemberAction = action
   .inputSchema(inviteMemberSchema)
   .action(async ({ parsedInput }) => {
-    const { userId, orgId } = await auth();
+    const { userId, orgId } = await getAuthSession();
 
     if (!userId || !orgId) {
       throw new Error('Unauthorized');
@@ -79,12 +90,15 @@ export const inviteMemberAction = action
       'Team member invitations require a paid plan. Please upgrade to invite team members.',
     );
 
-    // Invite the user to the organization via Clerk
-    const clerk = await clerkClient();
-    await clerk.organizations.createOrganizationInvitation({
-      emailAddress: parsedInput.email,
-      organizationId: org.clerkOrgId,
-      role: parsedInput.role,
+    // Invite the user to the organization via Better-Auth
+    const headersList = await headers();
+    await auth.api.createInvitation({
+      body: {
+        email: parsedInput.email,
+        organizationId: org.id,
+        role: parsedInput.role === 'admin' ? 'admin' : 'member',
+      },
+      headers: headersList,
     });
 
     revalidatePath('/app/settings/organization');
@@ -96,7 +110,7 @@ export const inviteMemberAction = action
 export const updateTeamNameAction = action
   .inputSchema(updateTeamNameSchema)
   .action(async ({ parsedInput }) => {
-    const { userId, orgId } = await auth();
+    const { userId, orgId } = await getAuthSession();
 
     if (!userId || !orgId) {
       throw new Error('Unauthorized');
@@ -120,19 +134,15 @@ export const updateTeamNameAction = action
       throw new Error('Only admins can update team name');
     }
 
-    // Update organization name in Clerk
-    const clerk = await clerkClient();
-    await clerk.organizations.updateOrganization(orgId, {
-      name: parsedInput.name,
+    // Update organization name via Better-Auth
+    const headersList = await headers();
+    await auth.api.updateOrganization({
+      body: {
+        data: { name: parsedInput.name },
+        organizationId: org.id,
+      },
+      headers: headersList,
     });
-
-    // Update organization name in database
-    await db
-      .update(Orgs)
-      .set({
-        name: parsedInput.name,
-      })
-      .where(eq(Orgs.id, orgId));
 
     revalidatePath('/app/settings/organization');
 
@@ -143,7 +153,7 @@ export const updateTeamNameAction = action
 export const deleteTeamAction = action
   .inputSchema(deleteTeamSchema)
   .action(async ({ parsedInput }) => {
-    const { userId, orgId } = await auth();
+    const { userId, orgId } = await getAuthSession();
 
     if (!userId || !orgId) {
       throw new Error('Unauthorized');
@@ -176,13 +186,12 @@ export const deleteTeamAction = action
       throw new Error('Only the team creator can delete the team');
     }
 
-    // Delete organization in Clerk
-    const clerk = await clerkClient();
-    await clerk.organizations.deleteOrganization(org.clerkOrgId);
-
-    // The database will be cleaned up via Clerk webhooks
-    // But we can also clean up directly here for immediate effect
-    await db.delete(Orgs).where(eq(Orgs.id, orgId));
+    // Delete organization via Better-Auth
+    const headersList = await headers();
+    await auth.api.deleteOrganization({
+      body: { organizationId: org.id },
+      headers: headersList,
+    });
 
     // Redirect to dashboard after deletion
     redirect('/app/dashboard');
@@ -190,7 +199,7 @@ export const deleteTeamAction = action
 
 // Get organization members action
 export const getOrganizationMembersAction = action.action(async () => {
-  const { userId, orgId } = await auth();
+  const { userId, orgId } = await getAuthSession();
 
   if (!userId || !orgId) {
     throw new Error('Unauthorized');
@@ -227,7 +236,7 @@ export const getOrganizationMembersAction = action.action(async () => {
 export const removeMemberAction = action
   .inputSchema(removeMemberSchema)
   .action(async ({ parsedInput }) => {
-    const { userId, orgId } = await auth();
+    const { userId, orgId } = await getAuthSession();
 
     if (!userId || !orgId) {
       throw new Error('Unauthorized');
@@ -274,16 +283,15 @@ export const removeMemberAction = action
       }
     }
 
-    // Remove from database - Clerk webhooks will handle synchronization
-    // The user will be removed from Clerk via the webhook system
-    const clerk = await clerkClient();
-    await clerk.organizations.deleteOrganizationMembership({
-      organizationId: org.clerkOrgId,
-      userId: memberToRemove.userId,
+    // Remove member via Better-Auth
+    const headersList = await headers();
+    await auth.api.removeMember({
+      body: {
+        memberIdOrEmail: memberToRemove.userId,
+        organizationId: org.id,
+      },
+      headers: headersList,
     });
-
-    // Remove from database
-    await db.delete(OrgMembers).where(eq(OrgMembers.id, parsedInput.memberId));
 
     revalidatePath('/app/settings/organization');
 
@@ -294,7 +302,7 @@ export const removeMemberAction = action
 export const updateMemberRoleAction = action
   .inputSchema(updateMemberRoleSchema)
   .action(async ({ parsedInput }) => {
-    const { userId, orgId } = await auth();
+    const { userId, orgId } = await getAuthSession();
 
     if (!userId || !orgId) {
       throw new Error('Unauthorized');
@@ -341,21 +349,15 @@ export const updateMemberRoleAction = action
       }
     }
 
-    // Update member role in Clerk
-    const clerk = await clerkClient();
-    await clerk.organizations.updateOrganizationMembership({
-      organizationId: org.clerkOrgId,
-      role: parsedInput.role,
-      userId: memberToUpdate.userId,
+    // Update member role via Better-Auth
+    const headersList = await headers();
+    await auth.api.updateMemberRole({
+      body: {
+        memberId: memberToUpdate.id,
+        role: parsedInput.role === 'admin' ? 'admin' : 'member',
+      },
+      headers: headersList,
     });
-
-    // Update member role in database
-    await db
-      .update(OrgMembers)
-      .set({
-        role: parsedInput.role,
-      })
-      .where(eq(OrgMembers.id, parsedInput.memberId));
 
     revalidatePath('/app/settings/organization');
 
@@ -366,7 +368,7 @@ export const updateMemberRoleAction = action
 export const leaveOrganizationAction = action
   .inputSchema(leaveOrganizationSchema)
   .action(async ({ parsedInput }) => {
-    const { userId } = await auth();
+    const { userId } = await getAuthSession();
 
     if (!userId) {
       throw new Error('Unauthorized');
@@ -403,8 +405,15 @@ export const leaveOrganizationAction = action
       }
     }
 
-    // Remove from database - Clerk webhooks will handle synchronization
-    await db.delete(OrgMembers).where(eq(OrgMembers.id, member.id));
+    // Remove member via Better-Auth (self-removal)
+    const headersList = await headers();
+    await auth.api.removeMember({
+      body: {
+        memberIdOrEmail: userId,
+        organizationId: org.id,
+      },
+      headers: headersList,
+    });
 
     revalidatePath('/app/settings/organization');
 

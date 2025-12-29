@@ -1,11 +1,10 @@
-import { sql } from 'drizzle-orm';
-import { beforeEach, describe, expect, it } from 'vitest';
-
-import { EmailKeywords, EmailThreads } from '@seawatts/db/schema';
 import {
   listEmailsByCategory,
   searchEmails,
 } from '@seawatts/api/services/email-search';
+import { EmailThreads } from '@seawatts/db/schema';
+import { sql } from 'drizzle-orm';
+import { beforeEach, describe, expect, it } from 'vitest';
 
 import { TestFactories } from '../test-utils/factories';
 import { testDb } from './setup';
@@ -103,8 +102,8 @@ describe('Email Search Integration Tests', () => {
       const user = await factories.createUser();
       const account = await factories.createGmailAccount(user.id);
       const thread = await factories.createEmailThread(account.id, {
-        subject: 'Important meeting about Q4 budget',
         snippet: 'Please review the attached financial report',
+        subject: 'Important meeting about Q4 budget',
       });
 
       // Update search_vector with content
@@ -133,12 +132,12 @@ describe('Email Search Integration Tests', () => {
 
       // Create thread with searchable content
       const thread = await factories.createEmailThread(account.id, {
-        subject: 'Flight confirmation to New York',
         snippet: 'Your United Airlines flight UA123 is confirmed',
+        subject: 'Flight confirmation to New York',
       });
       await factories.createEmailMessage(thread.id, {
-        subject: thread.subject,
         bodyPreview: 'Departure from SFO at 8:00 AM, arriving JFK at 4:30 PM',
+        subject: thread.subject,
       });
 
       // Set search vector
@@ -152,8 +151,8 @@ describe('Email Search Integration Tests', () => {
 
       // Search for flight-related terms
       const results = await searchEmails({
-        query: 'flight New York',
         filters: { gmailAccountId: account.id },
+        query: 'flight New York',
       });
 
       expect(results.results.length).toBeGreaterThan(0);
@@ -166,8 +165,8 @@ describe('Email Search Integration Tests', () => {
 
       // Create thread with high relevance (budget mentioned multiple times)
       const highRelevance = await factories.createEmailThread(account.id, {
-        subject: 'Q4 Budget Review - Budget Planning Session',
         snippet: 'Budget analysis for the quarterly budget report',
+        subject: 'Q4 Budget Review - Budget Planning Session',
       });
       await testDb.db
         .update(EmailThreads)
@@ -178,8 +177,8 @@ describe('Email Search Integration Tests', () => {
 
       // Create thread with lower relevance (budget mentioned once)
       const lowRelevance = await factories.createEmailThread(account.id, {
-        subject: 'Team meeting notes',
         snippet: 'We briefly discussed the budget',
+        subject: 'Team meeting notes',
       });
       await testDb.db
         .update(EmailThreads)
@@ -190,8 +189,8 @@ describe('Email Search Integration Tests', () => {
 
       // Search for "budget"
       const results = await searchEmails({
-        query: 'budget',
         filters: { gmailAccountId: account.id },
+        query: 'budget',
       });
 
       expect(results.results.length).toBe(2);
@@ -228,8 +227,8 @@ describe('Email Search Integration Tests', () => {
 
       // Search by keyword
       const results = await searchEmails({
-        query: 'Amazon',
         filters: { gmailAccountId: account.id },
+        query: 'Amazon',
       });
 
       expect(results.results.length).toBeGreaterThan(0);
@@ -262,8 +261,8 @@ describe('Email Search Integration Tests', () => {
         .where(sql`${EmailThreads.id} = ${thread.id}`);
 
       const results = await searchEmails({
-        query: 'John Google meeting',
         filters: { gmailAccountId: account.id },
+        query: 'John Google meeting',
       });
 
       expect(results.results.length).toBeGreaterThan(0);

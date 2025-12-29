@@ -1,8 +1,8 @@
 'use server';
 
-import { auth } from '@clerk/nextjs/server';
+import { auth } from '@seawatts/auth/server';
 import { db } from '@seawatts/db/client';
-import { Orgs } from '@seawatts/db/schema';
+import { Orgs, Users } from '@seawatts/db/schema';
 import {
   BILLING_INTERVALS,
   createCheckoutSession,
@@ -29,7 +29,10 @@ const createCheckoutSchema = z.object({
 export const createCheckoutSessionAction = action
   .inputSchema(createCheckoutSchema)
   .action(async ({ parsedInput }) => {
-    const { userId } = await auth();
+    const headersList = await headers();
+    const session = await auth.api.getSession({ headers: headersList });
+
+    const userId = session?.user?.id;
 
     if (!userId) {
       throw new Error('Unauthorized');
@@ -45,21 +48,22 @@ export const createCheckoutSessionAction = action
     }
 
     // Get the origin URL
-    const headersList = await headers();
     const origin = headersList.get('origin') || 'https://seawatts.sh';
 
     // Create or get Stripe customer
     let customerId = org.stripeCustomerId;
 
     if (!customerId) {
-      // Get user details from Clerk for creating customer
-      const user = await auth();
+      // Get user email for creating customer
+      const user = await db.query.Users.findFirst({
+        where: eq(Users.id, userId),
+      });
 
       const customer = await getOrCreateCustomer({
-        email: user.sessionClaims?.email as string,
+        email: user?.email || session.user?.email || '',
         metadata: {
           orgId: org.id,
-          userId: user.userId as string,
+          userId,
         },
         name: org.name,
       });
@@ -80,7 +84,7 @@ export const createCheckoutSessionAction = action
     }
 
     // Create checkout session
-    const session = await createCheckoutSession({
+    const checkoutSession = await createCheckoutSession({
       billingInterval:
         parsedInput.billingInterval === 'yearly'
           ? BILLING_INTERVALS.YEARLY
@@ -94,8 +98,8 @@ export const createCheckoutSessionAction = action
     });
 
     // Redirect to Stripe Checkout
-    if (!session.url) {
+    if (!checkoutSession.url) {
       throw new Error('Failed to create checkout session');
     }
-    redirect(session.url);
+    redirect(checkoutSession.url);
   });

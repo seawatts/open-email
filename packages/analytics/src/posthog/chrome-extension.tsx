@@ -1,4 +1,5 @@
-import { useUser } from '@clerk/chrome-extension';
+// TODO: Chrome extension auth needs to be updated for Better-Auth
+// import { useUser } from '@clerk/chrome-extension';
 import posthog from 'posthog-js/dist/module.full.no-external';
 import { useEffect } from 'react';
 
@@ -16,15 +17,16 @@ export function PostHogPageView() {
 }
 
 export function PostHogIdentifyUser() {
-  const { user } = useUser();
+  // TODO: Implement Better-Auth for chrome extension
+  // const { user } = useUser();
 
   useEffect(() => {
-    if (user) {
-      posthog.identify(user.id, {
-        email: user.primaryEmailAddress?.emailAddress,
-      });
-    }
-  }, [user]);
+    // if (user) {
+    //   posthog.identify(user.id, {
+    //     email: user.primaryEmailAddress?.emailAddress,
+    //   });
+    // }
+  }, []);
 
   return null;
 }

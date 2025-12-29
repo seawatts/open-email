@@ -1,4 +1,3 @@
-import { ReactScan } from '@seawatts/ui/custom/react-scan';
 import { ThemeProvider } from '@seawatts/ui/custom/theme';
 import { cn } from '@seawatts/ui/lib/utils';
 import { Toaster } from '@seawatts/ui/sonner';
@@ -9,7 +8,6 @@ import { NuqsAdapter } from 'nuqs/adapters/next/app';
 
 import '@seawatts/ui/globals.css';
 
-import { ClerkProvider } from '@clerk/nextjs';
 import { AnalyticsProviders } from '@seawatts/analytics/providers';
 import { TRPCReactProvider } from '@seawatts/api/react';
 import { StripeProvider } from '@seawatts/stripe/guards/client';
@@ -57,18 +55,16 @@ export default function RootLayout(props: { children: React.ReactNode }) {
         )}
       >
         <ThemeProvider attribute="class" defaultTheme="dark" enableSystem>
-          {isDevelopment && <ReactScan />}
+          {/* {isDevelopment && <ReactScan />} */}
           <NuqsAdapter>
             <TRPCReactProvider>
               <Suspense>
-                <ClerkProvider>
-                  <AnalyticsProviders identifyUser>
-                    <StripeProvider>
-                      {props.children}
-                      <Toaster />
-                    </StripeProvider>
-                  </AnalyticsProviders>
-                </ClerkProvider>
+                <AnalyticsProviders identifyUser>
+                  <StripeProvider>
+                    {props.children}
+                    <Toaster />
+                  </StripeProvider>
+                </AnalyticsProviders>
               </Suspense>
             </TRPCReactProvider>
           </NuqsAdapter>

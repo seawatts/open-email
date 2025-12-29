@@ -1,11 +1,10 @@
-import { beforeEach, describe, expect, it } from 'vitest';
-
 import {
   getThreadMessages,
   getThreadSenders,
   getThreadWithMessages,
 } from '@seawatts/api/services/email-thread';
 import type { EmailKeywordType, EmailMessageType } from '@seawatts/db/schema';
+import { beforeEach, describe, expect, it } from 'vitest';
 
 import { TestFactories } from '../test-utils/factories';
 import { testDb } from './setup';

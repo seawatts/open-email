@@ -1,7 +1,18 @@
-import { auth } from '@clerk/nextjs/server';
+import { auth } from '@seawatts/auth/server';
 import { db } from '@seawatts/db/client';
 import { Orgs } from '@seawatts/db/schema';
 import { eq } from 'drizzle-orm';
+import { headers } from 'next/headers';
+
+// Helper to get authenticated session
+async function getAuthSession() {
+  const headersList = await headers();
+  const session = await auth.api.getSession({ headers: headersList });
+  return {
+    orgId: session?.session?.activeOrganizationId || null,
+    userId: session?.user?.id || null,
+  };
+}
 
 /**
  * Helper function to get the current organization's subscription status
@@ -10,7 +21,7 @@ export async function getOrgSubscriptionStatus(): Promise<{
   status: string | null;
   customerId: string | null;
 }> {
-  const { userId, orgId } = await auth();
+  const { userId, orgId } = await getAuthSession();
 
   if (!userId || !orgId) {
     return { customerId: null, status: null };

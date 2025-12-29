@@ -1,18 +1,33 @@
-import { auth } from '@clerk/nextjs/server';
+import { auth } from '@seawatts/auth/server';
 import { db } from '@seawatts/db/client';
+import { headers } from 'next/headers';
 
 export const createTRPCContext = async () => {
-  let authResult: Awaited<ReturnType<typeof auth>> | null = null;
+  let authResult: {
+    getToken: (() => string | null) | null;
+    orgId: string | null;
+    session: unknown;
+    sessionClaims: unknown;
+    sessionId: string | null;
+    userId: string | null;
+  } | null = null;
+
   try {
-    authResult = await auth();
+    const headersList = await headers();
+    const session = await auth.api.getSession({ headers: headersList });
+
+    if (session?.user) {
+      authResult = {
+        getToken: null, // Will be populated if needed
+        orgId: session.session?.activeOrganizationId || null,
+        session: session.session || null,
+        sessionClaims: session.user || null,
+        sessionId: session.session?.id || null,
+        userId: session.user.id || null,
+      };
+    }
   } catch (error) {
     console.error('Error authenticating', error);
-  }
-
-  // NOTE(seawatts): we have to do this because the clerk session claims
-  // are not always available in the request context when calling from the cli
-  if (authResult?.sessionClaims?.org_id) {
-    authResult.orgId = authResult.sessionClaims.org_id;
   }
 
   return {

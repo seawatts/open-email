@@ -1,13 +1,24 @@
-import { auth } from '@clerk/nextjs/server';
+import { auth } from '@seawatts/auth/server';
 import { db } from '@seawatts/db/client';
 import { Orgs } from '@seawatts/db/schema';
 import { eq } from 'drizzle-orm';
+import { headers } from 'next/headers';
 import { stripe } from '../index';
 import type {
   EntitlementKey,
   EntitlementsRecord,
   PartialEntitlementsRecord,
 } from './entitlement-types';
+
+// Helper to get authenticated session
+async function getAuthSession() {
+  const headersList = await headers();
+  const session = await auth.api.getSession({ headers: headersList });
+  return {
+    orgId: session?.session?.activeOrganizationId || null,
+    userId: session?.user?.id || null,
+  };
+}
 
 // Helper function to get customer entitlements from Stripe
 async function getCustomerEntitlements(
@@ -71,7 +82,7 @@ async function getCustomerEntitlements(
 export async function checkOrgEntitlements(
   entitlement: EntitlementKey | EntitlementKey[],
 ): Promise<boolean | PartialEntitlementsRecord> {
-  const { userId, orgId } = await auth();
+  const { userId, orgId } = await getAuthSession();
 
   if (!userId || !orgId) {
     return Array.isArray(entitlement) ? {} : false;
@@ -106,7 +117,7 @@ export async function checkOrgEntitlements(
  * Helper function to get all entitlements for the current user's organization
  */
 export async function getOrgEntitlements(): Promise<EntitlementsRecord> {
-  const { userId, orgId } = await auth();
+  const { userId, orgId } = await getAuthSession();
 
   if (!userId || !orgId) {
     return {} as EntitlementsRecord;

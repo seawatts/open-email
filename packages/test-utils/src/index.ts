@@ -1,9 +1,11 @@
-import { createClerkClient } from '@clerk/backend';
+// TODO: Update test utils for Better-Auth
+// import { createClerkClient } from '@clerk/backend';
 import { db } from '@seawatts/db/client';
-import { ApiKeys, AuthCodes, Orgs, Users } from '@seawatts/db/schema';
-import { createId } from '@seawatts/id';
-import { eq } from 'drizzle-orm';
-import { env } from './env';
+import { ApiKeys } from '@seawatts/db/schema';
+// import { env } from './env';
+
+// TODO: These test utilities need to be rewritten for Better-Auth
+// For now, they're disabled until the migration is complete
 
 export interface TestUser {
   id: string;
@@ -44,140 +46,47 @@ export interface TestSetup {
   cleanup: () => Promise<void>;
 }
 
-const clerkClient = createClerkClient({
-  publishableKey: env.CLERK_PUBLISHABLE_KEY,
-  secretKey: env.CLERK_SECRET_KEY,
-});
+// const clerkClient = createClerkClient({
+//   publishableKey: env.CLERK_PUBLISHABLE_KEY,
+//   secretKey: env.CLERK_SECRET_KEY,
+// });
 
 /**
  * Creates a test user in Clerk and the database
  */
 export async function createTestUser(
-  email = `test-${Date.now()}@example.com`,
-  firstName = 'Test',
-  lastName = 'User',
+  _email = `test-${Date.now()}@example.com`,
+  _firstName = 'Test',
+  _lastName = 'User',
 ): Promise<TestUser> {
-  try {
-    // Create user in Clerk
-    const clerkUser = await clerkClient.users.createUser({
-      emailAddress: [email],
-      firstName,
-      lastName,
-      legalAcceptedAt: new Date(),
-      password: createId(),
-      skipLegalChecks: true,
-      skipPasswordChecks: true,
-    });
-
-    if (!clerkUser.id) {
-      throw new Error('Failed to create Clerk user');
-    }
-
-    // Create user in database
-    const [dbUser] = await db
-      .insert(Users)
-      .values({
-        clerkId: clerkUser.id,
-        email,
-        firstName,
-        id: clerkUser.id,
-        lastName,
-      })
-      .returning();
-
-    if (!dbUser) {
-      throw new Error('Failed to create user in database');
-    }
-
-    return {
-      clerkId: dbUser.clerkId,
-      email: dbUser.email,
-      firstName: dbUser.firstName || firstName,
-      id: dbUser.id,
-      lastName: dbUser.lastName || lastName,
-    };
-  } catch (error) {
-    console.error('Error creating test user:', error);
-    throw error;
-  }
+  throw new Error(
+    'Test utilities need to be rewritten for Better-Auth - Clerk removed',
+  );
 }
 
 /**
  * Creates a test organization in Clerk and the database
  */
 export async function createTestOrg(
-  ownerId: string,
-  name = `Test Organization ${Date.now()}`,
+  _ownerId: string,
+  _name = `Test Organization ${Date.now()}`,
 ): Promise<TestOrg> {
-  // Create organization in Clerk
-  const clerkOrg = await clerkClient.organizations.createOrganization({
-    createdBy: ownerId,
-    name,
-  });
-
-  if (!clerkOrg.id) {
-    throw new Error('Failed to create Clerk organization');
-  }
-
-  // Create organization in database
-  const [dbOrg] = await db
-    .insert(Orgs)
-    .values({
-      clerkOrgId: clerkOrg.id,
-      createdByUserId: ownerId,
-      id: clerkOrg.id,
-      name,
-    })
-    .returning();
-
-  if (!dbOrg) {
-    throw new Error('Failed to create organization in database');
-  }
-
-  return {
-    clerkOrgId: dbOrg.clerkOrgId,
-    id: dbOrg.id,
-    name: dbOrg.name,
-    ownerId: dbOrg.createdByUserId,
-  };
+  throw new Error(
+    'Test utilities need to be rewritten for Better-Auth - Clerk removed',
+  );
 }
 
 /**
  * Creates a test auth code in the database with a real Clerk session
  */
 export async function createTestAuthCode(
-  userId: string,
-  orgId: string,
-  expiresInMinutes = 30,
+  _userId: string,
+  _orgId: string,
+  _expiresInMinutes = 30,
 ): Promise<TestAuthCode> {
-  const expiresAt = new Date(Date.now() + expiresInMinutes * 60 * 1000);
-
-  // Create a real Clerk session for the user
-  const session = await clerkClient.sessions.createSession({
-    userId,
-  });
-
-  const [authCode] = await db
-    .insert(AuthCodes)
-    .values({
-      expiresAt,
-      orgId,
-      sessionId: session.id,
-      userId,
-    })
-    .returning();
-
-  if (!authCode) {
-    throw new Error('Failed to create auth code in database');
-  }
-
-  return {
-    expiresAt: authCode.expiresAt,
-    id: authCode.id,
-    orgId: authCode.orgId,
-    sessionId: authCode.sessionId,
-    userId: authCode.userId,
-  };
+  throw new Error(
+    'Test utilities need to be rewritten for Better-Auth - Clerk removed',
+  );
 }
 
 /**
@@ -214,7 +123,7 @@ export async function createTestApiKey(
  * Creates a complete test setup with user, org, API key, webhook, and optional auth code
  */
 export async function createTestSetup(
-  options: {
+  _options: {
     userEmail?: string;
     userName?: { firstName?: string; lastName?: string };
     orgName?: string;
@@ -223,162 +132,31 @@ export async function createTestSetup(
     authCodeExpiresInMinutes?: number;
   } = {},
 ): Promise<TestSetup> {
-  const {
-    userEmail,
-    userName,
-    orgName,
-    apiKeyName = 'Test API Key',
-    createAuthCode = false,
-    authCodeExpiresInMinutes = 30,
-  } = options;
-
-  // Create test user
-  const user = await createTestUser(
-    userEmail,
-    userName?.firstName,
-    userName?.lastName,
+  throw new Error(
+    'Test utilities need to be rewritten for Better-Auth - Clerk removed',
   );
-
-  // Create test organization
-  const org = await createTestOrg(user.id, orgName);
-
-  // Create test API key
-  const apiKey = await createTestApiKey(org.id, user.id, apiKeyName);
-
-  let authCode: TestAuthCode | undefined;
-
-  if (createAuthCode) {
-    authCode = await createTestAuthCode(
-      user.id,
-      org.id,
-      authCodeExpiresInMinutes,
-    );
-  }
-
-  // Create cleanup function
-  const cleanup = async () => {
-    try {
-      // Clean up auth code if it exists
-      if (authCode) {
-        // Clean up Clerk session if auth code exists
-        try {
-          await clerkClient.sessions.revokeSession(authCode.sessionId);
-        } catch (error) {
-          console.warn('Failed to revoke Clerk session:', error);
-        }
-
-        await db.delete(AuthCodes).where(eq(AuthCodes.id, authCode.id));
-      }
-
-      // Clean up API key from database
-      await db.delete(ApiKeys).where(eq(ApiKeys.id, apiKey.id));
-
-      // Clean up organization from database
-      await db.delete(Orgs).where(eq(Orgs.id, org.id));
-
-      // Clean up user from database
-      await db.delete(Users).where(eq(Users.id, user.id));
-
-      // Clean up organization from Clerk
-      try {
-        await clerkClient.organizations.deleteOrganization(org.clerkOrgId);
-      } catch (error) {
-        console.warn('Failed to delete Clerk organization:', error);
-      }
-
-      // Clean up user from Clerk
-      try {
-        await clerkClient.users.deleteUser(user.clerkId);
-      } catch (error) {
-        console.warn('Failed to delete Clerk user:', error);
-      }
-    } catch (error) {
-      console.error('Error during test cleanup:', error);
-    }
-  };
-
-  return {
-    apiKey,
-    authCode,
-    cleanup,
-    org,
-    user,
-  };
 }
 
 /**
  * Utility to create an expired auth code for testing
  */
 export async function createExpiredAuthCode(
-  userId: string,
-  orgId: string,
+  _userId: string,
+  _orgId: string,
 ): Promise<TestAuthCode> {
-  const expiresAt = new Date(Date.now() - 1000); // Expired 1 second ago
-
-  // Create a real Clerk session for the user
-  const session = await clerkClient.sessions.createSession({
-    userId,
-  });
-
-  const [authCode] = await db
-    .insert(AuthCodes)
-    .values({
-      expiresAt,
-      id: `test-expired-auth-code-${Date.now()}`,
-      orgId,
-      sessionId: session.id,
-      userId,
-    })
-    .returning();
-
-  if (!authCode) {
-    throw new Error('Failed to create expired auth code in database');
-  }
-
-  return {
-    expiresAt: authCode.expiresAt,
-    id: authCode.id,
-    orgId: authCode.orgId,
-    sessionId: authCode.sessionId,
-    userId: authCode.userId,
-  };
+  throw new Error(
+    'Test utilities need to be rewritten for Better-Auth - Clerk removed',
+  );
 }
 
 /**
  * Utility to create a used auth code for testing
  */
 export async function createUsedAuthCode(
-  userId: string,
-  orgId: string,
+  _userId: string,
+  _orgId: string,
 ): Promise<TestAuthCode> {
-  const expiresAt = new Date(Date.now() + 30 * 60 * 1000); // 30 minutes from now
-
-  // Create a real Clerk session for the user
-  const session = await clerkClient.sessions.createSession({
-    userId,
-  });
-
-  const [authCode] = await db
-    .insert(AuthCodes)
-    .values({
-      expiresAt,
-      id: `test-used-auth-code-${Date.now()}`,
-      orgId,
-      sessionId: session.id,
-      usedAt: new Date(), // Mark as used
-      userId,
-    })
-    .returning();
-
-  if (!authCode) {
-    throw new Error('Failed to create used auth code in database');
-  }
-
-  return {
-    expiresAt: authCode.expiresAt,
-    id: authCode.id,
-    orgId: authCode.orgId,
-    sessionId: authCode.sessionId,
-    userId: authCode.userId,
-  };
+  throw new Error(
+    'Test utilities need to be rewritten for Better-Auth - Clerk removed',
+  );
 }

@@ -1,7 +1,3 @@
-import { sql } from 'drizzle-orm';
-import { beforeEach, describe, expect, it } from 'vitest';
-
-import { EmailThreads } from '@seawatts/db/schema';
 import {
   buildKeywordsByThreadMap,
   buildThreadSenderMap,
@@ -9,6 +5,9 @@ import {
   parseSearchQuery,
   STOP_WORDS,
 } from '@seawatts/api/services/email-search';
+import { EmailThreads } from '@seawatts/db/schema';
+import { sql } from 'drizzle-orm';
+import { beforeEach, describe, expect, it } from 'vitest';
 
 import { TestFactories } from '../test-utils/factories';
 import { testDb } from './setup';
@@ -97,9 +96,9 @@ describe('Search Mappers Integration Tests', () => {
   describe('buildKeywordsByThreadMap', () => {
     it('should group keywords by thread ID', () => {
       const keywordMatches = [
-        { threadId: 'thread1', keyword: 'Amazon', keywordType: 'company' },
-        { threadId: 'thread1', keyword: 'John', keywordType: 'person' },
-        { threadId: 'thread2', keyword: 'Google', keywordType: 'company' },
+        { keyword: 'Amazon', keywordType: 'company', threadId: 'thread1' },
+        { keyword: 'John', keywordType: 'person', threadId: 'thread1' },
+        { keyword: 'Google', keywordType: 'company', threadId: 'thread2' },
       ];
 
       const map = buildKeywordsByThreadMap(keywordMatches);
@@ -155,8 +154,8 @@ describe('Search Mappers Integration Tests', () => {
       const thread = await factories.createEmailThread(account.id, {
         bundleType: 'travel',
         isRead: false,
-        subject: 'Flight Confirmation',
         snippet: 'Your flight has been confirmed',
+        subject: 'Flight Confirmation',
       });
       await factories.createEmailMessage(thread.id, {
         fromEmail: 'airline@example.com',
@@ -165,14 +164,14 @@ describe('Search Mappers Integration Tests', () => {
 
       const threadRows = [
         {
-          id: thread.id,
-          subject: thread.subject,
-          snippet: thread.snippet,
           bundleType: thread.bundleType,
+          id: thread.id,
           isRead: thread.isRead,
           lastMessageAt: thread.lastMessageAt!,
           messageCount: thread.messageCount,
           relevanceScore: 0.85,
+          snippet: thread.snippet,
+          subject: thread.subject,
         },
       ];
 
@@ -201,13 +200,13 @@ describe('Search Mappers Integration Tests', () => {
     it('should use default values when sender not found', () => {
       const threadRows = [
         {
-          id: 'thread1',
-          subject: 'Test',
-          snippet: 'Test snippet',
           bundleType: 'personal',
+          id: 'thread1',
           isRead: true,
           lastMessageAt: new Date(),
           messageCount: 1,
+          snippet: 'Test snippet',
+          subject: 'Test',
         },
       ];
 
@@ -224,13 +223,13 @@ describe('Search Mappers Integration Tests', () => {
     it('should handle missing keywords map', () => {
       const threadRows = [
         {
-          id: 'thread1',
-          subject: 'Test',
-          snippet: null,
           bundleType: null,
+          id: 'thread1',
           isRead: true,
           lastMessageAt: new Date(),
           messageCount: 1,
+          snippet: null,
+          subject: 'Test',
         },
       ];
 
@@ -257,8 +256,8 @@ describe('Search Mappers Integration Tests', () => {
 
       // Create thread with search vector
       const thread = await factories.createEmailThread(account.id, {
-        subject: 'Important Budget Meeting',
         snippet: 'Quarterly budget review and planning',
+        subject: 'Important Budget Meeting',
       });
 
       // Set the search vector
@@ -275,8 +274,8 @@ describe('Search Mappers Integration Tests', () => {
       const results = await testDb.db
         .select({
           id: EmailThreads.id,
-          subject: EmailThreads.subject,
           rank: sql<number>`ts_rank(${EmailThreads.searchVector}, to_tsquery('english', 'budget:*'))`,
+          subject: EmailThreads.subject,
         })
         .from(EmailThreads)
         .where(

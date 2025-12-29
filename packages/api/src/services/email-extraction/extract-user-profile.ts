@@ -8,14 +8,13 @@
  * - Email signature detection
  */
 
-import { chat, toolDefinition } from '@tanstack/ai';
-import { z } from 'zod';
-
 import { getDefaultAdapter, getModel } from '@seawatts/ai';
 import type {
   EmailMessageType,
   VocabularyProfileJson,
 } from '@seawatts/db/schema';
+import { chat, toolDefinition } from '@tanstack/ai';
+import { z } from 'zod';
 
 // ============================================================================
 // Types
@@ -115,19 +114,19 @@ RULES:
 const extractWritingStyleTool = toolDefinition({
   description: 'Extract writing style analysis from user emails',
   inputSchema: z.object({
-    formalityLevel: z.number().min(0).max(1).describe('Overall formality 0-1'),
-    greeting: z.string().optional().describe('Typical greeting used'),
-    signoff: z.string().optional().describe('Typical sign-off used'),
     commonPhrases: z.array(z.string()).describe('Frequently used phrases'),
-    vocabularyProfile: z.object({
-      technicalLevel: z.number().min(0).max(1),
-      emojiUsage: z.number().min(0).max(1),
-      contractionUsage: z.number().min(0).max(1),
-    }),
     detectedSignature: z
       .string()
       .optional()
       .describe('Email signature if found'),
+    formalityLevel: z.number().min(0).max(1).describe('Overall formality 0-1'),
+    greeting: z.string().optional().describe('Typical greeting used'),
+    signoff: z.string().optional().describe('Typical sign-off used'),
+    vocabularyProfile: z.object({
+      contractionUsage: z.number().min(0).max(1),
+      emojiUsage: z.number().min(0).max(1),
+      technicalLevel: z.number().min(0).max(1),
+    }),
   }),
   name: 'extract_writing_style' as const,
 });
@@ -135,12 +134,12 @@ const extractWritingStyleTool = toolDefinition({
 const extractContactStyleTool = toolDefinition({
   description: 'Extract writing style specific to a recipient',
   inputSchema: z.object({
-    contactEmail: z.string().optional(),
+    commonPhrases: z.array(z.string()),
     contactDomain: z.string().optional(),
+    contactEmail: z.string().optional(),
     formalityLevel: z.number().min(0).max(1),
     typicalGreeting: z.string().optional(),
     typicalSignoff: z.string().optional(),
-    commonPhrases: z.array(z.string()),
   }),
   name: 'extract_contact_style' as const,
 });
@@ -150,6 +149,7 @@ const extractFactsTool = toolDefinition({
   inputSchema: z.object({
     facts: z.array(
       z.object({
+        confidence: z.number().min(0).max(1),
         content: z.string().describe('The fact statement'),
         factType: z.enum([
           'fact',
@@ -158,7 +158,6 @@ const extractFactsTool = toolDefinition({
           'signature',
           'relationship',
         ]),
-        confidence: z.number().min(0).max(1),
         source: z.string().optional().describe('Where this fact was found'),
       }),
     ),
@@ -296,7 +295,7 @@ function buildGlobalContext(sentMessages: UserSentMessage[]): string {
   const sampled = sentMessages.slice(0, 10);
 
   for (const { message, recipientEmails } of sampled) {
-    parts.push(`---`);
+    parts.push('---');
     parts.push(`To: ${recipientEmails.join(', ')}`);
     parts.push(`Subject: ${message.subject}`);
     parts.push(`Date: ${message.internalDate.toISOString().split('T')[0]}`);
@@ -504,7 +503,7 @@ function findCommonSuffix(strings: string[]): string {
     while (
       j < suffix.length &&
       j < current.length &&
-      suffix[suffix.length - 1 - j] === current[current.length - 1 - j]
+      suffix.at(1 + j) === current.at(1 + j)
     ) {
       j++;
     }

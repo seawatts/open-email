@@ -1,6 +1,6 @@
 'use client';
 
-import { SignedIn, SignedOut } from '@clerk/nextjs';
+import { SignedIn, SignedOut } from '@seawatts/auth/clerk-compat';
 import { Button } from '@seawatts/ui/components/button';
 import { GitHubStarsButtonWrapper } from '@seawatts/ui/custom/github-stars-button/button-wrapper';
 import { ThemeToggle } from '@seawatts/ui/custom/theme';
@@ -138,7 +138,7 @@ export function Navbar({ navs }: { navs?: NavItem[] }) {
                     className="hidden md:flex rounded-full"
                     variant="outline"
                   >
-                    <Link href="/dashboard?utm_source=marketing-site&utm_medium=navbar-dashboard">
+                    <Link href="/app/dashboard?utm_source=marketing-site&utm_medium=navbar-dashboard">
                       Dashboard
                     </Link>
                   </Button>
@@ -259,7 +259,7 @@ export function Navbar({ navs }: { navs?: NavItem[] }) {
                   </Link>
                   <SignedIn>
                     <Button asChild className="rounded-full" variant="outline">
-                      <Link href="/dashboard?utm_source=marketing-site&utm_medium=navbar-dashboard">
+                      <Link href="/app/dashboard?utm_source=marketing-site&utm_medium=navbar-dashboard">
                         Dashboard
                       </Link>
                     </Button>

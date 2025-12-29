@@ -5,7 +5,16 @@ import { createAuthClient } from 'better-auth/react';
 import { useEffect, useState } from 'react';
 
 export const authClient = createAuthClient({
+  fetchOptions: {
+    onError: (ctx) => {
+      console.error('Auth client error:', ctx.error);
+    },
+  },
   plugins: [organizationClient()],
+  session: {
+    fetchOnWindowFocus: false,
+    staleTime: 1000 * 60 * 5, // 5 minutes
+  },
 });
 
 // Export action functions directly (these don't use React context)

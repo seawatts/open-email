@@ -1,7 +1,10 @@
 'use client';
 
-import { useOrganization, useOrganizationList } from '@clerk/nextjs';
 import { MetricButton } from '@seawatts/analytics/components';
+import {
+  useOrganization,
+  useOrganizationList,
+} from '@seawatts/auth/clerk-compat';
 import {
   Command,
   CommandGroup,
@@ -149,7 +152,7 @@ export function OrgSelector({ onSelect }: OrgSelectorProps) {
                     setInput('');
                     setOpen(false);
                     if (setActive) {
-                      setActive({ organization: membership.organization });
+                      setActive({ organization: membership.organization.id });
                     }
                     onSelect?.(membership.organization.id);
 

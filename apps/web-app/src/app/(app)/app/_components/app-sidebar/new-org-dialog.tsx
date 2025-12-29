@@ -1,8 +1,8 @@
 'use client';
 
-import { useOrganizationList, useUser } from '@clerk/nextjs';
 import { MetricButton, MetricLink } from '@seawatts/analytics/components';
 import { api } from '@seawatts/api/react';
+import { useOrganizationList, useUser } from '@seawatts/auth/clerk-compat';
 import {
   Entitled,
   NotEntitled,
@@ -190,7 +190,7 @@ export function NewOrgDialog({ open, onOpenChange }: NewOrgDialogProps) {
 
       // Invalidate queries to refresh data
       apiUtils.invalidate();
-      userMemberships.revalidate();
+      userMemberships?.revalidate();
     } catch (error) {
       console.error('Failed to complete setup:', error);
       setErrors([

@@ -68,8 +68,3 @@ export function GmailConnect() {
     </div>
   );
 }
-
-
-
-
-

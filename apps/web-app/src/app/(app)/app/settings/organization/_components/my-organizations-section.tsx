@@ -1,7 +1,10 @@
 'use client';
 
-import { useOrganization, useOrganizationList } from '@clerk/nextjs';
 import { MetricButton } from '@seawatts/analytics/components';
+import {
+  useOrganization,
+  useOrganizationList,
+} from '@seawatts/auth/clerk-compat';
 import { Badge } from '@seawatts/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@seawatts/ui/card';
 import { Skeleton } from '@seawatts/ui/skeleton';
@@ -58,7 +61,7 @@ export function MyOrganizationsSection() {
     setTargetOrganization(organization);
     setIsLeaveDialogOpen(true);
   };
-  const loading = userMemberships.isLoading;
+  const loading = userMemberships?.isLoading ?? false;
 
   return (
     <>

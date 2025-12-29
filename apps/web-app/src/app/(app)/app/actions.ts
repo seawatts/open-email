@@ -1,10 +1,11 @@
 'use server';
 
-import { auth, currentUser } from '@clerk/nextjs/server';
 import { upsertOrg } from '@seawatts/api/services';
+import { auth } from '@seawatts/auth/server';
 import { db } from '@seawatts/db/client';
 import { Orgs } from '@seawatts/db/schema';
 import { eq } from 'drizzle-orm';
+import { headers } from 'next/headers';
 import { createSafeActionClient } from 'next-safe-action';
 import { z } from 'zod';
 
@@ -14,34 +15,32 @@ const action = createSafeActionClient();
 export const upsertOrgAction = action
   .inputSchema(
     z.object({
-      clerkOrgId: z.string().optional(),
       name: z.string().optional(),
+      orgId: z.string().optional(),
       webhookId: z.string().optional(),
     }),
   )
   .action(async ({ parsedInput }) => {
-    const { clerkOrgId, name, webhookId } = parsedInput;
-    const user = await auth();
+    const { orgId, name, webhookId } = parsedInput;
+    const headersList = await headers();
+    const session = await auth.api.getSession({ headers: headersList });
 
-    if (!user.userId) {
+    if (!session?.user?.id) {
       throw new Error('User not found');
     }
 
-    const clerkUser = await currentUser();
-    if (!clerkUser) {
-      throw new Error('User details not found');
-    }
+    const userId = session.user.id;
 
     console.log('upsertOrgAction called with:', {
-      clerkOrgId,
-      userId: user.userId,
+      orgId,
+      userId,
       webhookId,
     });
 
-    // If no clerkOrgId is provided (creating new org), check if user already has an organization
-    if (!clerkOrgId) {
+    // If no orgId is provided (creating new org), check if user already has an organization
+    if (!orgId) {
       const existingOrg = await db.query.Orgs.findFirst({
-        where: eq(Orgs.createdByUserId, user.userId),
+        where: eq(Orgs.createdByUserId, userId),
       });
 
       console.log('Existing org found:', existingOrg);
@@ -50,8 +49,8 @@ export const upsertOrgAction = action
         // User already has an organization, use upsertOrg to get the proper return structure
         const result = await upsertOrg({
           name: existingOrg.name,
-          orgId: existingOrg.clerkOrgId,
-          userId: user.userId,
+          orgId: existingOrg.id,
+          userId,
         });
 
         console.log('Returning existing org result:', result);
@@ -70,19 +69,11 @@ export const upsertOrgAction = action
     // Use the upsertOrg utility function
     const result = await upsertOrg({
       name: name || 'Personal',
-      orgId: clerkOrgId || '',
-      userId: user.userId,
+      orgId: orgId || '',
+      userId,
     });
 
     console.log('New org result:', result);
-
-    // TODO: Re-enable when webhooks are re-implemented
-    // If webhookId is provided, create a custom webhook
-    // if (webhookId && result.webhook) {
-    //   // Update the webhook with the custom ID
-    //   // Note: This would require additional API calls to update the webhook
-    //   console.log('Custom webhook ID requested:', webhookId);
-    // }
 
     return {
       apiKey: result.apiKey,
@@ -99,6 +90,5 @@ export async function createOrgAction({
   name: string;
   webhookId?: string;
 }) {
-  // You may want to get user info from session or context if needed
   return upsertOrgAction({ name, webhookId });
 }
