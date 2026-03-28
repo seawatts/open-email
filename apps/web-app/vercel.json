@@ -11,11 +11,11 @@
     }
   ],
   "functions": {
-    "app/api/queues/thread-triage/route.ts": {
+    "app/api/queues/triage-thread/route.ts": {
       "experimentalTriggers": [
         {
           "type": "queue/v2beta",
-          "topic": "thread-triage"
+          "topic": "triage-thread"
         }
       ]
     }

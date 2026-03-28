@@ -28,7 +28,7 @@ export interface ThreadTriagePayload {
  * Gmail Pub/Sub Webhook Handler
  *
  * Lightweight fanout: decode notification -> Gmail History API -> discover
- * changed thread IDs -> send each to thread-triage queue with idempotency key.
+ * changed thread IDs -> send each to triage-thread queue with idempotency key.
  */
 export async function POST(req: NextRequest) {
   try {
@@ -148,7 +148,7 @@ export async function POST(req: NextRequest) {
         gmailThreadId,
         userId: account.userId,
       };
-      await send('thread-triage', payload, {
+      await send('triage-thread', payload, {
         idempotencyKey: gmailThreadId,
       });
     }

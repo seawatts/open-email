@@ -18,14 +18,14 @@ async function getServices() {
  * 1. syncThread: fetch from Gmail, upsert messages in DB
  * 2. triageThread: run quickTriage, write ai* columns
  *
- * POST /api/queues/thread-triage
+ * POST /api/queues/triage-thread
  */
 async function processThreadTriage(
   payload: ThreadTriagePayload,
 ): Promise<void> {
   const { accountId, gmailThreadId, userId } = payload;
 
-  console.log(`Processing thread-triage for ${gmailThreadId}`);
+  console.log(`Processing triage-thread for ${gmailThreadId}`);
 
   const { syncThread, triageThread } = await getServices();
   const { getGmailClient } = await import('@seawatts/api/services/gmail');
@@ -54,12 +54,12 @@ async function processThreadTriage(
 
 export async function POST() {
   return receive<ThreadTriagePayload>(
-    'thread-triage',
+    'triage-thread',
     'triage-consumer',
     processThreadTriage,
   );
 }
 
 export async function GET() {
-  return NextResponse.json({ service: 'thread-triage-consumer', status: 'ok' });
+  return NextResponse.json({ service: 'triage-thread-consumer', status: 'ok' });
 }
