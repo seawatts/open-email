@@ -1,5 +1,6 @@
 'use client';
 
+import type { AppRouter } from '@seawatts/api';
 import {
   Collapsible,
   CollapsibleContent,
@@ -7,12 +8,10 @@ import {
 } from '@seawatts/ui/collapsible';
 import { Text } from '@seawatts/ui/custom/typography';
 import { cn } from '@seawatts/ui/lib/utils';
+import type { inferRouterOutputs } from '@trpc/server';
 import { format } from 'date-fns';
 import { ChevronDown } from 'lucide-react';
 import { useState } from 'react';
-
-import type { AppRouter } from '@seawatts/api';
-import type { inferRouterOutputs } from '@trpc/server';
 
 import { EmailRenderer } from './email-renderer';
 

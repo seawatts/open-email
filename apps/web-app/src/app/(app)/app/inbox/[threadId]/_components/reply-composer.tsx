@@ -15,7 +15,6 @@ interface ReplyComposerProps {
   isProcessing: boolean;
   isSending: boolean;
   onBodyChange: (value: string) => void;
-  onSelectDraft: (draftId: string, body: string) => void;
   onSendReply: () => void;
   onClear: () => void;
   onGenerateDraft?: () => void;
@@ -33,7 +32,6 @@ export const ReplyComposer = forwardRef<
     isProcessing,
     isSending,
     onBodyChange,
-    onSelectDraft,
     onSendReply,
     onClear,
     onGenerateDraft,

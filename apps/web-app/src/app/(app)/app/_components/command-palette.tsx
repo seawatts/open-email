@@ -23,7 +23,7 @@ import {
   ToggleRight,
   Wand2,
 } from 'lucide-react';
-import { useRouter, usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { useCallback, useEffect, useState } from 'react';
 
 type PaletteView = 'commands' | 'create-rule' | 'edit-memory';
@@ -41,21 +41,19 @@ export function CommandPalette() {
 
   const isInThread = /\/app\/inbox\/[^/]+/.test(pathname);
 
-  const { data: settings } = useQuery(
-    trpc.email.settings.get.queryOptions(),
-  );
+  const { data: settings } = useQuery(trpc.email.settings.get.queryOptions());
 
   const createRuleMutation = useMutation(
     trpc.email.rules.create.mutationOptions({
+      onError: () => {
+        toast.error('Failed to create rule');
+      },
       onSuccess: () => {
         toast.success('Rule created');
         queryClient.invalidateQueries(trpc.email.rules.list.queryFilter());
         setRulePrompt('');
         setView('commands');
         setIsOpen(false);
-      },
-      onError: () => {
-        toast.error('Failed to create rule');
       },
     }),
   );
@@ -120,16 +118,13 @@ export function CommandPalette() {
   if (view === 'create-rule') {
     return (
       <CommandDialog
+        description="Describe a rule in plain English"
         onOpenChange={handleOpenChange}
         open={isOpen}
         showCloseButton={false}
         title="Create Rule"
-        description="Describe a rule in plain English"
       >
         <CommandInput
-          placeholder="e.g. Archive all emails from noreply@github.com"
-          value={rulePrompt}
-          onValueChange={setRulePrompt}
           onKeyDown={(e) => {
             if (e.key === 'Enter') {
               e.preventDefault();
@@ -139,6 +134,9 @@ export function CommandPalette() {
               setView('commands');
             }
           }}
+          onValueChange={setRulePrompt}
+          placeholder="e.g. Archive all emails from noreply@github.com"
+          value={rulePrompt}
         />
         <CommandList>
           <CommandEmpty>
@@ -163,11 +161,11 @@ export function CommandPalette() {
   if (view === 'edit-memory') {
     return (
       <CommandDialog
+        description="View and edit what the AI knows about you"
         onOpenChange={handleOpenChange}
         open={isOpen}
         showCloseButton={false}
         title="Edit Memory"
-        description="View and edit what the AI knows about you"
       >
         <div className="p-4">
           <textarea

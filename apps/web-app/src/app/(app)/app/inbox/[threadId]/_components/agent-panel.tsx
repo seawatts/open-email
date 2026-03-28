@@ -27,7 +27,6 @@ interface AgentPanelProps {
   onClearDraft: () => void;
   onQuickReply?: (body: string) => void;
   onRetriage: () => void;
-  onSelectDraft: (draftId: string, body: string) => void;
   onSendReply: () => void;
   onSmartProcess: () => void;
   onTabChange: (tab: string) => void;
@@ -52,7 +51,6 @@ export function AgentPanel({
   onClearDraft,
   onQuickReply,
   onRetriage,
-  onSelectDraft,
   onSendReply,
   onSmartProcess,
   onTabChange,
@@ -179,7 +177,6 @@ export function AgentPanel({
               onBodyChange={onBodyChange}
               onClear={onClearDraft}
               onGenerateDraft={onSmartProcess}
-              onSelectDraft={onSelectDraft}
               onSendReply={onSendReply}
               ref={replyTextareaRef}
               selectedDraftId={selectedDraftId}

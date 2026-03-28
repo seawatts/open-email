@@ -9,5 +9,12 @@
   },
   "exclude": ["node_modules"],
   "extends": ["@seawatts/tsconfig/base.json"],
-  "include": ["src", "*.ts", "*.js", ".expo/types/**/*.ts", "expo-env.d.ts", "global.d.ts"]
+  "include": [
+    "src",
+    "*.ts",
+    "*.js",
+    ".expo/types/**/*.ts",
+    "expo-env.d.ts",
+    "global.d.ts"
+  ]
 }

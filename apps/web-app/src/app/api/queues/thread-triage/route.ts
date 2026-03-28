@@ -31,7 +31,12 @@ async function processThreadTriage(
   const { getGmailClient } = await import('@seawatts/api/services/gmail');
 
   const gmail = await getGmailClient(accountId);
-  const result = { messagesProcessed: 0, threadsProcessed: 0, newHistoryId: null, errors: [] as string[] };
+  const result = {
+    errors: [] as string[],
+    messagesProcessed: 0,
+    newHistoryId: null,
+    threadsProcessed: 0,
+  };
 
   const dbThreadId = await syncThread(gmail, accountId, gmailThreadId, result);
 

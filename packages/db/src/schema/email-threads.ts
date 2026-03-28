@@ -35,59 +35,59 @@ export const EmailThreads = schema.table(
     accountId: varchar('accountId')
       .references(() => Accounts.id, { onDelete: 'cascade' })
       .notNull(),
-    gmailThreadId: text('gmailThreadId').notNull(),
-    id: varchar('id', { length: 128 })
-      .$defaultFn(() => createId({ prefix: 'thread' }))
-      .notNull()
-      .primaryKey(),
-
-    // Gmail metadata
-    subject: text('subject').notNull(),
-    snippet: text('snippet'),
-    labels: json('labels').$type<string[]>().default([]).notNull(),
-    participantEmails: json('participantEmails')
-      .$type<string[]>()
-      .default([])
-      .notNull(),
-    messageCount: integer('messageCount').default(1).notNull(),
-    isRead: boolean('isRead').default(false).notNull(),
-    isStarred: boolean('isStarred').default(false).notNull(),
-    isSpam: boolean('isSpam').default(false).notNull(),
-    isTrash: boolean('isTrash').default(false).notNull(),
-    gmailCategory: gmailCategoryEnum('gmailCategory').default('primary'),
-    lastMessageAt: timestamp('lastMessageAt', {
-      mode: 'date',
-      withTimezone: true,
-    }).notNull(),
-
-    // AI triage (flattened -- no separate table)
-    aiSummary: text('aiSummary'),
     aiAction: suggestedActionEnum('aiAction'),
     aiConfidence: real('aiConfidence'),
+    aiModelUsed: text('aiModelUsed'),
     aiQuickReplies: json('aiQuickReplies')
       .$type<QuickReplyOption[]>()
       .default([]),
+
+    // AI triage (flattened -- no separate table)
+    aiSummary: text('aiSummary'),
     aiTriagedAt: timestamp('aiTriagedAt', {
       mode: 'date',
       withTimezone: true,
     }),
-    aiModelUsed: text('aiModelUsed'),
-
-    // Status
-    status: text('status').default('untriaged').notNull(),
-    snoozedUntil: timestamp('snoozedUntil', {
-      mode: 'date',
-      withTimezone: true,
-    }),
-
-    // Search
-    searchVector: tsvector('searchVector'),
     createdAt: timestamp('createdAt', {
       mode: 'date',
       withTimezone: true,
     })
       .notNull()
       .defaultNow(),
+    gmailCategory: gmailCategoryEnum('gmailCategory').default('primary'),
+    gmailThreadId: text('gmailThreadId').notNull(),
+    id: varchar('id', { length: 128 })
+      .$defaultFn(() => createId({ prefix: 'thread' }))
+      .notNull()
+      .primaryKey(),
+    isRead: boolean('isRead').default(false).notNull(),
+    isSpam: boolean('isSpam').default(false).notNull(),
+    isStarred: boolean('isStarred').default(false).notNull(),
+    isTrash: boolean('isTrash').default(false).notNull(),
+    labels: json('labels').$type<string[]>().default([]).notNull(),
+    lastMessageAt: timestamp('lastMessageAt', {
+      mode: 'date',
+      withTimezone: true,
+    }).notNull(),
+    messageCount: integer('messageCount').default(1).notNull(),
+    participantEmails: json('participantEmails')
+      .$type<string[]>()
+      .default([])
+      .notNull(),
+
+    // Search
+    searchVector: tsvector('searchVector'),
+    snippet: text('snippet'),
+    snoozedUntil: timestamp('snoozedUntil', {
+      mode: 'date',
+      withTimezone: true,
+    }),
+
+    // Status
+    status: text('status').default('untriaged').notNull(),
+
+    // Gmail metadata
+    subject: text('subject').notNull(),
     updatedAt: timestamp('updatedAt', {
       mode: 'date',
       withTimezone: true,

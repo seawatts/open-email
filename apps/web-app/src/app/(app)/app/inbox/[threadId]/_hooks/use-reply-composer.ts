@@ -47,7 +47,14 @@ export function useReplyComposer({
       subject: `Re: ${threadSubject}`,
       to: [lastMessageFromEmail],
     });
-  }, [accountId, editedBody, gmailThreadId, lastMessageFromEmail, sendReply, threadSubject]);
+  }, [
+    accountId,
+    editedBody,
+    gmailThreadId,
+    lastMessageFromEmail,
+    sendReply,
+    threadSubject,
+  ]);
 
   const selectDraft = useCallback((draftId: string, body: string) => {
     setSelectedDraftId(draftId);

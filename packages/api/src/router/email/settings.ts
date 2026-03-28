@@ -1,4 +1,4 @@
-import { UserProfile, type UserPreferencesJson } from '@seawatts/db/schema';
+import { type UserPreferencesJson, UserProfile } from '@seawatts/db/schema';
 import { eq } from 'drizzle-orm';
 import { z } from 'zod';
 
@@ -21,6 +21,39 @@ export const settingsRouter = createTRPCRouter({
       }
     );
   }),
+
+  toggleAutopilot: protectedProcedure
+    .input(
+      z.object({
+        enabled: z.boolean(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      if (!ctx.auth.userId) throw new Error('User ID is required');
+
+      const agentMode = input.enabled ? 'autopilot' : 'approval';
+
+      const existing = await ctx.db.query.UserProfile.findFirst({
+        where: eq(UserProfile.userId, ctx.auth.userId),
+      });
+
+      if (existing) {
+        await ctx.db
+          .update(UserProfile)
+          .set({
+            preferences: { ...existing.preferences, agentMode },
+          })
+          .where(eq(UserProfile.userId, ctx.auth.userId));
+      } else {
+        await ctx.db.insert(UserProfile).values({
+          memory: '',
+          preferences: { agentMode },
+          userId: ctx.auth.userId,
+        });
+      }
+
+      return { agentMode } as const;
+    }),
 
   update: protectedProcedure
     .input(
@@ -63,38 +96,5 @@ export const settingsRouter = createTRPCRouter({
       }
 
       return { success: true };
-    }),
-
-  toggleAutopilot: protectedProcedure
-    .input(
-      z.object({
-        enabled: z.boolean(),
-      }),
-    )
-    .mutation(async ({ ctx, input }) => {
-      if (!ctx.auth.userId) throw new Error('User ID is required');
-
-      const agentMode = input.enabled ? 'autopilot' : 'approval';
-
-      const existing = await ctx.db.query.UserProfile.findFirst({
-        where: eq(UserProfile.userId, ctx.auth.userId),
-      });
-
-      if (existing) {
-        await ctx.db
-          .update(UserProfile)
-          .set({
-            preferences: { ...existing.preferences, agentMode },
-          })
-          .where(eq(UserProfile.userId, ctx.auth.userId));
-      } else {
-        await ctx.db.insert(UserProfile).values({
-          memory: '',
-          preferences: { agentMode },
-          userId: ctx.auth.userId,
-        });
-      }
-
-      return { agentMode } as const;
     }),
 });

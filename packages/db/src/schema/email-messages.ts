@@ -32,50 +32,50 @@ export interface EmailAttachmentMeta {
 export const EmailMessages = schema.table(
   'emailMessages',
   {
-    id: varchar('id', { length: 128 })
-      .$defaultFn(() => createId({ prefix: 'msg' }))
-      .notNull()
-      .primaryKey(),
-    threadId: varchar('threadId')
-      .references(() => EmailThreads.id, { onDelete: 'cascade' })
-      .notNull(),
-    gmailMessageId: text('gmailMessageId').unique().notNull(),
-
-    // Sender / recipients
-    fromEmail: text('fromEmail').notNull(),
-    fromName: text('fromName'),
-    toEmails: json('toEmails').$type<string[]>().default([]).notNull(),
-    ccEmails: json('ccEmails').$type<string[]>().default([]),
-    isFromUser: boolean('isFromUser').default(false).notNull(),
-
-    // Content
-    subject: text('subject').notNull(),
-    bodyPreview: text('bodyPreview'),
-    bodyHtml: text('bodyHtml'),
-    bodyText: text('bodyText'),
-
-    // Threading headers
-    messageIdHeader: text('messageIdHeader'),
-    inReplyTo: text('inReplyTo'),
-
-    // Attachments
-    hasAttachments: boolean('hasAttachments').default(false).notNull(),
     attachmentMeta: json('attachmentMeta')
       .$type<EmailAttachmentMeta[]>()
       .default([]),
     attachmentText: text('attachmentText'),
-
-    // Timestamps
-    internalDate: timestamp('internalDate', {
-      mode: 'date',
-      withTimezone: true,
-    }).notNull(),
+    bodyHtml: text('bodyHtml'),
+    bodyPreview: text('bodyPreview'),
+    bodyText: text('bodyText'),
+    ccEmails: json('ccEmails').$type<string[]>().default([]),
     createdAt: timestamp('createdAt', {
       mode: 'date',
       withTimezone: true,
     })
       .notNull()
       .defaultNow(),
+
+    // Sender / recipients
+    fromEmail: text('fromEmail').notNull(),
+    fromName: text('fromName'),
+    gmailMessageId: text('gmailMessageId').unique().notNull(),
+
+    // Attachments
+    hasAttachments: boolean('hasAttachments').default(false).notNull(),
+    id: varchar('id', { length: 128 })
+      .$defaultFn(() => createId({ prefix: 'msg' }))
+      .notNull()
+      .primaryKey(),
+    inReplyTo: text('inReplyTo'),
+
+    // Timestamps
+    internalDate: timestamp('internalDate', {
+      mode: 'date',
+      withTimezone: true,
+    }).notNull(),
+    isFromUser: boolean('isFromUser').default(false).notNull(),
+
+    // Threading headers
+    messageIdHeader: text('messageIdHeader'),
+
+    // Content
+    subject: text('subject').notNull(),
+    threadId: varchar('threadId')
+      .references(() => EmailThreads.id, { onDelete: 'cascade' })
+      .notNull(),
+    toEmails: json('toEmails').$type<string[]>().default([]).notNull(),
   },
   (table) => [
     index('idx_email_messages_from_email').on(table.fromEmail),

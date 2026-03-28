@@ -16,30 +16,30 @@ import { Users } from './users';
 // ============================================================================
 
 export const EmailRules = schema.table('emailRules', {
-  id: varchar('id', { length: 128 })
-    .$defaultFn(() => createId({ prefix: 'rule' }))
-    .notNull()
-    .primaryKey(),
-  userId: varchar('userId')
-    .references(() => Users.id, { onDelete: 'cascade' })
-    .notNull(),
-  prompt: text('prompt').notNull(),
-  isActive: boolean('isActive').default(true).notNull(),
-  matchCount: integer('matchCount').default(0).notNull(),
-  lastMatchedAt: timestamp('lastMatchedAt', {
-    mode: 'date',
-    withTimezone: true,
-  }),
   createdAt: timestamp('createdAt', {
     mode: 'date',
     withTimezone: true,
   })
     .notNull()
     .defaultNow(),
+  id: varchar('id', { length: 128 })
+    .$defaultFn(() => createId({ prefix: 'rule' }))
+    .notNull()
+    .primaryKey(),
+  isActive: boolean('isActive').default(true).notNull(),
+  lastMatchedAt: timestamp('lastMatchedAt', {
+    mode: 'date',
+    withTimezone: true,
+  }),
+  matchCount: integer('matchCount').default(0).notNull(),
+  prompt: text('prompt').notNull(),
   updatedAt: timestamp('updatedAt', {
     mode: 'date',
     withTimezone: true,
   }).$onUpdateFn(() => new Date()),
+  userId: varchar('userId')
+    .references(() => Users.id, { onDelete: 'cascade' })
+    .notNull(),
 });
 
 export type EmailRuleType = typeof EmailRules.$inferSelect;

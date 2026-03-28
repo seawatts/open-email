@@ -8,11 +8,10 @@ const config: KnipConfig = {
     './package.json',
   ],
   ignoreDependencies: [
-    'tailwindcss',
-    '@tailwindcss/postcss',
-    'picocolors',
-    '@clack/prompts',
-    'react-native-worklets',
+    '@tailwindcss/typography',
+    'tw-animate-css',
+    'supabase',
+    '@happy-dom/global-registrator',
   ],
   ignoreExportsUsedInFile: true,
   ignoreWorkspaces: [
@@ -40,7 +39,30 @@ const config: KnipConfig = {
       entry: ['src/**/*.ts', 'src/**/*.tsx'],
       project: ['src/**/*.ts', 'src/**/*.tsx'],
     },
-    'packages/id': {
+    'packages/ai': {
+      entry: ['src/**/*.ts'],
+      project: ['src/**/*.ts'],
+    },
+    'packages/auth': {
+      entry: ['src/**/*.ts'],
+      project: ['src/**/*.ts'],
+    },
+    'packages/id': {},
+    'packages/integ-test': {
+      entry: ['src/**/*.ts', 'test-utils/**/*.ts'],
+      project: ['src/**/*.ts', 'test-utils/**/*.ts'],
+    },
+    'packages/logger': {
+      entry: ['src/**/*.ts'],
+      project: ['src/**/*.ts'],
+    },
+    'packages/test-utils': {
+      entry: ['src/**/*.ts'],
+      project: ['src/**/*.ts'],
+    },
+    'packages/utils': {
+      entry: ['src/**/*.ts'],
+      project: ['src/**/*.ts'],
     },
     'tooling/testing': {
       entry: ['src/**/*.ts'],

@@ -4,7 +4,7 @@ import { useTRPC } from '@seawatts/api/react';
 import { Badge } from '@seawatts/ui/badge';
 import { cn } from '@seawatts/ui/lib/utils';
 import { Sheet, SheetContent, SheetTrigger } from '@seawatts/ui/sheet';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { Sparkles } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
@@ -46,15 +46,6 @@ export function ThreadDetailClient({ threadId }: ThreadDetailClientProps) {
     threadId,
     threadSubject: thread?.subject ?? '',
   });
-
-  const queryClient = useQueryClient();
-  const quickReplyMutation = useMutation(
-    trpc.email.threads.quickReply.mutationOptions({
-      onSettled: () => {
-        queryClient.invalidateQueries(trpc.email.threads.list.queryFilter());
-      },
-    }),
-  );
 
   // Pre-fill reply composer with first AI quick reply (once)
   const didPrefillRef = useRef(false);
@@ -218,7 +209,6 @@ export function ThreadDetailClient({ threadId }: ThreadDetailClientProps) {
     onClearDraft: handleClearDraft,
     onQuickReply: handleQuickReplyChip,
     onRetriage: () => {},
-    onSelectDraft: replyComposer.selectDraft,
     onSendReply: replyComposer.handleSendReply,
     onSmartProcess: () => {},
     onSnooze: threadActions.handleSnooze,
@@ -296,7 +286,6 @@ export function ThreadDetailClient({ threadId }: ThreadDetailClientProps) {
               isSending={replyComposer.isSending}
               onBodyChange={replyComposer.setEditedBody}
               onClear={handleClearDraft}
-              onSelectDraft={replyComposer.selectDraft}
               onSendReply={replyComposer.handleSendReply}
               recipientName={recipientName}
               ref={replyTextareaRef}
@@ -337,7 +326,6 @@ export function ThreadDetailClient({ threadId }: ThreadDetailClientProps) {
               isSending={replyComposer.isSending}
               onBodyChange={replyComposer.setEditedBody}
               onClear={handleClearDraft}
-              onSelectDraft={replyComposer.selectDraft}
               onSendReply={() => {
                 replyComposer.handleSendReply();
                 setShowReplySheet(false);

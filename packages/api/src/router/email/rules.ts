@@ -31,8 +31,8 @@ export const rulesRouter = createTRPCRouter({
     if (!ctx.auth.userId) throw new Error('User ID is required');
 
     return ctx.db.query.EmailRules.findMany({
-      where: eq(EmailRules.userId, ctx.auth.userId),
       orderBy: (rules, { desc }) => [desc(rules.createdAt)],
+      where: eq(EmailRules.userId, ctx.auth.userId),
     });
   }),
 });

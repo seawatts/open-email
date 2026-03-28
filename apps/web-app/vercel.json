@@ -12,8 +12,8 @@
   ],
   "experimentalTriggers": [
     {
-      "type": "queue/v2beta",
-      "topic": "thread-triage"
+      "topic": "thread-triage",
+      "type": "queue/v2beta"
     }
   ]
 }

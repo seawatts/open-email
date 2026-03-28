@@ -18,7 +18,8 @@ export function checkForRuleSuggestion(
     const domain = sender.split('@')[1] ?? sender;
 
     for (const key of [sender, domain]) {
-      const actionMap = senderActionCounts.get(key) ?? new Map<string, number>();
+      const actionMap =
+        senderActionCounts.get(key) ?? new Map<string, number>();
       actionMap.set(action.userDid, (actionMap.get(action.userDid) ?? 0) + 1);
       senderActionCounts.set(key, actionMap);
     }
@@ -39,11 +40,12 @@ export function checkForRuleSuggestion(
 
   if (!bestMatch) return null;
 
-  const actionLabel = bestMatch.action === 'archive'
-    ? 'archived'
-    : bestMatch.action === 'snooze'
-      ? 'snoozed'
-      : `marked as ${bestMatch.action}`;
+  const actionLabel =
+    bestMatch.action === 'archive'
+      ? 'archived'
+      : bestMatch.action === 'snooze'
+        ? 'snoozed'
+        : `marked as ${bestMatch.action}`;
 
   const isEmail = bestMatch.key.includes('@');
   const target = isEmail ? bestMatch.key : `*@${bestMatch.key}`;

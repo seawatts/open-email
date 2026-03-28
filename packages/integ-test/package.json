@@ -1,6 +1,5 @@
 {
   "dependencies": {
-    "@seawatts/ai": "workspace:*",
     "@seawatts/api": "workspace:*",
     "@seawatts/db": "workspace:*",
     "@seawatts/id": "workspace:*",

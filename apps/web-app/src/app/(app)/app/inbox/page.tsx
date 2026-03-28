@@ -35,12 +35,11 @@ export default function InboxPage() {
   const hasAttemptedWatch = useRef(false);
 
   useEffect(() => {
-    // Auto-setup Gmail watch if account exists but watch isn't active
     if (account && !account.watchExpiration && !hasAttemptedWatch.current) {
       hasAttemptedWatch.current = true;
       setupWatchMutation.mutate();
     }
-  }, [account]);
+  }, [account, setupWatchMutation]);
 
   if (accountLoading) {
     return (

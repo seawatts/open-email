@@ -48,7 +48,7 @@ interface EmailRowProps {
 export function EmailRow({
   isFocused,
   isSelected,
-  onAction,
+  onAction: _onAction,
   onFocus,
   onOpen,
   onQuickApprove,

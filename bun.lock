@@ -298,7 +298,6 @@
       "name": "@seawatts/integ-test",
       "version": "0.0.22",
       "dependencies": {
-        "@seawatts/ai": "workspace:*",
         "@seawatts/api": "workspace:*",
         "@seawatts/db": "workspace:*",
         "@seawatts/id": "workspace:*",

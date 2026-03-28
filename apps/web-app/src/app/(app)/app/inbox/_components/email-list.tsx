@@ -175,8 +175,7 @@ export function EmailList({ accountId }: EmailListProps) {
     );
 
     return {
-      actionNeeded: visibleThreads.filter((t) => t.aiAction === 'reply')
-        .length,
+      actionNeeded: visibleThreads.filter((t) => t.aiAction === 'reply').length,
       all: visibleThreads.length,
       done: visibleThreads.filter((t) => t.aiAction === 'archive').length,
       waiting: visibleThreads.filter((t) => t.aiAction === 'snooze').length,
@@ -767,9 +766,7 @@ export function EmailList({ accountId }: EmailListProps) {
                     onOpen={() => router.push(`/app/inbox/${thread.id}`)}
                     onQuickApprove={() => handleQuickApprove(thread.id)}
                     onQuickArchive={() => handleQuickArchive(thread.id)}
-                    onQuickReply={(body) =>
-                      handleQuickReply(thread.id, body)
-                    }
+                    onQuickReply={(body) => handleQuickReply(thread.id, body)}
                     onSelect={() => toggleSelect(thread.id)}
                     thread={thread}
                   />
@@ -785,7 +782,9 @@ export function EmailList({ accountId }: EmailListProps) {
         <div className="fixed bottom-6 left-1/2 z-50 flex -translate-x-1/2 items-center gap-3 rounded-lg border border-border bg-background px-4 py-3 shadow-lg">
           <Undo2 className="h-4 w-4 text-muted-foreground" />
           <span className="text-sm">
-            {undoToast.action === 'quick_reply' ? 'Reply sent' : `Email ${undoToast.action}d`}
+            {undoToast.action === 'quick_reply'
+              ? 'Reply sent'
+              : `Email ${undoToast.action}d`}
           </span>
           <Button onClick={handleUndo} size="sm" variant="outline">
             Undo

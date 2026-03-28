@@ -1,7 +1,6 @@
-import type { inferRouterOutputs } from '@trpc/server';
 import type { AppRouter } from '@seawatts/api/types';
-
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import type { inferRouterOutputs } from '@trpc/server';
 import { format, isToday, isYesterday } from 'date-fns';
 import { useRouter } from 'expo-router';
 import { useCallback, useRef } from 'react';
@@ -120,7 +119,6 @@ function ThreadRow({
 
   return (
     <Swipeable
-      ref={swipeableRef}
       friction={2}
       onSwipeableOpen={(direction) => {
         if (direction === 'left') handleSwipeRight();
@@ -128,6 +126,7 @@ function ThreadRow({
       }}
       overshootLeft={false}
       overshootRight={false}
+      ref={swipeableRef}
       renderLeftActions={renderLeftActions}
       renderRightActions={renderRightActions}
     >
@@ -169,11 +168,17 @@ function ThreadRow({
         </Text>
 
         {thread.aiSummary ? (
-          <Text className="mt-1 text-xs text-muted-foreground" numberOfLines={2}>
+          <Text
+            className="mt-1 text-xs text-muted-foreground"
+            numberOfLines={2}
+          >
             {thread.aiSummary}
           </Text>
         ) : thread.snippet ? (
-          <Text className="mt-1 text-xs text-muted-foreground" numberOfLines={2}>
+          <Text
+            className="mt-1 text-xs text-muted-foreground"
+            numberOfLines={2}
+          >
             {thread.snippet}
           </Text>
         ) : null}
@@ -313,8 +318,8 @@ export default function InboxScreen() {
           renderItem={({ item }) => (
             <ThreadRow
               onArchive={handleArchive}
-              onSnooze={handleSnooze}
               onQuickReply={handleQuickReply}
+              onSnooze={handleSnooze}
               thread={item}
             />
           )}

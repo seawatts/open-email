@@ -1,7 +1,6 @@
-import type { inferRouterOutputs } from '@trpc/server';
 import type { AppRouter } from '@seawatts/api/types';
-
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import type { inferRouterOutputs } from '@trpc/server';
 import { format } from 'date-fns';
 import { Stack, useLocalSearchParams } from 'expo-router';
 import { useCallback } from 'react';
@@ -28,9 +27,7 @@ function TriageSummary({ thread }: { thread: ThreadDetail }) {
   return (
     <View className="mx-4 mb-3 rounded-lg bg-secondary p-3">
       <View className="flex-row items-center gap-2">
-        <Text className="text-sm font-semibold text-foreground">
-          AI Triage
-        </Text>
+        <Text className="text-sm font-semibold text-foreground">AI Triage</Text>
         {thread.aiAction ? <ActionBadge action={thread.aiAction} /> : null}
         {thread.aiConfidence != null ? (
           <Text className="text-xs text-muted-foreground">
@@ -53,7 +50,10 @@ function MessageCard({ message }: { message: Message }) {
   return (
     <View className="mx-4 mb-3 rounded-lg bg-card p-4">
       <View className="flex-row items-center justify-between">
-        <Text className="flex-1 text-sm font-semibold text-foreground" numberOfLines={1}>
+        <Text
+          className="flex-1 text-sm font-semibold text-foreground"
+          numberOfLines={1}
+        >
           {senderName}
         </Text>
         <Text className="text-xs text-muted-foreground">
@@ -71,7 +71,12 @@ function MessageCard({ message }: { message: Message }) {
       {message.hasAttachments ? (
         <View className="mt-2 flex-row items-center">
           <Text className="text-xs text-muted-foreground">
-            📎 {((message.attachmentMeta as Array<{ filename: string }>) ?? []).length} attachment(s)
+            📎{' '}
+            {
+              ((message.attachmentMeta as Array<{ filename: string }>) ?? [])
+                .length
+            }{' '}
+            attachment(s)
           </Text>
         </View>
       ) : null}
@@ -107,7 +112,9 @@ function QuickReplyBar({
                 paddingVertical: 8,
               }}
             >
-              <Text style={{ color: '#ffffff', fontSize: 13, fontWeight: '500' }}>
+              <Text
+                style={{ color: '#ffffff', fontSize: 13, fontWeight: '500' }}
+              >
                 {qr.label}
               </Text>
             </Pressable>
@@ -177,9 +184,7 @@ export default function ThreadDetailScreen() {
     return (
       <View className="flex-1 items-center justify-center bg-background">
         <Stack.Screen options={{ headerTitle: 'Not Found' }} />
-        <Text className="text-lg text-muted-foreground">
-          Thread not found.
-        </Text>
+        <Text className="text-lg text-muted-foreground">Thread not found.</Text>
       </View>
     );
   }
@@ -188,7 +193,10 @@ export default function ThreadDetailScreen() {
     <View className="flex-1 bg-background">
       <Stack.Screen options={{ headerTitle: thread.subject }} />
 
-      <ScrollView className="flex-1" contentContainerStyle={{ paddingVertical: 12 }}>
+      <ScrollView
+        className="flex-1"
+        contentContainerStyle={{ paddingVertical: 12 }}
+      >
         <Text className="mx-4 mb-2 text-lg font-bold text-foreground">
           {thread.subject}
         </Text>

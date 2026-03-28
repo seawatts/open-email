@@ -1,13 +1,13 @@
-import { Accounts, EmailMessages, EmailThreads } from '@seawatts/db/schema';
 import { db as dbClient } from '@seawatts/db/client';
+import { Accounts, EmailMessages, EmailThreads } from '@seawatts/db/schema';
 import { debug } from '@seawatts/logger';
 import { and, desc, eq, gte } from 'drizzle-orm';
 import { z } from 'zod';
 
 import { archiveThread, sendReply } from '../../services/gmail/actions';
 import {
-  updateUserMemory,
   type ActionLogEntry,
+  updateUserMemory,
 } from '../../services/memory/update-memory';
 import { checkForRuleSuggestion } from '../../services/rules/suggest-rules';
 import { createTRPCRouter, protectedProcedure } from '../../trpc';
@@ -24,12 +24,12 @@ async function getRecentActionEntries(
 
   const recentThreads = await dbClient.query.EmailThreads.findMany({
     limit: 50,
+    orderBy: [desc(EmailThreads.lastMessageAt)],
     where: and(
       eq(EmailThreads.accountId, accountId),
       eq(EmailThreads.status, 'acted'),
       gte(EmailThreads.lastMessageAt, oneDayAgo),
     ),
-    orderBy: [desc(EmailThreads.lastMessageAt)],
   });
 
   return recentThreads
@@ -48,7 +48,11 @@ async function getRecentActionEntries(
  */
 function maybeUpdateMemory(
   userId: string,
-  thread: { aiAction: string | null; subject: string; participantEmails: string[] },
+  thread: {
+    aiAction: string | null;
+    subject: string;
+    participantEmails: string[];
+  },
   userAction: string,
   replyText?: string,
 ): void {
@@ -186,7 +190,10 @@ export const threadsRouter = createTRPCRouter({
         const recentActions = await getRecentActionEntries(input.accountId);
         ruleSuggestion = checkForRuleSuggestion(recentActions);
       } catch {
-        log('Rule suggestion check failed for quickReply on thread %s', input.threadId);
+        log(
+          'Rule suggestion check failed for quickReply on thread %s',
+          input.threadId,
+        );
       }
 
       return { ruleSuggestion, success: true } as const;

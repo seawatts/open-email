@@ -1,10 +1,14 @@
+import { quickTriage, type TriageEmailContext } from '@seawatts/ai/ai-sdk-v6';
 import { eq } from '@seawatts/db';
 import { db } from '@seawatts/db/client';
-import { EmailMessages, EmailRules, EmailThreads, UserProfile } from '@seawatts/db/schema';
 import type { QuickReplyOption } from '@seawatts/db/schema';
+import {
+  EmailMessages,
+  EmailRules,
+  EmailThreads,
+  UserProfile,
+} from '@seawatts/db/schema';
 import { debug } from '@seawatts/logger';
-
-import { quickTriage, type TriageEmailContext } from '@seawatts/ai/ai-sdk-v6';
 
 import { getErrorMessage } from '../../utils';
 import { archiveThread } from './actions';
@@ -34,9 +38,9 @@ export async function triageThread(
   }
 
   const messages = await db.query.EmailMessages.findMany({
-    where: eq(EmailMessages.threadId, threadId),
-    orderBy: (m, { desc }) => [desc(m.internalDate)],
     limit: 3,
+    orderBy: (m, { desc }) => [desc(m.internalDate)],
+    where: eq(EmailMessages.threadId, threadId),
   });
 
   if (messages.length === 0) {
@@ -58,21 +62,24 @@ export async function triageThread(
     .filter((r) => r.isActive)
     .map((r) => r.prompt);
 
-  const latestMsg = messages[0]!;
+  const latestMsg = messages[0];
+  if (!latestMsg) {
+    return;
+  }
 
   const context: TriageEmailContext = {
-    subject: thread.subject,
-    fromName: latestMsg.fromName,
-    fromEmail: latestMsg.fromEmail,
-    toEmails: latestMsg.toEmails,
     date: thread.lastMessageAt,
-    participantEmails: thread.participantEmails,
+    fromEmail: latestMsg.fromEmail,
+    fromName: latestMsg.fromName,
     messages: messages.map((m) => ({
-      isFromUser: m.isFromUser,
-      fromName: m.fromName,
-      bodyPreview: m.bodyPreview,
       attachmentText: m.attachmentText,
+      bodyPreview: m.bodyPreview,
+      fromName: m.fromName,
+      isFromUser: m.isFromUser,
     })),
+    participantEmails: thread.participantEmails,
+    subject: thread.subject,
+    toEmails: latestMsg.toEmails,
   };
 
   try {
@@ -113,12 +120,12 @@ export async function triageThread(
     await db
       .update(EmailThreads)
       .set({
-        aiSummary: result.summary,
         aiAction: result.action,
         aiConfidence: result.confidence,
-        aiQuickReplies: result.quickReplies as QuickReplyOption[],
-        aiTriagedAt: new Date(),
         aiModelUsed: 'gpt-4o-mini',
+        aiQuickReplies: result.quickReplies as QuickReplyOption[],
+        aiSummary: result.summary,
+        aiTriagedAt: new Date(),
         status,
       })
       .where(eq(EmailThreads.id, threadId));

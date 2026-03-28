@@ -102,9 +102,7 @@ export function mapThreadsToSearchResults(
   threads: ThreadRow[],
   senderMap: Map<string, SenderInfo>,
 ): EmailSearchResult[] {
-  return threads.map((thread) =>
-    mapThreadToSearchResult(thread, senderMap),
-  );
+  return threads.map((thread) => mapThreadToSearchResult(thread, senderMap));
 }
 
 /**

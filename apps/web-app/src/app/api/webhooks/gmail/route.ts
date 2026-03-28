@@ -58,7 +58,9 @@ export async function POST(req: NextRequest) {
     }
 
     const { emailAddress, historyId } = dataResult.data;
-    console.log(`Gmail notification for ${emailAddress} historyId=${historyId}`);
+    console.log(
+      `Gmail notification for ${emailAddress} historyId=${historyId}`,
+    );
 
     const account = await db.query.Accounts.findFirst({
       where: and(
@@ -76,7 +78,9 @@ export async function POST(req: NextRequest) {
       const current = BigInt(account.lastHistoryId);
       const incoming = BigInt(historyId);
       if (incoming <= current) {
-        console.log(`Skipping: historyId ${historyId} <= ${account.lastHistoryId}`);
+        console.log(
+          `Skipping: historyId ${historyId} <= ${account.lastHistoryId}`,
+        );
         return NextResponse.json({ received: true });
       }
     }
@@ -149,7 +153,7 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    return NextResponse.json({ received: true, queued: threadIds.size });
+    return NextResponse.json({ queued: threadIds.size, received: true });
   } catch (error) {
     console.error('Gmail webhook error:', error);
     return NextResponse.json({ error: 'Processing failed', received: true });

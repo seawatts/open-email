@@ -1,9 +1,8 @@
-import { generateObject } from 'ai';
-
 import { getDefaultProvider, models } from '@seawatts/ai/ai-sdk-v6';
 import { eq } from '@seawatts/db';
 import { db } from '@seawatts/db/client';
 import { UserProfile } from '@seawatts/db/schema';
+import { generateObject } from 'ai';
 import { type NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 

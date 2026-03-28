@@ -10,6 +10,14 @@
       }
     }
   },
+  "css": {
+    "formatter": {
+      "quoteStyle": "single"
+    },
+    "parser": {
+      "tailwindDirectives": true
+    }
+  },
   "files": {
     "ignoreUnknown": false,
     "includes": [
@@ -34,14 +42,6 @@
       "!**/apps/chrome-extension/scripts/detect-obfuscation"
     ]
   },
-  "css": {
-    "formatter": {
-      "quoteStyle": "single"
-    },
-    "parser": {
-      "tailwindDirectives": true
-    }
-  },
   "formatter": {
     "enabled": true,
     "indentStyle": "space"
@@ -52,9 +52,7 @@
       "semicolons": "always",
       "trailingCommas": "all"
     },
-    "globals": [
-      "React"
-    ]
+    "globals": ["React"]
   },
   "linter": {
     "enabled": true,
@@ -93,9 +91,7 @@
         "useFilenamingConvention": {
           "level": "error",
           "options": {
-            "filenameCases": [
-              "kebab-case"
-            ],
+            "filenameCases": ["kebab-case"],
             "requireAscii": true
           }
         },
