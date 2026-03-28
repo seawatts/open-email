@@ -4,6 +4,7 @@ import {
   index,
   integer,
   json,
+  real,
   text,
   timestamp,
   unique,
@@ -13,57 +14,80 @@ import { createInsertSchema } from 'drizzle-zod';
 
 import { Accounts } from './accounts';
 import { schema, tsvector } from './common';
-import { bundleTypeEnum } from './enums';
+import { gmailCategoryEnum, suggestedActionEnum } from './enums';
 
 // ============================================================================
-// EMAIL THREADS TABLE - Thread metadata
+// QUICK REPLY TYPE
+// ============================================================================
+
+export interface QuickReplyOption {
+  label: string;
+  body: string;
+}
+
+// ============================================================================
+// EMAIL THREADS TABLE - Primary entity with triage results flattened in
 // ============================================================================
 
 export const EmailThreads = schema.table(
   'emailThreads',
   {
-    // AI-generated summary for quick search and context
-    aiSummary: text('aiSummary'),
-    aiSummaryUpdatedAt: timestamp('aiSummaryUpdatedAt', {
-      mode: 'date',
-      withTimezone: true,
-    }),
-    // Inbox-style bundle type for grouping
-    bundleType: bundleTypeEnum('bundleType').default('personal'),
-    createdAt: timestamp('createdAt', {
-      mode: 'date',
-      withTimezone: true,
-    })
-      .notNull()
-      .defaultNow(),
-    // References the better-auth account table (Google OAuth account)
     accountId: varchar('accountId')
-      .references(() => Accounts.id, {
-        onDelete: 'cascade',
-      })
+      .references(() => Accounts.id, { onDelete: 'cascade' })
       .notNull(),
     gmailThreadId: text('gmailThreadId').notNull(),
     id: varchar('id', { length: 128 })
       .$defaultFn(() => createId({ prefix: 'thread' }))
       .notNull()
       .primaryKey(),
-    // Inbox-style pinning
-    isPinned: boolean('isPinned').default(false).notNull(),
-    isRead: boolean('isRead').default(false).notNull(),
+
+    // Gmail metadata
+    subject: text('subject').notNull(),
+    snippet: text('snippet'),
     labels: json('labels').$type<string[]>().default([]).notNull(),
-    lastMessageAt: timestamp('lastMessageAt', {
-      mode: 'date',
-      withTimezone: true,
-    }).notNull(),
-    messageCount: integer('messageCount').default(1).notNull(),
     participantEmails: json('participantEmails')
       .$type<string[]>()
       .default([])
       .notNull(),
-    // Full-text search vector for fast text search
+    messageCount: integer('messageCount').default(1).notNull(),
+    isRead: boolean('isRead').default(false).notNull(),
+    isStarred: boolean('isStarred').default(false).notNull(),
+    isSpam: boolean('isSpam').default(false).notNull(),
+    isTrash: boolean('isTrash').default(false).notNull(),
+    gmailCategory: gmailCategoryEnum('gmailCategory').default('primary'),
+    lastMessageAt: timestamp('lastMessageAt', {
+      mode: 'date',
+      withTimezone: true,
+    }).notNull(),
+
+    // AI triage (flattened -- no separate table)
+    aiSummary: text('aiSummary'),
+    aiAction: suggestedActionEnum('aiAction'),
+    aiConfidence: real('aiConfidence'),
+    aiQuickReplies: json('aiQuickReplies')
+      .$type<QuickReplyOption[]>()
+      .default([]),
+    aiTriagedAt: timestamp('aiTriagedAt', {
+      mode: 'date',
+      withTimezone: true,
+    }),
+    aiModelUsed: text('aiModelUsed'),
+
+    // Status
+    status: text('status').default('untriaged').notNull(),
+    snoozedUntil: timestamp('snoozedUntil', {
+      mode: 'date',
+      withTimezone: true,
+    }),
+
+    // Search
     searchVector: tsvector('searchVector'),
-    snippet: text('snippet'),
-    subject: text('subject').notNull(),
+    createdAt: timestamp('createdAt', {
+      mode: 'date',
+      withTimezone: true,
+    })
+      .notNull()
+      .defaultNow(),
     updatedAt: timestamp('updatedAt', {
       mode: 'date',
       withTimezone: true,
@@ -71,8 +95,8 @@ export const EmailThreads = schema.table(
   },
   (table) => [
     unique().on(table.accountId, table.gmailThreadId),
-    // GIN index for full-text search
     index('idx_email_threads_search').using('gin', table.searchVector),
+    index('idx_email_threads_status').on(table.status),
   ],
 );
 

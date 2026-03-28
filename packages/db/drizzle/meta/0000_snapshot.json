@@ -1,5 +1,5 @@
 {
-  "id": "e252e4f5-a25d-4f95-8491-e12872299768",
+  "id": "285b6d27-781a-46a2-9ff5-612742f77196",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -179,266 +179,6 @@
       },
       "indexes": {},
       "foreignKeys": {},
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "open_email.agentDecisions": {
-      "name": "agentDecisions",
-      "schema": "open_email",
-      "columns": {
-        "category": {
-          "name": "category",
-          "type": "emailCategory",
-          "typeSchema": "open_email",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "completionTokens": {
-          "name": "completionTokens",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": false,
-          "default": 0
-        },
-        "confidence": {
-          "name": "confidence",
-          "type": "real",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "createdAt": {
-          "name": "createdAt",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        },
-        "draftReplies": {
-          "name": "draftReplies",
-          "type": "json",
-          "primaryKey": false,
-          "notNull": false,
-          "default": "'[]'::json"
-        },
-        "id": {
-          "name": "id",
-          "type": "varchar(128)",
-          "primaryKey": true,
-          "notNull": true
-        },
-        "modelUsed": {
-          "name": "modelUsed",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "promptTokens": {
-          "name": "promptTokens",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": false,
-          "default": 0
-        },
-        "rawOutput": {
-          "name": "rawOutput",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "reasons": {
-          "name": "reasons",
-          "type": "json",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "'[]'::json"
-        },
-        "smartActions": {
-          "name": "smartActions",
-          "type": "json",
-          "primaryKey": false,
-          "notNull": false,
-          "default": "'[]'::json"
-        },
-        "suggestedAction": {
-          "name": "suggestedAction",
-          "type": "suggestedAction",
-          "typeSchema": "open_email",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "suggestedLabels": {
-          "name": "suggestedLabels",
-          "type": "json",
-          "primaryKey": false,
-          "notNull": false,
-          "default": "'[]'::json"
-        },
-        "summary": {
-          "name": "summary",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "threadId": {
-          "name": "threadId",
-          "type": "varchar",
-          "primaryKey": false,
-          "notNull": true
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {
-        "agentDecisions_threadId_emailThreads_id_fk": {
-          "name": "agentDecisions_threadId_emailThreads_id_fk",
-          "tableFrom": "agentDecisions",
-          "tableTo": "emailThreads",
-          "schemaTo": "open_email",
-          "columnsFrom": [
-            "threadId"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "open_email.emailActions": {
-      "name": "emailActions",
-      "schema": "open_email",
-      "columns": {
-        "actionType": {
-          "name": "actionType",
-          "type": "emailActionType",
-          "typeSchema": "open_email",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "agentDecisionId": {
-          "name": "agentDecisionId",
-          "type": "varchar",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "approvedAt": {
-          "name": "approvedAt",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "approvedBy": {
-          "name": "approvedBy",
-          "type": "varchar",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "createdAt": {
-          "name": "createdAt",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        },
-        "error": {
-          "name": "error",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "executedAt": {
-          "name": "executedAt",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "id": {
-          "name": "id",
-          "type": "varchar(128)",
-          "primaryKey": true,
-          "notNull": true
-        },
-        "payload": {
-          "name": "payload",
-          "type": "json",
-          "primaryKey": false,
-          "notNull": false,
-          "default": "'{}'::json"
-        },
-        "status": {
-          "name": "status",
-          "type": "emailActionStatus",
-          "typeSchema": "open_email",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "'pending'"
-        },
-        "threadId": {
-          "name": "threadId",
-          "type": "varchar",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "updatedAt": {
-          "name": "updatedAt",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": false
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {
-        "emailActions_agentDecisionId_agentDecisions_id_fk": {
-          "name": "emailActions_agentDecisionId_agentDecisions_id_fk",
-          "tableFrom": "emailActions",
-          "tableTo": "agentDecisions",
-          "schemaTo": "open_email",
-          "columnsFrom": [
-            "agentDecisionId"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        },
-        "emailActions_approvedBy_user_id_fk": {
-          "name": "emailActions_approvedBy_user_id_fk",
-          "tableFrom": "emailActions",
-          "tableTo": "user",
-          "schemaTo": "open_email",
-          "columnsFrom": [
-            "approvedBy"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        },
-        "emailActions_threadId_emailThreads_id_fk": {
-          "name": "emailActions_threadId_emailThreads_id_fk",
-          "tableFrom": "emailActions",
-          "tableTo": "emailThreads",
-          "schemaTo": "open_email",
-          "columnsFrom": [
-            "threadId"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        }
-      },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
       "policies": {},
@@ -754,303 +494,27 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
-    "open_email.emailHighlights": {
-      "name": "emailHighlights",
-      "schema": "open_email",
-      "columns": {
-        "actionLabel": {
-          "name": "actionLabel",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "actionUrl": {
-          "name": "actionUrl",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "createdAt": {
-          "name": "createdAt",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        },
-        "data": {
-          "name": "data",
-          "type": "json",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "highlightType": {
-          "name": "highlightType",
-          "type": "highlightType",
-          "typeSchema": "open_email",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "icon": {
-          "name": "icon",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "id": {
-          "name": "id",
-          "type": "varchar(128)",
-          "primaryKey": true,
-          "notNull": true
-        },
-        "messageId": {
-          "name": "messageId",
-          "type": "varchar",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "subtitle": {
-          "name": "subtitle",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "threadId": {
-          "name": "threadId",
-          "type": "varchar",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "title": {
-          "name": "title",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {
-        "emailHighlights_messageId_emailMessages_id_fk": {
-          "name": "emailHighlights_messageId_emailMessages_id_fk",
-          "tableFrom": "emailHighlights",
-          "tableTo": "emailMessages",
-          "schemaTo": "open_email",
-          "columnsFrom": [
-            "messageId"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        },
-        "emailHighlights_threadId_emailThreads_id_fk": {
-          "name": "emailHighlights_threadId_emailThreads_id_fk",
-          "tableFrom": "emailHighlights",
-          "tableTo": "emailThreads",
-          "schemaTo": "open_email",
-          "columnsFrom": [
-            "threadId"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "open_email.emailKeywords": {
-      "name": "emailKeywords",
-      "schema": "open_email",
-      "columns": {
-        "confidence": {
-          "name": "confidence",
-          "type": "real",
-          "primaryKey": false,
-          "notNull": false,
-          "default": 1
-        },
-        "createdAt": {
-          "name": "createdAt",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        },
-        "id": {
-          "name": "id",
-          "type": "varchar(128)",
-          "primaryKey": true,
-          "notNull": true
-        },
-        "keyword": {
-          "name": "keyword",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "keywordType": {
-          "name": "keywordType",
-          "type": "keywordType",
-          "typeSchema": "open_email",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "messageId": {
-          "name": "messageId",
-          "type": "varchar",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "metadata": {
-          "name": "metadata",
-          "type": "json",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "originalText": {
-          "name": "originalText",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "threadId": {
-          "name": "threadId",
-          "type": "varchar",
-          "primaryKey": false,
-          "notNull": true
-        }
-      },
-      "indexes": {
-        "idx_email_keywords_keyword": {
-          "name": "idx_email_keywords_keyword",
-          "columns": [
-            {
-              "expression": "keyword",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "idx_email_keywords_type": {
-          "name": "idx_email_keywords_type",
-          "columns": [
-            {
-              "expression": "keywordType",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "idx_email_keywords_thread_type": {
-          "name": "idx_email_keywords_thread_type",
-          "columns": [
-            {
-              "expression": "threadId",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "keywordType",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
-      "foreignKeys": {
-        "emailKeywords_messageId_emailMessages_id_fk": {
-          "name": "emailKeywords_messageId_emailMessages_id_fk",
-          "tableFrom": "emailKeywords",
-          "tableTo": "emailMessages",
-          "schemaTo": "open_email",
-          "columnsFrom": [
-            "messageId"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        },
-        "emailKeywords_threadId_emailThreads_id_fk": {
-          "name": "emailKeywords_threadId_emailThreads_id_fk",
-          "tableFrom": "emailKeywords",
-          "tableTo": "emailThreads",
-          "schemaTo": "open_email",
-          "columnsFrom": [
-            "threadId"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
     "open_email.emailMessages": {
       "name": "emailMessages",
       "schema": "open_email",
       "columns": {
-        "aiSummary": {
-          "name": "aiSummary",
+        "id": {
+          "name": "id",
+          "type": "varchar(128)",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "threadId": {
+          "name": "threadId",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "gmailMessageId": {
+          "name": "gmailMessageId",
           "type": "text",
           "primaryKey": false,
-          "notNull": false
-        },
-        "attachmentMeta": {
-          "name": "attachmentMeta",
-          "type": "json",
-          "primaryKey": false,
-          "notNull": false,
-          "default": "'[]'::json"
-        },
-        "bodyPreview": {
-          "name": "bodyPreview",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "ccEmails": {
-          "name": "ccEmails",
-          "type": "json",
-          "primaryKey": false,
-          "notNull": false,
-          "default": "'[]'::json"
-        },
-        "createdAt": {
-          "name": "createdAt",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
+          "notNull": true
         },
         "fromEmail": {
           "name": "fromEmail",
@@ -1064,30 +528,19 @@
           "primaryKey": false,
           "notNull": false
         },
-        "gmailMessageId": {
-          "name": "gmailMessageId",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "hasAttachments": {
-          "name": "hasAttachments",
-          "type": "boolean",
+        "toEmails": {
+          "name": "toEmails",
+          "type": "json",
           "primaryKey": false,
           "notNull": true,
-          "default": false
+          "default": "'[]'::json"
         },
-        "id": {
-          "name": "id",
-          "type": "varchar(128)",
-          "primaryKey": true,
-          "notNull": true
-        },
-        "internalDate": {
-          "name": "internalDate",
-          "type": "timestamp with time zone",
+        "ccEmails": {
+          "name": "ccEmails",
+          "type": "json",
           "primaryKey": false,
-          "notNull": true
+          "notNull": false,
+          "default": "'[]'::json"
         },
         "isFromUser": {
           "name": "isFromUser",
@@ -1096,33 +549,123 @@
           "notNull": true,
           "default": false
         },
-        "snippet": {
-          "name": "snippet",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
         "subject": {
           "name": "subject",
           "type": "text",
           "primaryKey": false,
           "notNull": true
         },
-        "threadId": {
-          "name": "threadId",
-          "type": "varchar",
+        "bodyPreview": {
+          "name": "bodyPreview",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "bodyHtml": {
+          "name": "bodyHtml",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "bodyText": {
+          "name": "bodyText",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "messageIdHeader": {
+          "name": "messageIdHeader",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "inReplyTo": {
+          "name": "inReplyTo",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "hasAttachments": {
+          "name": "hasAttachments",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "attachmentMeta": {
+          "name": "attachmentMeta",
+          "type": "json",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "'[]'::json"
+        },
+        "attachmentText": {
+          "name": "attachmentText",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "internalDate": {
+          "name": "internalDate",
+          "type": "timestamp with time zone",
           "primaryKey": false,
           "notNull": true
         },
-        "toEmails": {
-          "name": "toEmails",
-          "type": "json",
+        "createdAt": {
+          "name": "createdAt",
+          "type": "timestamp with time zone",
           "primaryKey": false,
           "notNull": true,
-          "default": "'[]'::json"
+          "default": "now()"
         }
       },
-      "indexes": {},
+      "indexes": {
+        "idx_email_messages_from_email": {
+          "name": "idx_email_messages_from_email",
+          "columns": [
+            {
+              "expression": "fromEmail",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "idx_email_messages_internal_date": {
+          "name": "idx_email_messages_internal_date",
+          "columns": [
+            {
+              "expression": "internalDate",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "idx_email_messages_is_from_user": {
+          "name": "idx_email_messages_is_from_user",
+          "columns": [
+            {
+              "expression": "isFromUser",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
       "foreignKeys": {
         "emailMessages_threadId_emailThreads_id_fk": {
           "name": "emailMessages_threadId_emailThreads_id_fk",
@@ -1157,31 +700,22 @@
       "name": "emailRules",
       "schema": "open_email",
       "columns": {
-        "actions": {
-          "name": "actions",
-          "type": "json",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "'{}'::json"
-        },
-        "conditions": {
-          "name": "conditions",
-          "type": "json",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "'{}'::json"
-        },
-        "createdAt": {
-          "name": "createdAt",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        },
         "id": {
           "name": "id",
           "type": "varchar(128)",
           "primaryKey": true,
+          "notNull": true
+        },
+        "userId": {
+          "name": "userId",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "prompt": {
+          "name": "prompt",
+          "type": "text",
+          "primaryKey": false,
           "notNull": true
         },
         "isActive": {
@@ -1191,24 +725,31 @@
           "notNull": true,
           "default": true
         },
-        "ruleType": {
-          "name": "ruleType",
-          "type": "emailRuleType",
-          "typeSchema": "open_email",
+        "matchCount": {
+          "name": "matchCount",
+          "type": "integer",
           "primaryKey": false,
-          "notNull": true
+          "notNull": true,
+          "default": 0
+        },
+        "lastMatchedAt": {
+          "name": "lastMatchedAt",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "createdAt": {
+          "name": "createdAt",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
         },
         "updatedAt": {
           "name": "updatedAt",
           "type": "timestamp with time zone",
           "primaryKey": false,
           "notNull": false
-        },
-        "userId": {
-          "name": "userId",
-          "type": "varchar",
-          "primaryKey": false,
-          "notNull": true
         }
       },
       "indexes": {},
@@ -1238,33 +779,6 @@
       "name": "emailThreads",
       "schema": "open_email",
       "columns": {
-        "aiSummary": {
-          "name": "aiSummary",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "aiSummaryUpdatedAt": {
-          "name": "aiSummaryUpdatedAt",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "bundleType": {
-          "name": "bundleType",
-          "type": "bundleType",
-          "typeSchema": "open_email",
-          "primaryKey": false,
-          "notNull": false,
-          "default": "'personal'"
-        },
-        "createdAt": {
-          "name": "createdAt",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        },
         "accountId": {
           "name": "accountId",
           "type": "varchar",
@@ -1283,19 +797,17 @@
           "primaryKey": true,
           "notNull": true
         },
-        "isPinned": {
-          "name": "isPinned",
-          "type": "boolean",
+        "subject": {
+          "name": "subject",
+          "type": "text",
           "primaryKey": false,
-          "notNull": true,
-          "default": false
+          "notNull": true
         },
-        "isRead": {
-          "name": "isRead",
-          "type": "boolean",
+        "snippet": {
+          "name": "snippet",
+          "type": "text",
           "primaryKey": false,
-          "notNull": true,
-          "default": false
+          "notNull": false
         },
         "labels": {
           "name": "labels",
@@ -1304,11 +816,12 @@
           "notNull": true,
           "default": "'[]'::json"
         },
-        "lastMessageAt": {
-          "name": "lastMessageAt",
-          "type": "timestamp with time zone",
+        "participantEmails": {
+          "name": "participantEmails",
+          "type": "json",
           "primaryKey": false,
-          "notNull": true
+          "notNull": true,
+          "default": "'[]'::json"
         },
         "messageCount": {
           "name": "messageCount",
@@ -1317,12 +830,98 @@
           "notNull": true,
           "default": 1
         },
-        "participantEmails": {
-          "name": "participantEmails",
-          "type": "json",
+        "isRead": {
+          "name": "isRead",
+          "type": "boolean",
           "primaryKey": false,
           "notNull": true,
+          "default": false
+        },
+        "isStarred": {
+          "name": "isStarred",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "isSpam": {
+          "name": "isSpam",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "isTrash": {
+          "name": "isTrash",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "gmailCategory": {
+          "name": "gmailCategory",
+          "type": "gmailCategory",
+          "typeSchema": "open_email",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "'primary'"
+        },
+        "lastMessageAt": {
+          "name": "lastMessageAt",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "aiSummary": {
+          "name": "aiSummary",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "aiAction": {
+          "name": "aiAction",
+          "type": "suggestedAction",
+          "typeSchema": "open_email",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "aiConfidence": {
+          "name": "aiConfidence",
+          "type": "real",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "aiQuickReplies": {
+          "name": "aiQuickReplies",
+          "type": "json",
+          "primaryKey": false,
+          "notNull": false,
           "default": "'[]'::json"
+        },
+        "aiTriagedAt": {
+          "name": "aiTriagedAt",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "aiModelUsed": {
+          "name": "aiModelUsed",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "status": {
+          "name": "status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'untriaged'"
+        },
+        "snoozedUntil": {
+          "name": "snoozedUntil",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
         },
         "searchVector": {
           "name": "searchVector",
@@ -1330,17 +929,12 @@
           "primaryKey": false,
           "notNull": false
         },
-        "snippet": {
-          "name": "snippet",
-          "type": "text",
+        "createdAt": {
+          "name": "createdAt",
+          "type": "timestamp with time zone",
           "primaryKey": false,
-          "notNull": false
-        },
-        "subject": {
-          "name": "subject",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
+          "notNull": true,
+          "default": "now()"
         },
         "updatedAt": {
           "name": "updatedAt",
@@ -1363,6 +957,21 @@
           "isUnique": false,
           "concurrently": false,
           "method": "gin",
+          "with": {}
+        },
+        "idx_email_threads_status": {
+          "name": "idx_email_threads_status",
+          "columns": [
+            {
+              "expression": "status",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
           "with": {}
         }
       },
@@ -1862,182 +1471,23 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
-    "open_email.userContactStyle": {
-      "name": "userContactStyle",
+    "open_email.userProfile": {
+      "name": "userProfile",
       "schema": "open_email",
       "columns": {
-        "commonPhrases": {
-          "name": "commonPhrases",
-          "type": "json",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "contactDomain": {
-          "name": "contactDomain",
+        "memory": {
+          "name": "memory",
           "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "contactEmail": {
-          "name": "contactEmail",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "createdAt": {
-          "name": "createdAt",
-          "type": "timestamp with time zone",
           "primaryKey": false,
           "notNull": true,
-          "default": "now()"
+          "default": "''"
         },
-        "formalityLevel": {
-          "name": "formalityLevel",
-          "type": "real",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "id": {
-          "name": "id",
-          "type": "varchar(128)",
-          "primaryKey": true,
-          "notNull": true
-        },
-        "lastMessageAt": {
-          "name": "lastMessageAt",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "messageCount": {
-          "name": "messageCount",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": false,
-          "default": 0
-        },
-        "typicalGreeting": {
-          "name": "typicalGreeting",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "typicalSignoff": {
-          "name": "typicalSignoff",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "updatedAt": {
-          "name": "updatedAt",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "userId": {
-          "name": "userId",
-          "type": "varchar",
-          "primaryKey": false,
-          "notNull": true
-        }
-      },
-      "indexes": {
-        "idx_contact_style_email": {
-          "name": "idx_contact_style_email",
-          "columns": [
-            {
-              "expression": "userId",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "contactEmail",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "idx_contact_style_domain": {
-          "name": "idx_contact_style_domain",
-          "columns": [
-            {
-              "expression": "userId",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "contactDomain",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
-      "foreignKeys": {
-        "userContactStyle_userId_user_id_fk": {
-          "name": "userContactStyle_userId_user_id_fk",
-          "tableFrom": "userContactStyle",
-          "tableTo": "user",
-          "schemaTo": "open_email",
-          "columnsFrom": [
-            "userId"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "open_email.userEmailSettings": {
-      "name": "userEmailSettings",
-      "schema": "open_email",
-      "columns": {
-        "agentMode": {
-          "name": "agentMode",
-          "type": "agentMode",
-          "typeSchema": "open_email",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "'approval'"
-        },
-        "autoActionsAllowed": {
-          "name": "autoActionsAllowed",
+        "preferences": {
+          "name": "preferences",
           "type": "json",
           "primaryKey": false,
           "notNull": true,
-          "default": "'[]'::json"
-        },
-        "requireApprovalDomains": {
-          "name": "requireApprovalDomains",
-          "type": "json",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "'[]'::json"
-        },
-        "toneProfile": {
-          "name": "toneProfile",
-          "type": "json",
-          "primaryKey": false,
-          "notNull": false
+          "default": "'{}'::json"
         },
         "updatedAt": {
           "name": "updatedAt",
@@ -2054,226 +1504,9 @@
       },
       "indexes": {},
       "foreignKeys": {
-        "userEmailSettings_userId_user_id_fk": {
-          "name": "userEmailSettings_userId_user_id_fk",
-          "tableFrom": "userEmailSettings",
-          "tableTo": "user",
-          "schemaTo": "open_email",
-          "columnsFrom": [
-            "userId"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "open_email.userMemory": {
-      "name": "userMemory",
-      "schema": "open_email",
-      "columns": {
-        "confidence": {
-          "name": "confidence",
-          "type": "real",
-          "primaryKey": false,
-          "notNull": false,
-          "default": 1
-        },
-        "content": {
-          "name": "content",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "createdAt": {
-          "name": "createdAt",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        },
-        "id": {
-          "name": "id",
-          "type": "varchar(128)",
-          "primaryKey": true,
-          "notNull": true
-        },
-        "memoryType": {
-          "name": "memoryType",
-          "type": "memoryType",
-          "typeSchema": "open_email",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "metadata": {
-          "name": "metadata",
-          "type": "json",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "source": {
-          "name": "source",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "updatedAt": {
-          "name": "updatedAt",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "userId": {
-          "name": "userId",
-          "type": "varchar",
-          "primaryKey": false,
-          "notNull": true
-        }
-      },
-      "indexes": {
-        "idx_user_memory_user": {
-          "name": "idx_user_memory_user",
-          "columns": [
-            {
-              "expression": "userId",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "idx_user_memory_type": {
-          "name": "idx_user_memory_type",
-          "columns": [
-            {
-              "expression": "userId",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "memoryType",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
-      "foreignKeys": {
-        "userMemory_userId_user_id_fk": {
-          "name": "userMemory_userId_user_id_fk",
-          "tableFrom": "userMemory",
-          "tableTo": "user",
-          "schemaTo": "open_email",
-          "columnsFrom": [
-            "userId"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "open_email.userWritingProfile": {
-      "name": "userWritingProfile",
-      "schema": "open_email",
-      "columns": {
-        "analyzedMessageCount": {
-          "name": "analyzedMessageCount",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": false,
-          "default": 0
-        },
-        "averageMessageLength": {
-          "name": "averageMessageLength",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "commonPhrases": {
-          "name": "commonPhrases",
-          "type": "json",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "defaultFormalityLevel": {
-          "name": "defaultFormalityLevel",
-          "type": "real",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "detectedSignature": {
-          "name": "detectedSignature",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "lastAnalyzedAt": {
-          "name": "lastAnalyzedAt",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "preferredGreeting": {
-          "name": "preferredGreeting",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "preferredSignoff": {
-          "name": "preferredSignoff",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "updatedAt": {
-          "name": "updatedAt",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "userId": {
-          "name": "userId",
-          "type": "varchar",
-          "primaryKey": true,
-          "notNull": true
-        },
-        "vocabularyProfile": {
-          "name": "vocabularyProfile",
-          "type": "json",
-          "primaryKey": false,
-          "notNull": false
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {
-        "userWritingProfile_userId_user_id_fk": {
-          "name": "userWritingProfile_userId_user_id_fk",
-          "tableFrom": "userWritingProfile",
+        "userProfile_userId_user_id_fk": {
+          "name": "userProfile_userId_user_id_fk",
+          "tableFrom": "userProfile",
           "tableTo": "user",
           "schemaTo": "open_email",
           "columnsFrom": [
@@ -2365,14 +1598,6 @@
     }
   },
   "enums": {
-    "open_email.agentMode": {
-      "name": "agentMode",
-      "schema": "open_email",
-      "values": [
-        "approval",
-        "auto"
-      ]
-    },
     "open_email.apiKeyUsageType": {
       "name": "apiKeyUsageType",
       "schema": "open_email",
@@ -2380,75 +1605,15 @@
         "mcp-server"
       ]
     },
-    "open_email.bundleType": {
-      "name": "bundleType",
+    "open_email.gmailCategory": {
+      "name": "gmailCategory",
       "schema": "open_email",
       "values": [
-        "travel",
-        "purchases",
-        "finance",
+        "primary",
         "social",
-        "promos",
+        "promotions",
         "updates",
-        "forums",
-        "personal"
-      ]
-    },
-    "open_email.emailActionStatus": {
-      "name": "emailActionStatus",
-      "schema": "open_email",
-      "values": [
-        "pending",
-        "approved",
-        "rejected",
-        "executed",
-        "failed"
-      ]
-    },
-    "open_email.emailActionType": {
-      "name": "emailActionType",
-      "schema": "open_email",
-      "values": [
-        "send",
-        "archive",
-        "label",
-        "snooze",
-        "delete",
-        "smart_action"
-      ]
-    },
-    "open_email.emailCategory": {
-      "name": "emailCategory",
-      "schema": "open_email",
-      "values": [
-        "urgent",
-        "needs_reply",
-        "awaiting_other",
-        "fyi",
-        "spam_like"
-      ]
-    },
-    "open_email.emailRuleType": {
-      "name": "emailRuleType",
-      "schema": "open_email",
-      "values": [
-        "auto_archive",
-        "auto_label",
-        "always_ask",
-        "tone"
-      ]
-    },
-    "open_email.highlightType": {
-      "name": "highlightType",
-      "schema": "open_email",
-      "values": [
-        "flight",
-        "hotel",
-        "package_tracking",
-        "payment",
-        "event",
-        "reservation",
-        "action_item"
+        "forums"
       ]
     },
     "open_email.invitationStatus": {
@@ -2459,40 +1624,6 @@
         "accepted",
         "rejected",
         "canceled"
-      ]
-    },
-    "open_email.keywordType": {
-      "name": "keywordType",
-      "schema": "open_email",
-      "values": [
-        "person",
-        "company",
-        "location",
-        "topic",
-        "temporal",
-        "action",
-        "attachment",
-        "financial",
-        "product"
-      ]
-    },
-    "open_email.localConnectionStatus": {
-      "name": "localConnectionStatus",
-      "schema": "open_email",
-      "values": [
-        "connected",
-        "disconnected"
-      ]
-    },
-    "open_email.memoryType": {
-      "name": "memoryType",
-      "schema": "open_email",
-      "values": [
-        "fact",
-        "preference",
-        "writing_style",
-        "signature",
-        "relationship"
       ]
     },
     "open_email.stripeSubscriptionStatus": {
@@ -2514,10 +1645,8 @@
       "schema": "open_email",
       "values": [
         "reply",
-        "follow_up",
         "archive",
-        "label",
-        "ignore"
+        "snooze"
       ]
     },
     "open_email.userRole": {

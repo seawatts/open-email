@@ -157,19 +157,6 @@ const policyConfigs: Record<string, PolicyConfig> = {
     tableName: 'account',
   },
 
-  // Agent Decisions table - indirect ownership via threadId
-  agentDecisions: {
-    policies: [
-      {
-        name: 'Users can access their agent decisions',
-        operation: 'ALL',
-        using: policyConditions.threadOwnership,
-        withCheck: policyConditions.threadOwnership,
-      },
-    ],
-    tableName: 'agentDecisions',
-  },
-
   // API Keys table
   apiKeys: {
     policies: [
@@ -195,45 +182,6 @@ const policyConfigs: Record<string, PolicyConfig> = {
       createOrgOwnershipPolicy('ALL', 'organizationId'),
     ],
     tableName: 'authCodes',
-  },
-
-  // Email Actions table - indirect ownership via threadId
-  emailActions: {
-    policies: [
-      {
-        name: 'Users can access their email actions',
-        operation: 'ALL',
-        using: policyConditions.threadOwnership,
-        withCheck: policyConditions.threadOwnership,
-      },
-    ],
-    tableName: 'emailActions',
-  },
-
-  // Email Highlights table - indirect ownership via threadId
-  emailHighlights: {
-    policies: [
-      {
-        name: 'Users can access their email highlights',
-        operation: 'ALL',
-        using: policyConditions.threadOwnership,
-        withCheck: policyConditions.threadOwnership,
-      },
-    ],
-    tableName: 'emailHighlights',
-  },
-
-  // Email Keywords table - indirect ownership via threadId
-  emailKeywords: {
-    policies: [
-      {
-        name: 'Users can access their email keywords',
-        operation: 'ALL',
-        using: policyConditions.threadOwnership,
-        withCheck: policyConditions.threadOwnership,
-      },
-    ],
-    tableName: 'emailKeywords',
   },
 
   // Email Messages table - indirect ownership via threadId -> gmailAccountId
@@ -266,13 +214,6 @@ const policyConfigs: Record<string, PolicyConfig> = {
       },
     ],
     tableName: 'emailThreads',
-  },
-
-  // Account table - user ownership only (no org)
-  // Note: This is the OAuth account table (includes Gmail accounts)
-  account: {
-    policies: [createUserOwnershipPolicy('ALL', 'userId')],
-    tableName: 'account',
   },
 
   // Invitations table
@@ -342,28 +283,10 @@ const policyConfigs: Record<string, PolicyConfig> = {
     tableName: 'user',
   },
 
-  // User Contact Style table - user ownership
-  userContactStyle: {
+  // User Profile table - userId is PK
+  userProfile: {
     policies: [createUserOwnershipPolicy('ALL', 'userId')],
-    tableName: 'userContactStyle',
-  },
-
-  // User Email Settings table - userId is PK
-  userEmailSettings: {
-    policies: [createUserOwnershipPolicy('ALL', 'userId')],
-    tableName: 'userEmailSettings',
-  },
-
-  // User Memory table - user ownership
-  userMemory: {
-    policies: [createUserOwnershipPolicy('ALL', 'userId')],
-    tableName: 'userMemory',
-  },
-
-  // User Writing Profile table - userId is PK
-  userWritingProfile: {
-    policies: [createUserOwnershipPolicy('ALL', 'userId')],
-    tableName: 'userWritingProfile',
+    tableName: 'userProfile',
   },
 };
 

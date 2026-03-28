@@ -4,17 +4,9 @@ import { db } from '../src/client';
 // Tables that should have realtime enabled for live updates
 // These are the tables that benefit from real-time subscriptions in the email app
 const tablesToEnableRealtime = [
-  // Email-related tables for inbox updates
   'emailThreads',
   'emailMessages',
-  'emailHighlights',
-  'emailKeywords',
-  // AI/Agent tables for action updates
-  'agentDecisions',
-  'emailActions',
-  // User settings for preference sync
-  'userEmailSettings',
-  'userMemory',
+  'userProfile',
 ] as const;
 
 // RLS policies for realtime authorization
@@ -54,42 +46,6 @@ const realtimePolicies = [
     table: 'realtime.messages',
     target: 'authenticated',
   },
-  // Policy for authenticated users to read postgres changes on agent decisions
-  {
-    condition: `
-      realtime.messages.extension = 'postgres_changes'
-      AND realtime.topic() LIKE 'agentDecisions-%'
-      AND EXISTS (
-        SELECT 1 FROM open_email."agentDecisions" d
-        JOIN open_email."emailThreads" t ON t.id = d."threadId"
-        JOIN open_email."account" g ON g.id = t."accountId"
-        WHERE d.id = split_part(realtime.topic(), '-', 2)::text
-        AND g."userId" = (SELECT requesting_user_id())
-      )
-    `,
-    name: 'authenticated_can_read_agent_decisions_changes',
-    operation: 'select',
-    table: 'realtime.messages',
-    target: 'authenticated',
-  },
-  // Policy for authenticated users to read postgres changes on email actions
-  {
-    condition: `
-      realtime.messages.extension = 'postgres_changes'
-      AND realtime.topic() LIKE 'emailActions-%'
-      AND EXISTS (
-        SELECT 1 FROM open_email."emailActions" a
-        JOIN open_email."emailThreads" t ON t.id = a."threadId"
-        JOIN open_email."account" g ON g.id = t."accountId"
-        WHERE a.id = split_part(realtime.topic(), '-', 2)::text
-        AND g."userId" = (SELECT requesting_user_id())
-      )
-    `,
-    name: 'authenticated_can_read_email_actions_changes',
-    operation: 'select',
-    table: 'realtime.messages',
-    target: 'authenticated',
-  },
   // Policy for authenticated users to send broadcast messages
   {
     condition: `
@@ -97,8 +53,6 @@ const realtimePolicies = [
       AND (
         realtime.topic() LIKE 'emailThreads-%'
         OR realtime.topic() LIKE 'emailMessages-%'
-        OR realtime.topic() LIKE 'agentDecisions-%'
-        OR realtime.topic() LIKE 'emailActions-%'
       )
     `,
     name: 'authenticated_can_send_broadcast',
@@ -113,8 +67,6 @@ const realtimePolicies = [
       AND (
         realtime.topic() LIKE 'emailThreads-%'
         OR realtime.topic() LIKE 'emailMessages-%'
-        OR realtime.topic() LIKE 'agentDecisions-%'
-        OR realtime.topic() LIKE 'emailActions-%'
       )
     `,
     name: 'authenticated_can_read_broadcast',
