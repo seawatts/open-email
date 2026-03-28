@@ -1,6 +1,7 @@
 import { SidebarInset } from '@seawatts/ui/sidebar';
 import { cookies } from 'next/headers';
 import { AppSidebar } from './_components/app-sidebar/app-sidebar';
+import { CommandPalette } from './_components/command-palette';
 import { SidebarStateProvider } from './_components/sidebar-state-provider';
 import { SiteHeader } from './_components/site-header';
 
@@ -23,6 +24,7 @@ export default async function Layout({
           </div>
         </div>
       </SidebarInset>
+      <CommandPalette />
     </SidebarStateProvider>
   );
 }

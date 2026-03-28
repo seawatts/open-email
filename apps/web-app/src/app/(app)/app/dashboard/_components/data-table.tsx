@@ -702,6 +702,7 @@ function TableCellViewer({ item }: { item: z.infer<typeof schema> }) {
                         indicator="dot"
                         payload={[
                           {
+                            graphicalItemId: '0',
                             payload: {
                               month: 'January',
                             },

@@ -49,6 +49,14 @@ export const KEYBOARD_SHORTCUTS: KeyboardShortcut[] = [
   { category: 'actions', description: 'Mark as read', keys: 'Shift+i' },
   { category: 'actions', description: 'Mark as unread', keys: 'Shift+u' },
   { category: 'actions', description: 'Undo last action', keys: 'z' },
+  {
+    category: 'actions',
+    description: 'Execute AI suggestion',
+    keys: 'Tab',
+  },
+  { category: 'actions', description: 'Quick reply #1', keys: '1' },
+  { category: 'actions', description: 'Quick reply #2', keys: '2' },
+  { category: 'actions', description: 'Quick reply #3', keys: '3' },
 
   // Compose
   { category: 'compose', description: 'Reply', keys: 'r' },
@@ -65,7 +73,7 @@ export const KEYBOARD_SHORTCUTS: KeyboardShortcut[] = [
   { category: 'view', description: 'Search', keys: '/' },
   { category: 'view', description: 'Show keyboard shortcuts', keys: '?' },
   { category: 'view', description: 'Refresh', keys: 'Shift+r' },
-  { category: 'view', description: 'Toggle AI panel', keys: 'Tab' },
+  { category: 'view', description: 'Toggle AI panel', keys: 'Shift+Tab' },
 ];
 
 interface UseKeyboardShortcutsOptions {

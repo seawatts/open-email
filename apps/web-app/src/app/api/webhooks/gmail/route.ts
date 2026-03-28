@@ -4,198 +4,158 @@ import { Accounts } from '@seawatts/db/schema';
 import { type NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 
-// Feature flag: Set to true when Vercel Queues is out of beta
-// TODO: Switch to true when Vercel Queues is generally available
-const USE_VERCEL_QUEUE = process.env.USE_VERCEL_QUEUE === 'true';
-
-// Schema for Gmail Pub/Sub notification payload
 const gmailPubSubMessageSchema = z.object({
   message: z.object({
-    data: z.string(), // base64 encoded
+    data: z.string(),
     messageId: z.string(),
     publishTime: z.string(),
   }),
   subscription: z.string(),
 });
 
-// Schema for decoded Gmail notification data
 const gmailNotificationDataSchema = z.object({
   emailAddress: z.string().email(),
   historyId: z.coerce.string(),
 });
 
-// Queue message payload type
-export interface GmailSyncPayload {
-  emailAddress: string;
-  historyId: string;
-  receivedAt: string;
-}
-
-/**
- * Import sync function dynamically to avoid circular dependencies
- */
-async function getSyncFunction() {
-  const { syncGmailAccount } = await import('@seawatts/api/services/gmail');
-  return syncGmailAccount;
-}
-
-/**
- * Process Gmail sync inline (used when queue is not available)
- */
-async function processGmailSyncInline(
-  emailAddress: string,
-  historyId: string,
-): Promise<void> {
-  // Look up Google account by accountId (email for Google OAuth)
-  // The accountId field in better-auth's Accounts table stores the Google account email
-  const account = await db.query.Accounts.findFirst({
-    where: and(
-      eq(Accounts.accountId, emailAddress),
-      eq(Accounts.providerId, 'google'),
-    ),
-  });
-
-  if (!account) {
-    console.warn(`No Google account found for email: ${emailAddress}`);
-    return;
-  }
-
-  // Check if the historyId is newer than what we have
-  if (account.lastHistoryId) {
-    const currentHistoryId = BigInt(account.lastHistoryId);
-    const newHistoryId = BigInt(historyId);
-
-    if (newHistoryId <= currentHistoryId) {
-      console.log(
-        `Skipping sync for ${emailAddress}: historyId ${historyId} <= current ${account.lastHistoryId}`,
-      );
-      return;
-    }
-  }
-
-  const syncGmailAccount = await getSyncFunction();
-
-  // Perform incremental sync
-  const result = await syncGmailAccount(account.id, {
-    extractKeywords: true,
-    fullSync: false,
-    userId: account.userId,
-  });
-
-  console.log(
-    `Gmail sync completed for ${emailAddress}: ${result.threadsProcessed} threads, ${result.messagesProcessed} messages`,
-  );
-
-  if (result.errors.length > 0) {
-    console.warn(
-      `Gmail sync had ${result.errors.length} errors:`,
-      result.errors,
-    );
-  }
-}
-
-/**
- * Push to Vercel Queue for async processing
- * Only used when USE_VERCEL_QUEUE is true
- */
-async function queueGmailSync(payload: GmailSyncPayload): Promise<void> {
-  // Dynamic import to avoid loading @vercel/queue when not needed
-  const { send } = await import('@vercel/queue');
-  await send('gmail-sync', payload);
-  console.log(`Queued Gmail sync job for ${payload.emailAddress}`);
+export interface ThreadTriagePayload {
+  accountId: string;
+  gmailThreadId: string;
+  userId: string;
 }
 
 /**
  * Gmail Pub/Sub Webhook Handler
  *
- * Receives push notifications from Google Pub/Sub when email changes occur.
- * Processes sync inline or queues for async processing based on feature flag.
- *
- * POST /api/webhooks/gmail
+ * Lightweight fanout: decode notification -> Gmail History API -> discover
+ * changed thread IDs -> send each to thread-triage queue with idempotency key.
  */
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
 
-    // Parse and validate the Pub/Sub message
     const parseResult = gmailPubSubMessageSchema.safeParse(body);
-
     if (!parseResult.success) {
       console.error('Invalid Gmail Pub/Sub payload:', parseResult.error);
-      return NextResponse.json(
-        { error: 'Invalid payload format' },
-        { status: 400 },
-      );
+      return NextResponse.json({ error: 'Invalid payload' }, { status: 400 });
     }
 
     const { message } = parseResult.data;
-
-    // Decode base64 message data
     const decodedData = Buffer.from(message.data, 'base64').toString('utf-8');
     let notificationData: unknown;
 
     try {
       notificationData = JSON.parse(decodedData);
     } catch {
-      console.error('Failed to parse Gmail notification data:', decodedData);
-      return NextResponse.json(
-        { error: 'Invalid notification data' },
-        { status: 400 },
-      );
+      console.error('Failed to parse notification data:', decodedData);
+      return NextResponse.json({ error: 'Invalid data' }, { status: 400 });
     }
 
-    // Validate the notification data
-    const dataParseResult =
-      gmailNotificationDataSchema.safeParse(notificationData);
-
-    if (!dataParseResult.success) {
-      console.error(
-        'Invalid Gmail notification data schema:',
-        dataParseResult.error,
-      );
-      return NextResponse.json(
-        { error: 'Invalid notification data schema' },
-        { status: 400 },
-      );
+    const dataResult = gmailNotificationDataSchema.safeParse(notificationData);
+    if (!dataResult.success) {
+      console.error('Invalid notification schema:', dataResult.error);
+      return NextResponse.json({ error: 'Invalid schema' }, { status: 400 });
     }
 
-    const { emailAddress, historyId } = dataParseResult.data;
+    const { emailAddress, historyId } = dataResult.data;
+    console.log(`Gmail notification for ${emailAddress} historyId=${historyId}`);
 
-    console.log(
-      `Received Gmail notification for ${emailAddress} with historyId ${historyId}`,
-    );
+    const account = await db.query.Accounts.findFirst({
+      where: and(
+        eq(Accounts.accountId, emailAddress),
+        eq(Accounts.providerId, 'google'),
+      ),
+    });
 
-    if (USE_VERCEL_QUEUE) {
-      // Queue for async processing (when Vercel Queues is available)
-      const payload: GmailSyncPayload = {
-        emailAddress,
-        historyId,
-        receivedAt: new Date().toISOString(),
-      };
-      await queueGmailSync(payload);
+    if (!account) {
+      console.warn(`No Google account found for: ${emailAddress}`);
+      return NextResponse.json({ received: true });
+    }
+
+    if (account.lastHistoryId) {
+      const current = BigInt(account.lastHistoryId);
+      const incoming = BigInt(historyId);
+      if (incoming <= current) {
+        console.log(`Skipping: historyId ${historyId} <= ${account.lastHistoryId}`);
+        return NextResponse.json({ received: true });
+      }
+    }
+
+    const { getGmailClient } = await import('@seawatts/api/services/gmail');
+    const gmail = await getGmailClient(account.id);
+
+    let threadIds: Set<string>;
+
+    if (account.lastHistoryId) {
+      const historyResponse = await gmail.users.history.list({
+        historyTypes: ['messageAdded', 'labelAdded', 'labelRemoved'],
+        startHistoryId: account.lastHistoryId,
+        userId: 'me',
+      });
+
+      threadIds = new Set<string>();
+      for (const record of historyResponse.data.history ?? []) {
+        for (const msg of record.messagesAdded ?? []) {
+          if (msg.message?.threadId) threadIds.add(msg.message.threadId);
+        }
+        for (const msg of record.labelsAdded ?? []) {
+          if (msg.message?.threadId) threadIds.add(msg.message.threadId);
+        }
+        for (const msg of record.labelsRemoved ?? []) {
+          if (msg.message?.threadId) threadIds.add(msg.message.threadId);
+        }
+      }
+
+      await db
+        .update(Accounts)
+        .set({
+          lastHistoryId: historyResponse.data.historyId ?? historyId,
+          lastSyncAt: new Date(),
+        })
+        .where(eq(Accounts.id, account.id));
     } else {
-      // Process inline (current approach while queue is in beta)
-      // Note: This runs synchronously but Google Pub/Sub allows up to 10s response time
-      await processGmailSyncInline(emailAddress, historyId);
+      const threadsResponse = await gmail.users.threads.list({
+        maxResults: 50,
+        q: 'in:inbox',
+        userId: 'me',
+      });
+      threadIds = new Set(
+        (threadsResponse.data.threads ?? [])
+          .map((t) => t.id)
+          .filter((id): id is string => Boolean(id)),
+      );
+
+      const profile = await gmail.users.getProfile({ userId: 'me' });
+      await db
+        .update(Accounts)
+        .set({
+          lastHistoryId: profile.data.historyId ?? null,
+          lastSyncAt: new Date(),
+        })
+        .where(eq(Accounts.id, account.id));
     }
 
-    // Return 200 to acknowledge receipt
-    return NextResponse.json({ received: true });
+    console.log(`Discovered ${threadIds.size} changed threads, fanning out`);
+
+    const { send } = await import('@vercel/queue');
+    for (const gmailThreadId of threadIds) {
+      const payload: ThreadTriagePayload = {
+        accountId: account.id,
+        gmailThreadId,
+        userId: account.userId,
+      };
+      await send('thread-triage', payload, {
+        idempotencyKey: gmailThreadId,
+      });
+    }
+
+    return NextResponse.json({ received: true, queued: threadIds.size });
   } catch (error) {
     console.error('Gmail webhook error:', error);
-    // Return 200 anyway to prevent Pub/Sub retries for unhandled errors
     return NextResponse.json({ error: 'Processing failed', received: true });
   }
 }
 
-/**
- * Health check endpoint for Gmail webhook
- * Google may send GET requests to verify the endpoint
- */
 export async function GET() {
-  return NextResponse.json({
-    queueEnabled: USE_VERCEL_QUEUE,
-    service: 'gmail-webhook',
-    status: 'ok',
-  });
+  return NextResponse.json({ service: 'gmail-webhook', status: 'ok' });
 }

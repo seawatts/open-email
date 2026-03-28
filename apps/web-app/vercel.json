@@ -1,0 +1,19 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "crons": [
+    {
+      "path": "/api/cron/gmail-watch-renew",
+      "schedule": "0 2 * * *"
+    },
+    {
+      "path": "/api/cron/memory-consolidation",
+      "schedule": "0 * * * *"
+    }
+  ],
+  "experimentalTriggers": [
+    {
+      "type": "queue/v2beta",
+      "topic": "thread-triage"
+    }
+  ]
+}

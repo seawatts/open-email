@@ -1,157 +1,106 @@
 'use client';
 
-import {
-  BUNDLE_CONFIG,
-  type BundleType,
-  type HighlightData,
-  type HighlightType,
-} from '@seawatts/api/email/types';
 import { useTRPC } from '@seawatts/api/react';
+import { Badge } from '@seawatts/ui/badge';
 import { Button } from '@seawatts/ui/button';
 import { Checkbox } from '@seawatts/ui/checkbox';
 import { cn } from '@seawatts/ui/lib/utils';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@seawatts/ui/tooltip';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { formatDistanceToNow } from 'date-fns';
-import {
-  Archive,
-  Bell,
-  CheckCircle,
-  Landmark,
-  Pin,
-  PinOff,
-  Plane,
-  Share2,
-  ShoppingBag,
-  Sparkles,
-  Tag,
-  User,
-  Users,
-} from 'lucide-react';
+import type { QuickReplyOption } from '@seawatts/db/schema';
+import { Archive, CheckCircle, Star, StarOff } from 'lucide-react';
 
-import { CategoryBadge } from './category-badge';
-import { HighlightChips } from './highlight-chip';
+import { AI_ACTION_BADGE_CONFIG } from '../_lib/ai-action-config';
 
-type EmailCategory =
-  | 'urgent'
-  | 'needs_reply'
-  | 'awaiting_other'
-  | 'fyi'
-  | 'spam_like';
-
-// Icon mapping for bundle types
-const BUNDLE_ICONS: Record<
-  BundleType,
-  React.ComponentType<{ className?: string }>
-> = {
-  finance: Landmark,
-  forums: Users,
-  personal: User,
-  promos: Tag,
-  purchases: ShoppingBag,
-  social: Share2,
-  travel: Plane,
-  updates: Bell,
-};
-
-interface ThreadHighlight {
-  actionLabel?: string | null;
-  actionUrl?: string | null;
-  data: HighlightData | Record<string, unknown>;
-  highlightType: HighlightType;
+interface ThreadData {
+  aiAction?: string | null;
+  aiConfidence?: number | null;
+  aiQuickReplies?: QuickReplyOption[] | null;
+  aiSummary?: string | null;
   id: string;
-  subtitle?: string | null;
-  title: string;
-}
-
-interface ThreadWithDecision {
-  bundleType?: BundleType | null;
-  emailHighlights?: ThreadHighlight[];
-  id: string;
-  isPinned?: boolean;
   isRead: boolean;
+  isStarred?: boolean;
   labels: string[];
   lastMessageAt: Date;
-  latestDecision: {
-    category: EmailCategory;
-    confidence: number;
-    suggestedAction: string;
-    summary: string | null;
-  } | null;
   latestMessage?: {
     fromEmail: string;
     fromName: string | null;
   } | null;
   messageCount: number;
   participantEmails: string[];
-  pendingActions?: { id: string }[];
-  snippet: string | null;
   subject: string;
 }
 
 interface EmailRowProps {
   isFocused: boolean;
   isSelected: boolean;
+  onAction?: (action: string) => void;
   onFocus: () => void;
   onOpen: () => void;
   onQuickApprove: () => void;
   onQuickArchive: () => void;
+  onQuickReply?: (replyBody: string) => void;
   onSelect: () => void;
-  showBundleIcon?: boolean;
-  thread: ThreadWithDecision;
+  thread: ThreadData;
 }
 
 export function EmailRow({
   isFocused,
   isSelected,
+  onAction,
   onFocus,
   onOpen,
   onQuickApprove,
   onQuickArchive,
+  onQuickReply,
   onSelect,
-  showBundleIcon = true,
   thread,
 }: EmailRowProps) {
-  const decision = thread.latestDecision;
-  const hasPendingActions = (thread.pendingActions?.length ?? 0) > 0;
   const trpc = useTRPC();
   const queryClient = useQueryClient();
 
-  const pinMutation = useMutation(
-    trpc.email.threads.pin.mutationOptions({
+  const starMutation = useMutation(
+    trpc.email.threads.star.mutationOptions({
       onSuccess: () => {
         queryClient.invalidateQueries(trpc.email.threads.list.queryFilter());
       },
     }),
   );
 
-  const handlePin = (e: React.MouseEvent) => {
+  const handleStar = (e: React.MouseEvent) => {
     e.stopPropagation();
-    pinMutation.mutate({
-      pinned: !thread.isPinned,
+    starMutation.mutate({
+      starred: !thread.isStarred,
       threadId: thread.id,
     });
   };
 
-  // Get bundle icon if available
-  const BundleIcon = thread.bundleType ? BUNDLE_ICONS[thread.bundleType] : null;
-  const bundleConfig = thread.bundleType
-    ? BUNDLE_CONFIG[thread.bundleType]
-    : null;
+  const aiActionBadgeConfig =
+    thread.aiAction != null
+      ? AI_ACTION_BADGE_CONFIG[thread.aiAction]
+      : undefined;
 
   return (
-    <button
+    <div
       className={cn(
         'group flex w-full items-start gap-3 border-b border-border px-4 py-3 text-left transition-colors cursor-pointer',
         isSelected && 'bg-primary/5',
         isFocused && 'ring-2 ring-inset ring-primary/50',
         !thread.isRead && 'bg-muted/30',
-        thread.isPinned && 'border-l-2 border-l-primary',
+        thread.isStarred && 'border-l-2 border-l-amber-400',
         'hover:bg-muted/50',
       )}
       onClick={onOpen}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          onOpen();
+        }
+      }}
       onMouseEnter={onFocus}
-      type="button"
+      role="button"
+      tabIndex={0}
     >
       {/* Checkbox */}
       <span
@@ -168,28 +117,12 @@ export function EmailRow({
         <Checkbox checked={isSelected} onCheckedChange={() => onSelect()} />
       </span>
 
-      {/* Bundle type icon */}
-      {showBundleIcon && BundleIcon && bundleConfig && (
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <div className="shrink-0 pt-1">
-              <div className="flex h-6 w-6 items-center justify-center rounded bg-muted">
-                <BundleIcon className="h-3.5 w-3.5 text-muted-foreground" />
-              </div>
-            </div>
-          </TooltipTrigger>
-          <TooltipContent side="right">
-            <p>{bundleConfig.label}</p>
-          </TooltipContent>
-        </Tooltip>
-      )}
-
       {/* Main content */}
       <div className="min-w-0 flex-1">
         <div className="mb-1 flex items-center gap-2">
-          {/* Pinned indicator */}
-          {thread.isPinned && (
-            <Pin className="h-3 w-3 fill-primary text-primary" />
+          {/* Starred indicator */}
+          {thread.isStarred && (
+            <Star className="h-3 w-3 fill-amber-400 text-amber-400" />
           )}
 
           {/* Sender */}
@@ -205,21 +138,17 @@ export function EmailRow({
               'Unknown'}
           </span>
 
-          {/* Category badge */}
-          {decision && (
-            <CategoryBadge
-              category={decision.category}
-              confidence={decision.confidence}
-              size="sm"
-            />
-          )}
-
-          {/* Pending action indicator */}
-          {hasPendingActions && (
-            <span className="flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-xs text-amber-800 dark:bg-amber-900 dark:text-amber-200">
-              <Sparkles className="h-3 w-3" />
-              Action pending
-            </span>
+          {/* AI action badge */}
+          {aiActionBadgeConfig && (
+            <Badge
+              className={cn(
+                'text-xs px-2 py-0.5 font-medium',
+                aiActionBadgeConfig.className,
+              )}
+              variant="secondary"
+            >
+              {aiActionBadgeConfig.label}
+            </Badge>
           )}
 
           {/* Timestamp */}
@@ -235,18 +164,29 @@ export function EmailRow({
           {thread.subject}
         </p>
 
-        {/* Snippet / AI Summary */}
-        <p className="truncate text-xs text-muted-foreground">
-          {decision?.summary ?? thread.snippet ?? ''}
-        </p>
+        {/* AI Summary */}
+        {thread.aiSummary && (
+          <p className="truncate text-xs text-muted-foreground">
+            {thread.aiSummary}
+          </p>
+        )}
 
-        {/* Highlights */}
-        {thread.emailHighlights && thread.emailHighlights.length > 0 && (
-          <div className="mt-2">
-            <HighlightChips
-              highlights={thread.emailHighlights}
-              maxDisplay={2}
-            />
+        {/* Quick reply chips */}
+        {thread.aiQuickReplies && thread.aiQuickReplies.length > 0 && (
+          <div className="mt-1 flex items-center gap-1">
+            {thread.aiQuickReplies.map((reply) => (
+              <button
+                className="rounded-full border border-border bg-background px-2 py-0.5 text-xs text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+                key={reply.label}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onQuickReply?.(reply.body);
+                }}
+                type="button"
+              >
+                {reply.label}
+              </button>
+            ))}
           </div>
         )}
       </div>
@@ -254,23 +194,23 @@ export function EmailRow({
       {/* Quick actions */}
       <div className="shrink-0 opacity-0 transition-opacity group-hover:opacity-100">
         <div className="flex items-center gap-1">
-          {/* Pin button */}
+          {/* Star button */}
           <Tooltip>
             <TooltipTrigger asChild>
-              <Button onClick={handlePin} size="sm" variant="ghost">
-                {thread.isPinned ? (
-                  <PinOff className="h-4 w-4" />
+              <Button onClick={handleStar} size="sm" variant="ghost">
+                {thread.isStarred ? (
+                  <StarOff className="h-4 w-4" />
                 ) : (
-                  <Pin className="h-4 w-4" />
+                  <Star className="h-4 w-4" />
                 )}
               </Button>
             </TooltipTrigger>
             <TooltipContent>
-              {thread.isPinned ? 'Unpin' : 'Pin to top'}
+              {thread.isStarred ? 'Unstar' : 'Star'}
             </TooltipContent>
           </Tooltip>
 
-          {decision?.suggestedAction && (
+          {thread.aiAction && (
             <Button
               onClick={(e) => {
                 e.stopPropagation();
@@ -294,6 +234,6 @@ export function EmailRow({
           </Button>
         </div>
       </div>
-    </button>
+    </div>
   );
 }

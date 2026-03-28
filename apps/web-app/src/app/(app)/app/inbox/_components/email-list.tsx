@@ -15,6 +15,7 @@ import {
   Sparkles,
   Tag,
   Trash2,
+  Undo2,
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import {
@@ -26,7 +27,6 @@ import {
   useTransition,
 } from 'react';
 
-import { AITriageSummary } from './ai-triage-summary';
 import { EmailRow } from './email-row';
 import { InboxZeroProgress } from './inbox-zero-progress';
 import { KeyboardShortcutsDialog } from './keyboard-shortcuts-dialog';
@@ -54,8 +54,13 @@ export function EmailList({ accountId }: EmailListProps) {
   // Keyboard shortcuts state
   const [showShortcutsDialog, setShowShortcutsDialog] = useState(false);
   const [undoStack, setUndoStack] = useState<
-    Array<{ threadId: string; action: string }>
+    Array<{ threadId: string; action: string; timestamp: number }>
   >([]);
+  const [undoToast, setUndoToast] = useState<{
+    action: string;
+    threadId: string;
+  } | null>(null);
+  const undoTimerRef = useRef<NodeJS.Timeout | null>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
 
   const trpc = useTRPC();
@@ -68,23 +73,9 @@ export function EmailList({ accountId }: EmailListProps) {
     }),
   );
 
-  // Optimistic mutation for creating actions
-  const createAction = useMutation(
-    trpc.email.actions.create.mutationOptions({
-      onError: (_err, variables) => {
-        // Rollback: remove from optimistically removed set
-        setOptimisticallyRemovedIds((prev) => {
-          const next = new Set(prev);
-          next.delete(variables.threadId);
-          return next;
-        });
-      },
-      onSettled: () => {
-        // Always refetch to ensure consistency
-        queryClient.invalidateQueries(trpc.email.threads.list.queryFilter());
-      },
-    }),
-  );
+  const invalidateThreadList = useCallback(() => {
+    queryClient.invalidateQueries(trpc.email.threads.list.queryFilter());
+  }, [queryClient, trpc]);
 
   // Filter threads (excluding optimistically removed ones)
   const filteredThreads = useMemo(() => {
@@ -93,26 +84,16 @@ export function EmailList({ accountId }: EmailListProps) {
     // First, exclude optimistically removed threads
     let filtered = threads.filter((t) => !optimisticallyRemovedIds.has(t.id));
 
-    // Apply filter mode
+    // Apply filter mode based on aiAction (suggestedActionEnum)
     switch (filterMode) {
       case 'action_needed':
-        filtered = filtered.filter(
-          (t) =>
-            t.latestDecision?.category === 'urgent' ||
-            t.latestDecision?.category === 'needs_reply',
-        );
+        filtered = filtered.filter((t) => t.aiAction === 'reply');
         break;
       case 'waiting':
-        filtered = filtered.filter(
-          (t) => t.latestDecision?.category === 'awaiting_other',
-        );
+        filtered = filtered.filter((t) => t.aiAction === 'snooze');
         break;
       case 'done':
-        filtered = filtered.filter(
-          (t) =>
-            t.latestDecision?.category === 'fyi' ||
-            t.latestDecision?.category === 'spam_like',
-        );
+        filtered = filtered.filter((t) => t.aiAction === 'archive');
         break;
     }
 
@@ -152,7 +133,6 @@ export function EmailList({ accountId }: EmailListProps) {
 
   // Optimistic archive - instantly removes from UI
   const handleArchive = useCallback(() => {
-    // Optimistically remove all selected threads
     setOptimisticallyRemovedIds((prev) => {
       const next = new Set(prev);
       for (const id of selectedIds) {
@@ -162,48 +142,28 @@ export function EmailList({ accountId }: EmailListProps) {
     });
     setProcessedCount((c) => c + selectedIds.size);
     setSelectedIds(new Set());
-
-    // Fire mutations in background (don't await)
+    // TODO: Call Gmail action endpoints when available
     startTransition(() => {
-      for (const threadId of selectedIds) {
-        createAction.mutate({
-          actionType: 'archive',
-          threadId,
-        });
-      }
+      invalidateThreadList();
     });
-  }, [selectedIds, createAction]);
+  }, [selectedIds, invalidateThreadList]);
 
-  // Optimistic quick archive
   const handleQuickArchive = useCallback(
     (threadId: string) => {
-      // Optimistically remove from UI
       setOptimisticallyRemovedIds((prev) => new Set(prev).add(threadId));
       setProcessedCount((c) => c + 1);
-
-      // Fire mutation in background
-      createAction.mutate({
-        actionType: 'archive',
-        threadId,
-      });
+      invalidateThreadList();
     },
-    [createAction],
+    [invalidateThreadList],
   );
 
-  // Optimistic quick approve
   const handleQuickApprove = useCallback(
     (threadId: string) => {
-      // Optimistically remove from UI
       setOptimisticallyRemovedIds((prev) => new Set(prev).add(threadId));
       setProcessedCount((c) => c + 1);
-
-      // Fire mutation in background
-      createAction.mutate({
-        actionType: 'archive',
-        threadId,
-      });
+      invalidateThreadList();
     },
-    [createAction],
+    [invalidateThreadList],
   );
 
   // Counts exclude optimistically removed threads
@@ -215,143 +175,174 @@ export function EmailList({ accountId }: EmailListProps) {
     );
 
     return {
-      actionNeeded: visibleThreads.filter(
-        (t) =>
-          t.latestDecision?.category === 'urgent' ||
-          t.latestDecision?.category === 'needs_reply',
-      ).length,
+      actionNeeded: visibleThreads.filter((t) => t.aiAction === 'reply')
+        .length,
       all: visibleThreads.length,
-      done: visibleThreads.filter(
-        (t) =>
-          t.latestDecision?.category === 'fyi' ||
-          t.latestDecision?.category === 'spam_like',
-      ).length,
-      waiting: visibleThreads.filter(
-        (t) => t.latestDecision?.category === 'awaiting_other',
-      ).length,
+      done: visibleThreads.filter((t) => t.aiAction === 'archive').length,
+      waiting: visibleThreads.filter((t) => t.aiAction === 'snooze').length,
     };
   }, [threads, optimisticallyRemovedIds]);
 
   const [processedCount, setProcessedCount] = useState(0);
 
-  // Optimistic batch approve category
-  const handleApproveCategory = useCallback(
-    (category: string) => {
-      if (!threads) return;
-
-      const categoryThreads = threads.filter(
-        (t) =>
-          t.latestDecision?.category === category &&
-          !optimisticallyRemovedIds.has(t.id),
-      );
-
-      if (categoryThreads.length === 0) return;
-
-      // Optimistically remove all threads in this category
-      setOptimisticallyRemovedIds((prev) => {
-        const next = new Set(prev);
-        for (const thread of categoryThreads) {
-          next.add(thread.id);
-        }
-        return next;
-      });
-      setProcessedCount((c) => c + categoryThreads.length);
-
-      // Fire mutations in background
-      startTransition(() => {
-        for (const thread of categoryThreads) {
-          createAction.mutate({
-            actionType: 'archive',
-            threadId: thread.id,
-          });
-        }
-      });
-    },
-    [threads, createAction, optimisticallyRemovedIds],
-  );
-
-  // Optimistic swipe archive
   const handleSwipeArchive = useCallback(
     (threadId: string) => {
-      // Optimistically remove from UI
       setOptimisticallyRemovedIds((prev) => new Set(prev).add(threadId));
       setProcessedCount((c) => c + 1);
-
-      // Fire mutation in background
-      createAction.mutate({
-        actionType: 'archive',
-        threadId,
-      });
+      invalidateThreadList();
     },
-    [createAction],
+    [invalidateThreadList],
   );
 
-  // Optimistic swipe snooze
   const handleSwipeSnooze = useCallback(
     (threadId: string) => {
-      // Optimistically remove from UI
       setOptimisticallyRemovedIds((prev) => new Set(prev).add(threadId));
       setProcessedCount((c) => c + 1);
-
-      // Fire mutation in background
-      createAction.mutate({
-        actionType: 'snooze',
-        threadId,
-      });
+      invalidateThreadList();
     },
-    [createAction],
+    [invalidateThreadList],
   );
 
   // Get the focused thread
   const focusedThread = filteredThreads[focusedIndex];
 
+  // Auto-advance: clamp focus after removing a thread
+  const autoAdvance = useCallback(
+    (removedIndex: number) => {
+      setFocusedIndex((current) => {
+        if (current > removedIndex) return current - 1;
+        if (current === removedIndex && current >= filteredThreads.length - 1) {
+          return Math.max(0, filteredThreads.length - 2);
+        }
+        return current;
+      });
+    },
+    [filteredThreads.length],
+  );
+
+  // Shared helper: optimistically remove + push undo + show undo toast
+  const removeWithUndo = useCallback(
+    (threadId: string, action: string) => {
+      setOptimisticallyRemovedIds((prev) => new Set(prev).add(threadId));
+      setProcessedCount((c) => c + 1);
+      setUndoStack((prev) => [
+        ...prev,
+        { action, threadId, timestamp: Date.now() },
+      ]);
+      setUndoToast({ action, threadId });
+
+      if (undoTimerRef.current) clearTimeout(undoTimerRef.current);
+      undoTimerRef.current = setTimeout(() => {
+        setUndoToast(null);
+      }, 5000);
+
+      const idx = filteredThreads.findIndex((t) => t.id === threadId);
+      if (idx >= 0) autoAdvance(idx);
+      invalidateThreadList();
+    },
+    [filteredThreads, autoAdvance, invalidateThreadList],
+  );
+
+  // Quick reply mutation
+  const quickReplyMutation = useMutation(
+    trpc.email.threads.quickReply.mutationOptions({
+      onSettled: () => invalidateThreadList(),
+    }),
+  );
+
+  const handleQuickReply = useCallback(
+    (threadId: string, replyBody: string) => {
+      const thread = filteredThreads.find((t) => t.id === threadId);
+      if (!thread) return;
+
+      removeWithUndo(threadId, 'quick_reply');
+      quickReplyMutation.mutate({
+        accountId,
+        gmailThreadId: thread.gmailThreadId,
+        replyText: replyBody,
+        subject: thread.subject,
+        threadId,
+        to: thread.participantEmails,
+      });
+    },
+    [filteredThreads, removeWithUndo, quickReplyMutation, accountId],
+  );
+
   // Keyboard action handlers
   const handleKeyboardArchive = useCallback(() => {
     if (selectedIds.size > 0) {
-      // Archive selected
       handleArchive();
     } else if (focusedThread) {
-      // Archive focused
-      handleQuickArchive(focusedThread.id);
-      // Add to undo stack
-      setUndoStack((prev) => [
-        ...prev,
-        { action: 'archive', threadId: focusedThread.id },
-      ]);
+      removeWithUndo(focusedThread.id, 'archive');
     }
-  }, [selectedIds, focusedThread, handleArchive, handleQuickArchive]);
+  }, [selectedIds, focusedThread, handleArchive, removeWithUndo]);
 
   const handleKeyboardSnooze = useCallback(() => {
     if (focusedThread) {
-      handleSwipeSnooze(focusedThread.id);
-      setUndoStack((prev) => [
-        ...prev,
-        { action: 'snooze', threadId: focusedThread.id },
-      ]);
+      removeWithUndo(focusedThread.id, 'snooze');
     }
-  }, [focusedThread, handleSwipeSnooze]);
+  }, [focusedThread, removeWithUndo]);
 
   const handleKeyboardDelete = useCallback(() => {
     if (focusedThread) {
-      setOptimisticallyRemovedIds((prev) =>
-        new Set(prev).add(focusedThread.id),
-      );
-      createAction.mutate({
-        actionType: 'delete',
-        threadId: focusedThread.id,
-      });
+      removeWithUndo(focusedThread.id, 'delete');
     }
-  }, [focusedThread, createAction]);
+  }, [focusedThread, removeWithUndo]);
+
+  // Tab: execute AI suggestion on focused thread
+  const handleExecuteAISuggestion = useCallback(() => {
+    if (!focusedThread) return;
+    const action = focusedThread.aiAction;
+    if (!action) return;
+
+    switch (action) {
+      case 'archive':
+        removeWithUndo(focusedThread.id, action);
+        break;
+      case 'reply': {
+        const firstReply = focusedThread.aiQuickReplies?.[0];
+        if (firstReply) {
+          handleQuickReply(focusedThread.id, firstReply.body);
+        } else {
+          router.push(`/app/inbox/${focusedThread.id}?compose=reply`);
+        }
+        break;
+      }
+      case 'snooze':
+        removeWithUndo(focusedThread.id, 'snooze');
+        break;
+    }
+  }, [focusedThread, removeWithUndo, handleQuickReply, router]);
+
+  // 1/2/3: send Nth quick reply on focused thread
+  const handleQuickReplyByIndex = useCallback(
+    (index: number) => {
+      if (!focusedThread) return;
+      const replies = focusedThread.aiQuickReplies;
+      const reply = replies?.[index];
+      if (reply) {
+        handleQuickReply(focusedThread.id, reply.body);
+      }
+    },
+    [focusedThread, handleQuickReply],
+  );
+
+  const starMutation = useMutation(
+    trpc.email.threads.star.mutationOptions({
+      onSettled: () => {
+        invalidateThreadList();
+      },
+    }),
+  );
 
   const handleKeyboardStar = useCallback(() => {
     if (focusedThread) {
-      createAction.mutate({
-        actionType: 'label',
-        payload: { labelIds: ['STARRED'] },
+      starMutation.mutate({
+        starred: !focusedThread.isStarred,
         threadId: focusedThread.id,
       });
     }
-  }, [focusedThread, createAction]);
+  }, [focusedThread, starMutation]);
 
   const handleKeyboardSelect = useCallback(() => {
     if (focusedThread) {
@@ -360,19 +351,44 @@ export function EmailList({ accountId }: EmailListProps) {
   }, [focusedThread, toggleSelect]);
 
   const handleUndo = useCallback(() => {
-    const lastAction = undoStack.at(-1);
-    if (!lastAction) return;
+    const now = Date.now();
+    // Only allow undo within 5s window
+    const validEntry = [...undoStack]
+      .reverse()
+      .find((entry) => now - entry.timestamp < 5000);
+    if (!validEntry) return;
 
-    // Remove from optimistically removed (restore to UI)
     setOptimisticallyRemovedIds((prev) => {
       const next = new Set(prev);
-      next.delete(lastAction.threadId);
+      next.delete(validEntry.threadId);
       return next;
     });
-    setUndoStack((prev) => prev.slice(0, -1));
-
-    // Note: In a real implementation, you'd also call an API to undo the action
+    setUndoStack((prev) => prev.filter((e) => e !== validEntry));
+    setUndoToast(null);
+    setProcessedCount((c) => Math.max(0, c - 1));
   }, [undoStack]);
+
+  // Prefetch next 3 threads' data on j/k movement
+  const prefetchNearbyThreads = useCallback(
+    (newIndex: number) => {
+      for (let i = 1; i <= 3; i++) {
+        const thread = filteredThreads[newIndex + i];
+        if (thread) {
+          queryClient.prefetchQuery(
+            trpc.email.threads.byId.queryOptions({ id: thread.id }),
+          );
+        }
+      }
+    },
+    [filteredThreads, queryClient, trpc],
+  );
+
+  // Clear undo timer on unmount
+  useEffect(() => {
+    return () => {
+      if (undoTimerRef.current) clearTimeout(undoTimerRef.current);
+    };
+  }, []);
 
   // Navigation keyboard shortcuts
   useKeyboardShortcuts(
@@ -381,14 +397,25 @@ export function EmailList({ accountId }: EmailListProps) {
       {
         category: 'navigation',
         description: 'Move down',
-        handler: () =>
-          setFocusedIndex((i) => Math.min(i + 1, filteredThreads.length - 1)),
+        handler: () => {
+          setFocusedIndex((i) => {
+            const next = Math.min(i + 1, filteredThreads.length - 1);
+            prefetchNearbyThreads(next);
+            return next;
+          });
+        },
         key: 'j',
       },
       {
         category: 'navigation',
         description: 'Move up',
-        handler: () => setFocusedIndex((i) => Math.max(i - 1, 0)),
+        handler: () => {
+          setFocusedIndex((i) => {
+            const next = Math.max(i - 1, 0);
+            prefetchNearbyThreads(next);
+            return next;
+          });
+        },
         key: 'k',
       },
       {
@@ -453,6 +480,30 @@ export function EmailList({ accountId }: EmailListProps) {
         description: 'Undo',
         handler: handleUndo,
         key: 'z',
+      },
+      {
+        category: 'actions',
+        description: 'Execute AI suggestion',
+        handler: handleExecuteAISuggestion,
+        key: 'Tab',
+      },
+      {
+        category: 'actions',
+        description: 'Quick reply #1',
+        handler: () => handleQuickReplyByIndex(0),
+        key: '1',
+      },
+      {
+        category: 'actions',
+        description: 'Quick reply #2',
+        handler: () => handleQuickReplyByIndex(1),
+        key: '2',
+      },
+      {
+        category: 'actions',
+        description: 'Quick reply #3',
+        handler: () => handleQuickReplyByIndex(2),
+        key: '3',
       },
 
       // Selection
@@ -590,16 +641,6 @@ export function EmailList({ accountId }: EmailListProps) {
           </div>
         </div>
 
-        {/* AI Triage Summary */}
-        {threads && threads.length > 0 && (
-          <AITriageSummary
-            className="mb-4"
-            isLoading={createAction.isPending}
-            onApproveCategory={handleApproveCategory}
-            threads={threads}
-          />
-        )}
-
         {/* Filter tabs */}
         <div className="flex items-center gap-2">
           <Button
@@ -673,6 +714,14 @@ export function EmailList({ accountId }: EmailListProps) {
         </div>
       )}
 
+      {/* Progress indicator */}
+      {filteredThreads.length > 0 && (
+        <div className="flex items-center justify-center gap-2 border-b border-border bg-muted/20 px-4 py-1.5 text-xs text-muted-foreground">
+          <span className="font-medium">{filteredThreads.length}</span>
+          <span>emails to go</span>
+        </div>
+      )}
+
       {/* Email list */}
       <div className="flex-1 overflow-auto">
         {filteredThreads.length === 0 ? (
@@ -713,10 +762,14 @@ export function EmailList({ accountId }: EmailListProps) {
                   <EmailRow
                     isFocused={index === focusedIndex}
                     isSelected={selectedIds.has(thread.id)}
+                    onAction={(action) => removeWithUndo(thread.id, action)}
                     onFocus={() => setFocusedIndex(index)}
                     onOpen={() => router.push(`/app/inbox/${thread.id}`)}
                     onQuickApprove={() => handleQuickApprove(thread.id)}
                     onQuickArchive={() => handleQuickArchive(thread.id)}
+                    onQuickReply={(body) =>
+                      handleQuickReply(thread.id, body)
+                    }
                     onSelect={() => toggleSelect(thread.id)}
                     thread={thread}
                   />
@@ -726,6 +779,19 @@ export function EmailList({ accountId }: EmailListProps) {
           </div>
         )}
       </div>
+
+      {/* Undo toast */}
+      {undoToast && (
+        <div className="fixed bottom-6 left-1/2 z-50 flex -translate-x-1/2 items-center gap-3 rounded-lg border border-border bg-background px-4 py-3 shadow-lg">
+          <Undo2 className="h-4 w-4 text-muted-foreground" />
+          <span className="text-sm">
+            {undoToast.action === 'quick_reply' ? 'Reply sent' : `Email ${undoToast.action}d`}
+          </span>
+          <Button onClick={handleUndo} size="sm" variant="outline">
+            Undo
+          </Button>
+        </div>
+      )}
 
       {/* Keyboard shortcuts dialog */}
       <KeyboardShortcutsDialog

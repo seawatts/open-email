@@ -10,15 +10,9 @@ interface ThreadDetailPageProps {
 async function ThreadDetailPrefetcher({ threadId }: { threadId: string }) {
   const queryClient = getQueryClient();
 
-  // Prefetch thread and highlights data in parallel using v11 pattern
-  await Promise.all([
-    queryClient.prefetchQuery(
-      trpc.email.threads.byId.queryOptions({ id: threadId }),
-    ),
-    queryClient.prefetchQuery(
-      trpc.email.highlights.byThread.queryOptions({ threadId }),
-    ),
-  ]);
+  await queryClient.prefetchQuery(
+    trpc.email.threads.byId.queryOptions({ id: threadId }),
+  );
 
   return (
     <HydrationBoundary>

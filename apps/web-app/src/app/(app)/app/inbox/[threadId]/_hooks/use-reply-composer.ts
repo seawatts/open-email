@@ -5,12 +5,16 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useCallback, useState } from 'react';
 
 interface UseReplyComposerProps {
+  accountId: string;
+  gmailThreadId: string;
   threadId: string;
   threadSubject: string;
   lastMessageFromEmail: string;
 }
 
 export function useReplyComposer({
+  accountId,
+  gmailThreadId,
   threadId,
   threadSubject,
   lastMessageFromEmail,
@@ -37,12 +41,13 @@ export function useReplyComposer({
     if (!editedBody) return;
 
     await sendReply.mutateAsync({
+      accountId,
       body: editedBody,
+      gmailThreadId,
       subject: `Re: ${threadSubject}`,
-      threadId,
       to: [lastMessageFromEmail],
     });
-  }, [editedBody, lastMessageFromEmail, sendReply, threadId, threadSubject]);
+  }, [accountId, editedBody, gmailThreadId, lastMessageFromEmail, sendReply, threadSubject]);
 
   const selectDraft = useCallback((draftId: string, body: string) => {
     setSelectedDraftId(draftId);

@@ -35,6 +35,7 @@ export const env = createEnv({
     POSTHOG_KEY: process.env.POSTHOG_KEY,
     STRIPE_SECRET_KEY: process.env.STRIPE_SECRET_KEY,
     STRIPE_WEBHOOK_SECRET: process.env.STRIPE_WEBHOOK_SECRET,
+    SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY,
   },
 
   server: {
@@ -46,6 +47,7 @@ export const env = createEnv({
     POSTHOG_KEY: z.string(),
     STRIPE_SECRET_KEY: z.string().optional(),
     STRIPE_WEBHOOK_SECRET: z.string().optional(),
+    SUPABASE_SERVICE_ROLE_KEY: z.string().optional(),
   },
 
   shared: {

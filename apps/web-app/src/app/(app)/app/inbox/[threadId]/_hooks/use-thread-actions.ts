@@ -1,7 +1,7 @@
 'use client';
 
 import { useTRPC } from '@seawatts/api/react';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
 import { useCallback, useState } from 'react';
 
@@ -17,70 +17,29 @@ export function useThreadActions({ threadId }: UseThreadActionsProps) {
   const [optimisticActionComplete, setOptimisticActionComplete] = useState<
     string | null
   >(null);
-  const [optimisticallyApprovedIds, setOptimisticallyApprovedIds] = useState<
-    Set<string>
-  >(new Set());
+  const [isCreatingAction, setIsCreatingAction] = useState(false);
 
-  const createAction = useMutation(
-    trpc.email.actions.create.mutationOptions({
-      onMutate: (variables) => {
-        if (
-          variables.actionType === 'archive' ||
-          variables.actionType === 'snooze'
-        ) {
-          setOptimisticActionComplete(variables.actionType);
-        }
-      },
-      onSettled: () => {
-        queryClient.invalidateQueries(
-          trpc.email.threads.byId.queryFilter({ id: threadId }),
-        );
-        queryClient.invalidateQueries(trpc.email.threads.list.queryFilter());
-      },
-    }),
-  );
-
-  const approveAction = useMutation(
-    trpc.email.actions.approve.mutationOptions({
-      onError: (_err, variables) => {
-        setOptimisticallyApprovedIds((prev) => {
-          const next = new Set(prev);
-          next.delete(variables.actionId);
-          return next;
-        });
-      },
-      onMutate: (variables) => {
-        setOptimisticallyApprovedIds((prev) =>
-          new Set(prev).add(variables.actionId),
-        );
-      },
-      onSettled: () => {
-        queryClient.invalidateQueries(
-          trpc.email.threads.byId.queryFilter({ id: threadId }),
-        );
-      },
-    }),
-  );
+  const invalidateThreadQueries = useCallback(() => {
+    queryClient.invalidateQueries(
+      trpc.email.threads.byId.queryFilter({ id: threadId }),
+    );
+    queryClient.invalidateQueries(trpc.email.threads.list.queryFilter());
+  }, [queryClient, trpc, threadId]);
 
   const handleAction = useCallback(
     (
       actionType: 'archive' | 'label' | 'snooze' | 'delete',
-      payload?: Record<string, unknown>,
+      _payload?: Record<string, unknown>,
     ) => {
-      createAction.mutate({
-        actionType,
-        payload,
-        threadId,
-      });
+      if (actionType === 'archive' || actionType === 'snooze') {
+        setOptimisticActionComplete(actionType);
+      }
+      setIsCreatingAction(true);
+      // TODO: Call Gmail action endpoints when available
+      invalidateThreadQueries();
+      setIsCreatingAction(false);
     },
-    [createAction, threadId],
-  );
-
-  const handleApproveAction = useCallback(
-    (actionId: string, approved: boolean) => {
-      approveAction.mutate({ actionId, approved });
-    },
-    [approveAction],
+    [invalidateThreadQueries],
   );
 
   const handleArchive = useCallback(() => {
@@ -123,9 +82,7 @@ export function useThreadActions({ threadId }: UseThreadActionsProps) {
   );
 
   return {
-    // Actions
     handleAction,
-    handleApproveAction,
     handleArchive,
     handleArchiveAndNavigate,
     handleDelete,
@@ -133,10 +90,7 @@ export function useThreadActions({ threadId }: UseThreadActionsProps) {
     handleSnooze,
     handleSnoozeAndNavigate,
     handleStar,
-    isApprovingAction: approveAction.isPending,
-    isCreatingAction: createAction.isPending,
-    // State
+    isCreatingAction,
     optimisticActionComplete,
-    optimisticallyApprovedIds,
   };
 }

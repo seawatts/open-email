@@ -5,7 +5,7 @@ import { Button } from '@seawatts/ui/button';
 import { Skeleton } from '@seawatts/ui/skeleton';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { RefreshCw } from 'lucide-react';
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 
 import { EmailList } from './_components/email-list';
 import { GmailSetup } from './_components/gmail-setup';
@@ -32,12 +32,15 @@ export default function InboxPage() {
     trpc.email.gmail.setupWatch.mutationOptions(),
   );
 
+  const hasAttemptedWatch = useRef(false);
+
   useEffect(() => {
     // Auto-setup Gmail watch if account exists but watch isn't active
-    if (account && !account.watchExpiration) {
+    if (account && !account.watchExpiration && !hasAttemptedWatch.current) {
+      hasAttemptedWatch.current = true;
       setupWatchMutation.mutate();
     }
-  }, [account, setupWatchMutation]);
+  }, [account]);
 
   if (accountLoading) {
     return (
