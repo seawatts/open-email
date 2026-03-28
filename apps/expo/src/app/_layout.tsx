@@ -1,34 +1,27 @@
-import '@bacons/text-decoder/install';
-
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { useColorScheme } from 'nativewind';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 import { TRPCProvider } from '~/utils/api';
 
-import '../styles.css';
-
-// This is the main layout of the app
-// It wraps your pages with the providers they need
 export default function RootLayout() {
-  const { colorScheme } = useColorScheme();
   return (
-    <TRPCProvider>
-      {/*
-          The Stack component displays the current page.
-          It also allows you to configure your screens
-        */}
-      <Stack
-        screenOptions={{
-          contentStyle: {
-            backgroundColor: colorScheme === 'dark' ? '#09090B' : '#FFFFFF',
-          },
-          headerStyle: {
-            backgroundColor: '#f472b6',
-          },
-        }}
-      />
-      <StatusBar />
-    </TRPCProvider>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <TRPCProvider>
+        <Stack>
+          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+          <Stack.Screen
+            name="thread/[id]"
+            options={{
+              headerBackTitle: 'Inbox',
+              headerStyle: { backgroundColor: 'hsl(0, 0%, 100%)' },
+              headerTitle: '',
+              presentation: 'card',
+            }}
+          />
+        </Stack>
+        <StatusBar />
+      </TRPCProvider>
+    </GestureHandlerRootView>
   );
 }

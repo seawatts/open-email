@@ -1,15 +1,13 @@
 {
   "compilerOptions": {
-    "baseUrl": ".",
     "checkJs": false,
     "jsx": "react-native",
+    "moduleSuffixes": [".ios", ".android", ".native", ""],
     "paths": {
       "~/*": ["./src/*"]
-    },
-    "tsBuildInfoFile": "node_modules/.cache/tsbuildinfo.json",
-    "types": ["nativewind/types"]
+    }
   },
   "exclude": ["node_modules"],
   "extends": ["@seawatts/tsconfig/base.json"],
-  "include": ["src", "*.ts", "*.js", ".expo/types/**/*.ts", "expo-env.d.ts"]
+  "include": ["src", "*.ts", "*.js", ".expo/types/**/*.ts", "expo-env.d.ts", "global.d.ts"]
 }

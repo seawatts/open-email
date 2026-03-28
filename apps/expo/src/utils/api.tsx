@@ -1,75 +1,50 @@
-import type { AppRouter } from '@seawatts/api';
+import { createNativeClient, type NativeApiClient } from '@seawatts/api/native';
+import type { AppRouter } from '@seawatts/api/types';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { httpBatchLink, loggerLink } from '@trpc/client';
-import { createTRPCReact } from '@trpc/react-query';
-import Constants from 'expo-constants';
+import {
+  createTRPCContext,
+  createTRPCOptionsProxy,
+} from '@trpc/tanstack-react-query';
 import { useState } from 'react';
-import superjson from 'superjson';
 
-/**
- * A set of typesafe hooks for consuming your API.
- */
-export const api = createTRPCReact<AppRouter>();
-export type { RouterInputs, RouterOutputs } from '@seawatts/api';
+import { authClient } from './auth';
+import { getApiBaseUrl } from './base-url';
 
-/**
- * Extend this function when going to production by
- * setting the baseUrl to your production API URL.
- */
-const getBaseUrl = () => {
-  /**
-   * Gets the IP address of your host-machine. If it cannot automatically find it,
-   * you'll have to manually set it. NOTE: Port 3000 should work for most but confirm
-   * you don't have anything else running on it, or you'd have to change it.
-   *
-   * **NOTE**: This is only for development. In production, you'll want to set the
-   * baseUrl to your production API URL.
-   */
-  const debuggerHost = Constants.expoConfig?.hostUri;
-  const localhost = debuggerHost?.split(':')[0];
+const {
+  TRPCProvider: TRPCProviderContext,
+  useTRPC,
+  useTRPCClient,
+} = createTRPCContext<AppRouter>();
 
-  if (!localhost) {
-    // return "https://turbo.t3.gg";
-    throw new Error(
-      'Failed to get localhost. Please point to your production server.',
-    );
-  }
-  return `http://${localhost}:3000`;
-};
+export const queryClient = new QueryClient();
 
-/**
- * A wrapper for your app that provides the TRPC context.
- * Use only in _app.tsx
- */
+export const api: NativeApiClient<AppRouter> = createNativeClient<AppRouter>({
+  baseUrl: getApiBaseUrl(),
+  cookieGetter: () => authClient.getCookie() ?? undefined,
+  sourceHeader: 'expo',
+});
+
+export const trpc = createTRPCOptionsProxy<AppRouter>({
+  client: api,
+  queryClient,
+});
+
 export function TRPCProvider(props: { children: React.ReactNode }) {
-  const [queryClient] = useState(() => new QueryClient());
   const [trpcClient] = useState(() =>
-    api.createClient({
-      links: [
-        loggerLink({
-          colorMode: 'ansi',
-          enabled: (options) =>
-            process.env.NODE_ENV === 'development' ||
-            (options.direction === 'down' && options.result instanceof Error),
-        }),
-        httpBatchLink({
-          headers() {
-            const headers = new Map<string, string>();
-            headers.set('x-trpc-source', 'expo-react');
-            return Object.fromEntries(headers);
-          },
-          transformer: superjson,
-          url: `${getBaseUrl()}/api/trpc`,
-        }),
-      ],
+    createNativeClient<AppRouter>({
+      baseUrl: getApiBaseUrl(),
+      cookieGetter: () => authClient.getCookie() ?? undefined,
+      sourceHeader: 'expo',
     }),
   );
 
   return (
-    <api.Provider client={trpcClient} queryClient={queryClient}>
-      <QueryClientProvider client={queryClient}>
+    <QueryClientProvider client={queryClient}>
+      <TRPCProviderContext queryClient={queryClient} trpcClient={trpcClient}>
         {props.children}
-      </QueryClientProvider>
-    </api.Provider>
+      </TRPCProviderContext>
+    </QueryClientProvider>
   );
 }
+
+export { useTRPC, useTRPCClient };

@@ -1,21 +1,24 @@
 import { expoClient } from '@better-auth/expo/client';
-import { lastLoginMethodClient } from '@better-auth/expo/plugins';
 import { createAuthClient } from 'better-auth/react';
+import Constants from 'expo-constants';
 import * as SecureStore from 'expo-secure-store';
 
-import { getBaseUrl } from './base-url';
+import { getAuthBaseUrl } from './base-url';
+
+const configScheme = Constants.expoConfig?.scheme;
+const scheme = Array.isArray(configScheme)
+  ? configScheme[0]
+  : (configScheme ?? 'openemail');
 
 export const authClient = createAuthClient({
-  baseURL: getBaseUrl(),
+  baseURL: getAuthBaseUrl(),
   plugins: [
     expoClient({
-      scheme: 'expo',
+      scheme,
       storage: SecureStore,
-      storagePrefix: 'expo',
-    }),
-    lastLoginMethodClient({
-      storage: SecureStore,
-      storagePrefix: 'expo',
+      storagePrefix: 'openemail',
     }),
   ],
 });
+
+export const { useSession, signIn, signOut } = authClient;
