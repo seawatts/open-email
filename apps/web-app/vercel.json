@@ -10,10 +10,11 @@
       "schedule": "0 * * * *"
     }
   ],
-  "experimentalTriggers": [
-    {
-      "topic": "thread-triage",
-      "type": "queue/v2beta"
+  "functions": {
+    "app/api/queues/thread-triage/route.ts": {
+      "experimentalTriggers": [
+        { "type": "queue/v2beta", "topic": "thread-triage" }
+      ]
     }
-  ]
+  }
 }
