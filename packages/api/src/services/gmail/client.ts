@@ -6,6 +6,8 @@ import type { OAuth2Client } from 'google-auth-library';
 import type { gmail_v1 } from 'googleapis';
 import { google } from 'googleapis';
 
+import { env } from '../../env';
+
 const log = debug('seawatts:gmail');
 
 // Get environment variables
@@ -83,7 +85,9 @@ export async function getAuthenticatedClient(account: {
  * Get Gmail client for an account ID
  * Looks up the account in the better-auth Accounts table
  */
-export async function getGmailClient(accountId: string): Promise<gmail_v1.Gmail> {
+export async function getGmailClient(
+  accountId: string,
+): Promise<gmail_v1.Gmail> {
   const account = await db.query.Accounts.findFirst({
     where: eq(Accounts.id, accountId),
   });
@@ -123,7 +127,7 @@ export async function getGmailClientForUser(
  * Get Google Pub/Sub topic for Gmail notifications
  */
 function getGmailPubSubTopic(): string {
-  const topic = process.env.GOOGLE_PUBSUB_TOPIC;
+  const topic = env.GOOGLE_PUBSUB_TOPIC;
   if (!topic) {
     throw new Error('Missing GOOGLE_PUBSUB_TOPIC environment variable');
   }

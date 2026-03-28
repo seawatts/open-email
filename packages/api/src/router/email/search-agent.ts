@@ -14,13 +14,9 @@ import { searchAgent } from '@seawatts/ai/tanstack-ai';
 import { observable } from '@trpc/server/observable';
 import { z } from 'zod';
 
-import {
-  listEmailsByCategory,
-  searchEmails,
-} from '../../services/email-search';
+import { searchEmails } from '../../services/email-search';
 import { getThreadWithMessages } from '../../services/email-thread';
 import { createTRPCRouter, protectedProcedure } from '../../trpc';
-import type { BundleType } from '../../utils';
 import { parseDateRange } from '../../utils';
 
 /**
@@ -31,7 +27,6 @@ function createSearchExecutor(accountId: string): SearchToolExecutor {
   return {
     async getEmailThread(params) {
       const result = await getThreadWithMessages(params.threadId, {
-        includeKeywords: true,
         includeMessages: true,
       });
 
@@ -40,16 +35,11 @@ function createSearchExecutor(accountId: string): SearchToolExecutor {
       }
 
       return {
-        keywords: result.keywords.map((k) => ({
-          keyword: k.keyword,
-          keywordType: k.keywordType,
-        })),
         messages: result.messages.map((m) => ({
           body: m.bodyPreview || '',
           date: m.internalDate,
           from: m.fromEmail,
           id: m.id,
-          snippet: m.snippet || '',
           to: m.toEmails,
         })),
         subject: result.thread.subject,
@@ -57,25 +47,10 @@ function createSearchExecutor(accountId: string): SearchToolExecutor {
       };
     },
 
-    async listEmailsByCategory(params) {
-      const result = await listEmailsByCategory({
-        accountId,
-        category: params.category,
-        dateRange: parseDateRange(params.dateRange),
-        limit: params.limit,
-      });
-
-      // Results already in correct format from service
-      return {
-        results: result.results,
-        totalCount: result.totalCount,
-      };
-    },
     async searchEmails(params) {
       const result = await searchEmails({
         filters: {
           accountId,
-          bundleTypes: params.filters?.bundleTypes as BundleType[] | undefined,
           dateRange: parseDateRange(params.filters?.dateRange),
           hasAttachments: params.filters?.hasAttachments,
           senders: params.filters?.senders,
@@ -85,7 +60,6 @@ function createSearchExecutor(accountId: string): SearchToolExecutor {
         query: params.query,
       });
 
-      // Results already in correct format from service
       return {
         results: result.results,
         totalCount: result.totalCount,
@@ -111,7 +85,6 @@ export const searchAgentRouter = createTRPCRouter({
       }),
     )
     .mutation(async ({ input }) => {
-      // Create executor with accountId baked in
       const executor = createSearchExecutor(input.accountId);
 
       let finalAnswer = '';
@@ -168,7 +141,6 @@ export const searchAgentRouter = createTRPCRouter({
     )
     .subscription(({ input }) => {
       return observable<SearchAgentEvent>((emit) => {
-        // Create executor with accountId baked in
         const executor = createSearchExecutor(input.accountId);
 
         const runAgent = async () => {

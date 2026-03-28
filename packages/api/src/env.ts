@@ -11,6 +11,7 @@ export const env = createEnv({
   runtimeEnv: {
     EMAIL_FROM: process.env.EMAIL_FROM,
     EMAIL_REPLY_TO: process.env.EMAIL_REPLY_TO,
+    GOOGLE_PUBSUB_TOPIC: process.env.GOOGLE_PUBSUB_TOPIC,
     NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL,
     NODE_ENV: process.env.NODE_ENV,
     RESEND_API_KEY: process.env.RESEND_API_KEY,
@@ -19,6 +20,7 @@ export const env = createEnv({
   server: {
     EMAIL_FROM: z.string().default('noreply@seawatts.sh'),
     EMAIL_REPLY_TO: z.string().default('noreply@seawatts.sh'),
+    GOOGLE_PUBSUB_TOPIC: z.string().optional(),
     RESEND_API_KEY: z.string(),
   },
 

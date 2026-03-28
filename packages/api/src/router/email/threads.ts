@@ -1,80 +1,78 @@
-/**
- * Email Threads Router
- * Handles email thread management
- */
-
-import {
-  Accounts,
-  AgentDecisions,
-  EmailActions,
-  EmailMessages,
-  EmailThreads,
-} from '@seawatts/db/schema';
-import { and, desc, eq } from 'drizzle-orm';
+import { Accounts, EmailMessages, EmailThreads } from '@seawatts/db/schema';
+import { db as dbClient } from '@seawatts/db/client';
+import { debug } from '@seawatts/logger';
+import { and, desc, eq, gte } from 'drizzle-orm';
 import { z } from 'zod';
 
-import { bundleTypeSchema } from '../../email/types';
+import { archiveThread, sendReply } from '../../services/gmail/actions';
+import {
+  updateUserMemory,
+  type ActionLogEntry,
+} from '../../services/memory/update-memory';
+import { checkForRuleSuggestion } from '../../services/rules/suggest-rules';
 import { createTRPCRouter, protectedProcedure } from '../../trpc';
 
+const log = debug('seawatts:router:threads');
+
+/**
+ * Build recent action entries from recently acted threads for pattern detection.
+ */
+async function getRecentActionEntries(
+  accountId: string,
+): Promise<ActionLogEntry[]> {
+  const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+
+  const recentThreads = await dbClient.query.EmailThreads.findMany({
+    limit: 50,
+    where: and(
+      eq(EmailThreads.accountId, accountId),
+      eq(EmailThreads.status, 'acted'),
+      gte(EmailThreads.lastMessageAt, oneDayAgo),
+    ),
+    orderBy: [desc(EmailThreads.lastMessageAt)],
+  });
+
+  return recentThreads
+    .filter((t): t is typeof t & { aiAction: string } => t.aiAction !== null)
+    .map((t) => ({
+      aiSuggested: t.aiAction,
+      sender: t.participantEmails[0] ?? 'unknown',
+      subject: t.subject,
+      userDid: 'archive',
+    }));
+}
+
+/**
+ * Fire a memory update when the user's action disagrees with the AI suggestion.
+ * Never awaited — runs in the background.
+ */
+function maybeUpdateMemory(
+  userId: string,
+  thread: { aiAction: string | null; subject: string; participantEmails: string[] },
+  userAction: string,
+  replyText?: string,
+): void {
+  if (!thread.aiAction) return;
+  if (thread.aiAction === userAction) return;
+
+  const entry: ActionLogEntry = {
+    aiSuggested: thread.aiAction,
+    replyText,
+    sender: thread.participantEmails[0] ?? 'unknown',
+    subject: thread.subject,
+    userDid: userAction,
+  };
+
+  void updateUserMemory(userId, [entry]).catch((error: unknown) => {
+    log(
+      'Background memory update failed for user %s: %s',
+      userId,
+      error instanceof Error ? error.message : String(error),
+    );
+  });
+}
+
 export const threadsRouter = createTRPCRouter({
-  /**
-   * Get bundle counts for an account
-   */
-  bundleCounts: protectedProcedure
-    .input(z.object({ accountId: z.string() }))
-    .query(async ({ ctx, input }) => {
-      // Get all threads for the account
-      const threads = await ctx.db.query.EmailThreads.findMany({
-        columns: { bundleType: true, isRead: true },
-        where: eq(EmailThreads.accountId, input.accountId),
-      });
-
-      // Count by bundle type
-      const counts: Record<string, { total: number; unread: number }> = {};
-
-      for (const thread of threads) {
-        const bundle = thread.bundleType ?? 'personal';
-        if (!counts[bundle]) {
-          counts[bundle] = { total: 0, unread: 0 };
-        }
-        counts[bundle].total++;
-        if (!thread.isRead) {
-          counts[bundle].unread++;
-        }
-      }
-
-      return counts;
-    }),
-
-  /**
-   * Get threads grouped by bundle type
-   */
-  byBundle: protectedProcedure
-    .input(
-      z.object({
-        accountId: z.string(),
-        bundleType: bundleTypeSchema,
-        limit: z.number().default(50),
-        offset: z.number().default(0),
-      }),
-    )
-    .query(async ({ ctx, input }) => {
-      const threads = await ctx.db.query.EmailThreads.findMany({
-        limit: input.limit,
-        offset: input.offset,
-        orderBy: [desc(EmailThreads.lastMessageAt)],
-        where: and(
-          eq(EmailThreads.accountId, input.accountId),
-          eq(EmailThreads.bundleType, input.bundleType),
-        ),
-        with: {
-          emailHighlights: true,
-        },
-      });
-
-      return threads;
-    }),
-
   byId: protectedProcedure
     .input(z.object({ id: z.string() }))
     .query(async ({ ctx, input }) => {
@@ -84,34 +82,18 @@ export const threadsRouter = createTRPCRouter({
 
       if (!thread) return null;
 
-      // Get messages
       const messages = await ctx.db.query.EmailMessages.findMany({
         orderBy: [EmailMessages.internalDate],
         where: eq(EmailMessages.threadId, thread.id),
       });
 
-      // Get decisions
-      const decisions = await ctx.db.query.AgentDecisions.findMany({
-        orderBy: [desc(AgentDecisions.createdAt)],
-        where: eq(AgentDecisions.threadId, thread.id),
-      });
-
-      // Get actions
-      const actions = await ctx.db.query.EmailActions.findMany({
-        orderBy: [desc(EmailActions.createdAt)],
-        where: eq(EmailActions.threadId, thread.id),
-      });
-
-      // Get account email (accountId is the email for Google OAuth)
       const account = await ctx.db.query.Accounts.findFirst({
         where: eq(Accounts.id, thread.accountId),
       });
 
       return {
         ...thread,
-        accountEmail: account?.accountId ?? '', // accountId is the email for Google
-        actions,
-        decisions,
+        accountEmail: account?.accountId ?? '',
         messages,
       };
     }),
@@ -120,53 +102,28 @@ export const threadsRouter = createTRPCRouter({
     .input(
       z.object({
         accountId: z.string(),
-        category: z
-          .enum(['urgent', 'needs_reply', 'awaiting_other', 'fyi', 'spam_like'])
-          .optional(),
         limit: z.number().min(1).max(100).default(50),
         offset: z.number().min(0).default(0),
+        status: z.string().optional(),
       }),
     )
     .query(async ({ ctx, input }) => {
-      // Get threads
       const threads = await ctx.db.query.EmailThreads.findMany({
         limit: input.limit,
         offset: input.offset,
         orderBy: [desc(EmailThreads.lastMessageAt)],
-        where: eq(EmailThreads.accountId, input.accountId),
+        where: and(
+          eq(EmailThreads.accountId, input.accountId),
+          eq(EmailThreads.isSpam, false),
+          eq(EmailThreads.isTrash, false),
+        ),
       });
 
-      // For each thread, get the latest decision and pending actions
-      const threadsWithDecisions = await Promise.all(
-        threads.map(async (thread) => {
-          const latestDecision = await ctx.db.query.AgentDecisions.findFirst({
-            orderBy: [desc(AgentDecisions.createdAt)],
-            where: eq(AgentDecisions.threadId, thread.id),
-          });
-
-          const pendingActions = await ctx.db.query.EmailActions.findMany({
-            where: and(
-              eq(EmailActions.threadId, thread.id),
-              eq(EmailActions.status, 'pending'),
-            ),
-          });
-
-          return {
-            ...thread,
-            latestDecision: latestDecision ?? null,
-            pendingActions,
-          };
-        }),
-      );
-
-      // Filter by category if specified
-      if (input.category) {
-        return threadsWithDecisions.filter(
-          (t) => t.latestDecision?.category === input.category,
-        );
+      if (input.status) {
+        return threads.filter((t) => t.status === input.status);
       }
 
-      return threadsWithDecisions;
+      return threads;
     }),
 
   needingTriage: protectedProcedure
@@ -177,84 +134,141 @@ export const threadsRouter = createTRPCRouter({
       }),
     )
     .query(async ({ ctx, input }) => {
-      // Get threads that don't have any decisions yet
       const threads = await ctx.db.query.EmailThreads.findMany({
         limit: input.limit,
         orderBy: [desc(EmailThreads.lastMessageAt)],
-        where: eq(EmailThreads.accountId, input.accountId),
+        where: and(
+          eq(EmailThreads.accountId, input.accountId),
+          eq(EmailThreads.status, 'untriaged'),
+          eq(EmailThreads.isSpam, false),
+          eq(EmailThreads.isTrash, false),
+        ),
       });
 
-      // Filter to only those without decisions
-      const threadsNeedingTriage = [];
-      for (const thread of threads) {
-        const decision = await ctx.db.query.AgentDecisions.findFirst({
-          where: eq(AgentDecisions.threadId, thread.id),
-        });
-        if (!decision) {
-          threadsNeedingTriage.push(thread);
-        }
-      }
-
-      return threadsNeedingTriage;
+      return threads;
     }),
 
-  /**
-   * Pin or unpin a thread
-   */
-  pin: protectedProcedure
+  quickReply: protectedProcedure
     .input(
       z.object({
-        pinned: z.boolean(),
+        accountId: z.string(),
+        gmailThreadId: z.string(),
+        replyText: z.string(),
+        subject: z.string(),
+        threadId: z.string(),
+        to: z.array(z.string()),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const thread = await ctx.db.query.EmailThreads.findFirst({
+        where: eq(EmailThreads.id, input.threadId),
+      });
+
+      await sendReply(input.accountId, input.gmailThreadId, {
+        body: input.replyText,
+        subject: input.subject,
+        to: input.to,
+      });
+
+      await archiveThread(input.accountId, input.gmailThreadId);
+
+      await ctx.db
+        .update(EmailThreads)
+        .set({ status: 'acted' })
+        .where(eq(EmailThreads.id, input.threadId));
+
+      if (thread && ctx.auth.userId) {
+        maybeUpdateMemory(ctx.auth.userId, thread, 'reply', input.replyText);
+      }
+
+      let ruleSuggestion: string | null = null;
+      try {
+        const recentActions = await getRecentActionEntries(input.accountId);
+        ruleSuggestion = checkForRuleSuggestion(recentActions);
+      } catch {
+        log('Rule suggestion check failed for quickReply on thread %s', input.threadId);
+      }
+
+      return { ruleSuggestion, success: true } as const;
+    }),
+
+  star: protectedProcedure
+    .input(
+      z.object({
+        starred: z.boolean(),
         threadId: z.string(),
       }),
     )
     .mutation(async ({ ctx, input }) => {
+      const thread = await ctx.db.query.EmailThreads.findFirst({
+        where: eq(EmailThreads.id, input.threadId),
+      });
+
       const [updated] = await ctx.db
         .update(EmailThreads)
-        .set({ isPinned: input.pinned })
+        .set({ isStarred: input.starred })
         .where(eq(EmailThreads.id, input.threadId))
         .returning();
+
+      if (thread && ctx.auth.userId) {
+        maybeUpdateMemory(
+          ctx.auth.userId,
+          thread,
+          input.starred ? 'star' : 'unstar',
+        );
+      }
 
       return updated;
     }),
 
-  /**
-   * Get pinned threads
-   */
-  pinned: protectedProcedure
+  starred: protectedProcedure
     .input(z.object({ accountId: z.string() }))
     .query(async ({ ctx, input }) => {
       const threads = await ctx.db.query.EmailThreads.findMany({
         orderBy: [desc(EmailThreads.lastMessageAt)],
         where: and(
           eq(EmailThreads.accountId, input.accountId),
-          eq(EmailThreads.isPinned, true),
+          eq(EmailThreads.isStarred, true),
+          eq(EmailThreads.isSpam, false),
+          eq(EmailThreads.isTrash, false),
         ),
-        with: {
-          emailHighlights: true,
-        },
       });
 
       return threads;
     }),
 
-  /**
-   * Update bundle type for a thread
-   */
-  updateBundle: protectedProcedure
+  updateStatus: protectedProcedure
     .input(
       z.object({
-        bundleType: bundleTypeSchema,
+        status: z.string(),
         threadId: z.string(),
       }),
     )
     .mutation(async ({ ctx, input }) => {
+      const thread = await ctx.db.query.EmailThreads.findFirst({
+        where: eq(EmailThreads.id, input.threadId),
+      });
+
       const [updated] = await ctx.db
         .update(EmailThreads)
-        .set({ bundleType: input.bundleType })
+        .set({ status: input.status })
         .where(eq(EmailThreads.id, input.threadId))
         .returning();
 
-      return updated;
+      if (thread && ctx.auth.userId) {
+        maybeUpdateMemory(ctx.auth.userId, thread, input.status);
+      }
+
+      let ruleSuggestion: string | null = null;
+      if (thread) {
+        try {
+          const recentActions = await getRecentActionEntries(thread.accountId);
+          ruleSuggestion = checkForRuleSuggestion(recentActions);
+        } catch {
+          log('Rule suggestion check failed for thread %s', input.threadId);
+        }
+      }
+
+      return { ...updated, ruleSuggestion };
     }),
 });

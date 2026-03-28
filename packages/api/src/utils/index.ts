@@ -8,7 +8,6 @@ export { parseDateRange, parseGmailDate } from './date-utils';
 export { getErrorMessage } from './error-utils';
 export {
   type AttachmentMeta,
-  type BundleType,
   type NormalizedMessage,
   type NormalizedThread,
   normalizeMessage,

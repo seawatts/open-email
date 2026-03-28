@@ -1,17 +1,13 @@
 /**
  * Thread Service
  *
- * Centralized thread fetching with messages, keywords, and highlights.
+ * Centralized thread fetching with messages.
  * Used by extraction services, routers, and agents.
  */
 
 import { eq } from '@seawatts/db';
 import { db } from '@seawatts/db/client';
 import {
-  EmailHighlights,
-  type EmailHighlightType,
-  EmailKeywords,
-  type EmailKeywordType,
   EmailMessages,
   type EmailMessageType,
   EmailThreads,
@@ -23,8 +19,6 @@ import {
  */
 export interface GetThreadOptions {
   includeMessages?: boolean;
-  includeKeywords?: boolean;
-  includeHighlights?: boolean;
 }
 
 /**
@@ -33,8 +27,6 @@ export interface GetThreadOptions {
 export interface ThreadWithRelations {
   thread: EmailThreadType;
   messages: EmailMessageType[];
-  keywords: EmailKeywordType[];
-  highlights: EmailHighlightType[];
 }
 
 /**
@@ -48,13 +40,8 @@ export async function getThreadWithMessages(
   threadId: string,
   options: GetThreadOptions = {},
 ): Promise<ThreadWithRelations | null> {
-  const {
-    includeMessages = true,
-    includeKeywords = false,
-    includeHighlights = false,
-  } = options;
+  const { includeMessages = true } = options;
 
-  // Get thread
   const thread = await db.query.EmailThreads.findFirst({
     where: eq(EmailThreads.id, threadId),
   });
@@ -63,7 +50,6 @@ export async function getThreadWithMessages(
     return null;
   }
 
-  // Get messages if requested
   const messages = includeMessages
     ? await db.query.EmailMessages.findMany({
         orderBy: [EmailMessages.internalDate],
@@ -71,24 +57,7 @@ export async function getThreadWithMessages(
       })
     : [];
 
-  // Get keywords if requested
-  const keywords = includeKeywords
-    ? await db
-        .select()
-        .from(EmailKeywords)
-        .where(eq(EmailKeywords.threadId, threadId))
-    : [];
-
-  // Get highlights if requested
-  const highlights = includeHighlights
-    ? await db.query.EmailHighlights.findMany({
-        where: eq(EmailHighlights.threadId, threadId),
-      })
-    : [];
-
   return {
-    highlights,
-    keywords,
     messages,
     thread,
   };
@@ -113,7 +82,6 @@ export async function getThreadSenders(
     { fromEmail: string; fromName: string | null }
   >();
 
-  // Optimization: for single thread, use direct query
   const singleThreadId = threadIds[0];
   if (threadIds.length === 1 && singleThreadId) {
     const messages = await db
@@ -136,7 +104,6 @@ export async function getThreadSenders(
     return senderMap;
   }
 
-  // For multiple threads, batch query all messages
   // TODO: Use inArray for better performance in production
   const allMessages = await db
     .select({
@@ -148,7 +115,6 @@ export async function getThreadSenders(
     .from(EmailMessages)
     .orderBy(EmailMessages.internalDate);
 
-  // Filter to only requested threads and pick first message per thread
   const threadIdSet = new Set(threadIds);
   for (const msg of allMessages) {
     if (threadIdSet.has(msg.threadId) && !senderMap.has(msg.threadId)) {

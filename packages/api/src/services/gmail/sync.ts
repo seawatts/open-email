@@ -1,19 +1,18 @@
 import { eq } from '@seawatts/db';
 import { db } from '@seawatts/db/client';
+import type { EmailAttachmentMeta } from '@seawatts/db/schema';
 import { Accounts, EmailMessages, EmailThreads } from '@seawatts/db/schema';
 import { debug } from '@seawatts/logger';
 import type { gmail_v1 } from 'googleapis';
 
 import type { SyncResult } from '../../email/types';
 import { getErrorMessage, parseGmailDate } from '../../utils';
+import { uploadAttachment } from '../storage/email-storage';
 import { getGmailClient } from './client';
 import {
-  extractAllForThread,
-  extractAndStoreKeywords,
-} from './extract-on-sync';
-import {
+  createBodyPreview,
   extractAttachmentMeta,
-  extractPlainText,
+  extractEmailBodies,
   getHeader,
   parseEmailAddress,
   redactPII,
@@ -21,39 +20,47 @@ import {
 
 const log = debug('seawatts:gmail:sync');
 
-// Extended sync result with extraction info
-export interface SyncResultWithExtraction extends SyncResult {
-  threadsExtracted?: number;
-  summariesGenerated?: number;
-  userProfileUpdates?: number;
+// Gmail category type matching the database enum
+type GmailCategory = 'primary' | 'social' | 'promotions' | 'updates' | 'forums';
+
+/**
+ * Extract Gmail category from label IDs
+ * Maps Gmail's CATEGORY_* labels to our simplified category enum
+ */
+function extractGmailCategory(labels: string[]): GmailCategory {
+  if (labels.includes('CATEGORY_SOCIAL')) return 'social';
+  if (labels.includes('CATEGORY_PROMOTIONS')) return 'promotions';
+  if (labels.includes('CATEGORY_UPDATES')) return 'updates';
+  if (labels.includes('CATEGORY_FORUMS')) return 'forums';
+  // CATEGORY_PERSONAL or no category = primary
+  return 'primary';
 }
 
-// Options for sync operation
+/**
+ * Check if a thread should be skipped (spam or trash)
+ */
+function isSpamOrTrash(labels: string[]): {
+  isSpam: boolean;
+  isTrash: boolean;
+} {
+  return {
+    isSpam: labels.includes('SPAM'),
+    isTrash: labels.includes('TRASH'),
+  };
+}
+
 export interface SyncOptions {
   fullSync?: boolean;
-  extractKeywords?: boolean;
-  extractSummaries?: boolean;
-  extractUserProfile?: boolean;
-  userId?: string; // Required for user profile extraction
 }
 
 /**
  * Sync a Gmail account - performs full or incremental sync
- *
- * @param accountId Gmail account ID
- * @param options Sync options (fullSync, extractKeywords)
  */
 export async function syncGmailAccount(
   accountId: string,
   options: SyncOptions = {},
-): Promise<SyncResultWithExtraction> {
-  const {
-    fullSync = false,
-    extractKeywords = false,
-    extractSummaries = false,
-    extractUserProfile = false,
-    userId,
-  } = options;
+): Promise<SyncResult> {
+  const { fullSync = false } = options;
 
   const account = await db.query.Accounts.findFirst({
     where: eq(Accounts.id, accountId),
@@ -65,25 +72,19 @@ export async function syncGmailAccount(
 
   const gmail = await getGmailClient(accountId);
 
-  const result: SyncResultWithExtraction = {
+  const result: SyncResult = {
     errors: [],
     messagesProcessed: 0,
     newHistoryId: null,
-    summariesGenerated: 0,
-    threadsExtracted: 0,
     threadsProcessed: 0,
-    userProfileUpdates: 0,
   };
 
-  // Track synced thread IDs for extraction
   const syncedThreadIds: string[] = [];
 
   try {
     if (fullSync || !account.lastHistoryId) {
-      // Full sync - fetch recent threads
       await performFullSync(gmail, accountId, result, syncedThreadIds, account);
     } else {
-      // Incremental sync using history API
       await performIncrementalSync(
         gmail,
         accountId,
@@ -94,7 +95,6 @@ export async function syncGmailAccount(
       );
     }
 
-    // Update last history ID
     if (result.newHistoryId) {
       await db
         .update(Accounts)
@@ -105,60 +105,11 @@ export async function syncGmailAccount(
         .where(eq(Accounts.id, accountId));
     }
 
-    // Run extraction for synced threads
-    const shouldExtract =
-      extractKeywords || extractSummaries || extractUserProfile;
-
-    if (shouldExtract && syncedThreadIds.length > 0) {
-      log('Running extraction for %d synced threads', syncedThreadIds.length);
-
-      for (const threadId of syncedThreadIds) {
-        try {
-          // If all extraction types are enabled and we have userId, use comprehensive extraction
-          if (
-            (extractKeywords || extractSummaries || extractUserProfile) &&
-            userId
-          ) {
-            const extractResult = await extractAllForThread(threadId, userId, {
-              extractKeywords,
-              extractSummary: extractSummaries,
-              extractUserProfile,
-            });
-
-            if (extractResult.keywords) {
-              result.threadsExtracted = (result.threadsExtracted ?? 0) + 1;
-            }
-            if (extractResult.summary) {
-              result.summariesGenerated = (result.summariesGenerated ?? 0) + 1;
-            }
-            if (extractResult.userProfileUpdated) {
-              result.userProfileUpdates = (result.userProfileUpdates ?? 0) + 1;
-            }
-          } else if (extractKeywords) {
-            // Just extract keywords
-            const extractResult = await extractAndStoreKeywords(threadId);
-            if (extractResult) {
-              result.threadsExtracted = (result.threadsExtracted ?? 0) + 1;
-            }
-          }
-        } catch (error) {
-          log(
-            'Failed to extract for thread %s: %s',
-            threadId,
-            getErrorMessage(error),
-          );
-        }
-      }
-    }
-
     log(
-      'Gmail sync completed for account %s: %d threads, %d messages, %d keywords, %d summaries, %d profile updates',
+      'Gmail sync completed for account %s: %d threads, %d messages',
       accountId,
       result.threadsProcessed,
       result.messagesProcessed,
-      result.threadsExtracted ?? 0,
-      result.summariesGenerated ?? 0,
-      result.userProfileUpdates ?? 0,
     );
   } catch (error) {
     const errorMessage = getErrorMessage(error);
@@ -309,7 +260,7 @@ async function performIncrementalSync(
  * Sync a single thread and its messages
  * Returns the database thread ID on success
  */
-async function syncThread(
+export async function syncThread(
   gmail: gmail_v1.Gmail,
   accountId: string,
   threadId: string,
@@ -356,33 +307,47 @@ async function syncThread(
   const labels = lastMessage.labelIds ?? [];
   const isRead = !labels.includes('UNREAD');
 
-  // Create redacted snippet
-  const snippet = redactPII(thread.snippet ?? '');
+  // Check for spam/trash and extract Gmail category
+  const { isSpam, isTrash } = isSpamOrTrash(labels);
+  const gmailCategory = extractGmailCategory(labels);
 
-  // Upsert thread
+  // Skip spam and trash threads entirely - don't store or process them
+  if (isSpam || isTrash) {
+    log('Skipping %s thread %s', isSpam ? 'spam' : 'trash', threadId);
+    return null;
+  }
+
   const lastMessageAt = parseGmailDate(lastMessage.internalDate);
 
   const [dbThread] = await db
     .insert(EmailThreads)
     .values({
       accountId,
+      gmailCategory,
       gmailThreadId: threadId,
       isRead,
+      isSpam,
+      isStarred: labels.includes('STARRED'),
+      isTrash,
       labels,
       lastMessageAt,
       messageCount: messages.length,
       participantEmails: Array.from(participants),
-      snippet,
+      snippet: redactPII(thread.snippet ?? ''),
       subject: redactPII(subject),
     })
     .onConflictDoUpdate({
       set: {
+        gmailCategory,
         isRead,
+        isSpam,
+        isStarred: labels.includes('STARRED'),
+        isTrash,
         labels,
         lastMessageAt,
         messageCount: messages.length,
         participantEmails: Array.from(participants),
-        snippet,
+        snippet: redactPII(thread.snippet ?? ''),
         subject: redactPII(subject),
       },
       target: [EmailThreads.accountId, EmailThreads.gmailThreadId],
@@ -393,7 +358,14 @@ async function syncThread(
 
   // Sync individual messages
   for (const msg of messages) {
-    await syncMessage(dbThread.id, msg, result, account?.accountId);
+    await syncMessage(
+      gmail,
+      accountId,
+      dbThread.id,
+      msg,
+      result,
+      account?.accountId,
+    );
   }
 
   return dbThread.id;
@@ -403,6 +375,8 @@ async function syncThread(
  * Sync a single message
  */
 async function syncMessage(
+  gmail: gmail_v1.Gmail,
+  accountId: string,
   threadId: string,
   message: gmail_v1.Schema$Message,
   result: SyncResult,
@@ -420,12 +394,88 @@ async function syncMessage(
   const ccAddresses = parseEmailAddress(getHeader(headers, 'Cc'));
   const subject = getHeader(headers, 'Subject') || '(no subject)';
 
-  // Extract plain text body
-  const bodyText = extractPlainText(message.payload);
-  const bodyPreview = bodyText ? redactPII(bodyText.slice(0, 500)) : null;
+  const messageIdHeader = getHeader(headers, 'Message-ID') || null;
+  const inReplyTo = getHeader(headers, 'In-Reply-To') || null;
 
-  // Check for attachments
-  const attachments = extractAttachmentMeta(message.payload);
+  const bodies = extractEmailBodies(message.payload);
+
+  const bodyPreview = bodies.text
+    ? redactPII(createBodyPreview(bodies.text, 500) ?? '')
+    : null;
+
+  // Extract attachment metadata and upload attachments to storage
+  const attachmentsMeta = extractAttachmentMeta(message.payload);
+  const attachments: EmailAttachmentMeta[] = [];
+
+  for (const att of attachmentsMeta) {
+    // Get the attachment ID from the payload
+    const attachmentId = findAttachmentId(message.payload, att.filename);
+
+    if (attachmentId) {
+      try {
+        // Fetch attachment content from Gmail
+        const attachmentResponse = await gmail.users.messages.attachments.get({
+          id: attachmentId,
+          messageId: message.id,
+          userId: 'me',
+        });
+
+        const attachmentData = attachmentResponse.data.data;
+        if (attachmentData) {
+          // Decode base64url content
+          const content = Buffer.from(attachmentData, 'base64url');
+
+          // Upload to storage
+          const uploadResult = await uploadAttachment(accountId, message.id, {
+            content,
+            filename: att.filename,
+            mimeType: att.mimeType,
+          });
+
+          if (uploadResult) {
+            attachments.push({
+              cid: att.cid,
+              filename: att.filename,
+              id: uploadResult.id,
+              mimeType: att.mimeType,
+              size: att.size,
+              storagePath: uploadResult.storagePath,
+            });
+          } else {
+            // Store metadata without storage path
+            attachments.push({
+              cid: att.cid,
+              filename: att.filename,
+              mimeType: att.mimeType,
+              size: att.size,
+            });
+          }
+        }
+      } catch (error) {
+        log(
+          'Failed to upload attachment %s for %s: %s',
+          att.filename,
+          message.id,
+          getErrorMessage(error),
+        );
+        // Store metadata without storage path
+        attachments.push({
+          cid: att.cid,
+          filename: att.filename,
+          mimeType: att.mimeType,
+          size: att.size,
+        });
+      }
+    } else {
+      // No attachment ID, just store metadata
+      attachments.push({
+        cid: att.cid,
+        filename: att.filename,
+        mimeType: att.mimeType,
+        size: att.size,
+      });
+    }
+  }
 
   // Check if this message is from the user (for writing style extraction)
   const isFromUser = userEmail
@@ -438,15 +488,18 @@ async function syncMessage(
     .insert(EmailMessages)
     .values({
       attachmentMeta: attachments,
+      bodyHtml: bodies.html ?? null,
       bodyPreview,
+      bodyText: bodies.text ?? null,
       ccEmails: ccAddresses.map((a) => a.email),
       fromEmail: fromParsed.email,
       fromName: fromParsed.name,
       gmailMessageId: message.id,
       hasAttachments: attachments.length > 0,
+      inReplyTo,
       internalDate,
       isFromUser,
-      snippet: redactPII(message.snippet ?? ''),
+      messageIdHeader,
       subject: redactPII(subject),
       threadId,
       toEmails: toAddresses.map((a) => a.email),
@@ -454,13 +507,16 @@ async function syncMessage(
     .onConflictDoUpdate({
       set: {
         attachmentMeta: attachments,
+        bodyHtml: bodies.html ?? null,
         bodyPreview,
+        bodyText: bodies.text ?? null,
         ccEmails: ccAddresses.map((a) => a.email),
         fromEmail: fromParsed.email,
         fromName: fromParsed.name,
         hasAttachments: attachments.length > 0,
+        inReplyTo,
         isFromUser,
-        snippet: redactPII(message.snippet ?? ''),
+        messageIdHeader,
         subject: redactPII(subject),
         toEmails: toAddresses.map((a) => a.email),
       },
@@ -469,4 +525,27 @@ async function syncMessage(
     .returning();
 
   result.messagesProcessed++;
+}
+
+/**
+ * Find attachment ID in message payload by filename
+ */
+function findAttachmentId(
+  payload: gmail_v1.Schema$MessagePart | undefined,
+  filename: string,
+): string | null {
+  if (!payload) return null;
+
+  if (payload.filename === filename && payload.body?.attachmentId) {
+    return payload.body.attachmentId;
+  }
+
+  if (payload.parts) {
+    for (const part of payload.parts) {
+      const found = findAttachmentId(part, filename);
+      if (found) return found;
+    }
+  }
+
+  return null;
 }

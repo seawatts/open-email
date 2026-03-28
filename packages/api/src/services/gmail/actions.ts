@@ -1,127 +1,47 @@
-import { eq } from '@seawatts/db';
-import { db } from '@seawatts/db/client';
-import type { EmailActionType } from '@seawatts/db/schema';
-import { EmailActions, EmailThreads } from '@seawatts/db/schema';
 import { debug } from '@seawatts/logger';
-import type { gmail_v1 } from 'googleapis';
 
 import { getGmailClient } from './client';
 
 const log = debug('seawatts:gmail:actions');
 
 /**
- * Execute an email action
- */
-export async function executeAction(action: EmailActionType): Promise<void> {
-  const thread = await db.query.EmailThreads.findFirst({
-    where: eq(EmailThreads.id, action.threadId),
-  });
-
-  if (!thread) {
-    throw new Error(`Thread not found: ${action.threadId}`);
-  }
-
-  const gmail = await getGmailClient(thread.accountId);
-
-  log(
-    'Executing action %s of type %s for thread %s',
-    action.id,
-    action.actionType,
-    action.threadId,
-  );
-
-  try {
-    switch (action.actionType) {
-      case 'archive':
-        await archiveThread(gmail, thread.gmailThreadId);
-        break;
-      case 'label':
-        await labelThread(
-          gmail,
-          thread.gmailThreadId,
-          action.payload as { labelIds: string[] },
-        );
-        break;
-      case 'send':
-        await sendReply(
-          gmail,
-          thread.gmailThreadId,
-          action.payload as unknown as SendReplyPayload,
-        );
-        break;
-      case 'snooze':
-        await snoozeThread(
-          gmail,
-          thread.gmailThreadId,
-          action.payload as { until: string },
-        );
-        break;
-      case 'delete':
-        await deleteThread(gmail, thread.gmailThreadId);
-        break;
-      default:
-        throw new Error(`Unknown action type: ${action.actionType}`);
-    }
-
-    await db
-      .update(EmailActions)
-      .set({
-        executedAt: new Date(),
-        status: 'executed',
-      })
-      .where(eq(EmailActions.id, action.id));
-
-    log('Action %s executed successfully', action.id);
-  } catch (error) {
-    const errorMessage =
-      error instanceof Error ? error.message : 'Unknown error';
-    await db
-      .update(EmailActions)
-      .set({
-        error: errorMessage,
-        status: 'failed',
-      })
-      .where(eq(EmailActions.id, action.id));
-
-    log('Action %s failed: %s', action.id, errorMessage);
-    throw error;
-  }
-}
-
-/**
  * Archive a thread (remove from inbox)
  */
-async function archiveThread(
-  gmail: gmail_v1.Gmail,
-  threadId: string,
+export async function archiveThread(
+  accountId: string,
+  gmailThreadId: string,
 ): Promise<void> {
+  const gmail = await getGmailClient(accountId);
   await gmail.users.threads.modify({
-    id: threadId,
+    id: gmailThreadId,
     requestBody: {
       removeLabelIds: ['INBOX'],
     },
     userId: 'me',
   });
+  log('Thread %s archived', gmailThreadId);
 }
 
 /**
  * Add labels to a thread
  */
-async function labelThread(
-  gmail: gmail_v1.Gmail,
-  threadId: string,
-  payload: { labelIds: string[] },
+export async function labelThread(
+  accountId: string,
+  gmailThreadId: string,
+  labelIds: string[],
 ): Promise<void> {
+  const gmail = await getGmailClient(accountId);
   await gmail.users.threads.modify({
-    id: threadId,
+    id: gmailThreadId,
     requestBody: {
-      addLabelIds: payload.labelIds,
+      addLabelIds: labelIds,
     },
     userId: 'me',
   });
+  log('Thread %s labeled with %o', gmailThreadId, labelIds);
 }
 
-interface SendReplyPayload {
+export interface SendReplyPayload {
   body: string;
   cc?: string[];
   inReplyTo?: string;
@@ -133,12 +53,12 @@ interface SendReplyPayload {
 /**
  * Send a reply to a thread
  */
-async function sendReply(
-  gmail: gmail_v1.Gmail,
-  threadId: string,
+export async function sendReply(
+  accountId: string,
+  gmailThreadId: string,
   payload: SendReplyPayload,
 ): Promise<void> {
-  // Construct raw email
+  const gmail = await getGmailClient(accountId);
   const headers = [
     `To: ${payload.to.join(', ')}`,
     payload.cc?.length ? `Cc: ${payload.cc.join(', ')}` : '',
@@ -156,22 +76,22 @@ async function sendReply(
   await gmail.users.messages.send({
     requestBody: {
       raw: encodedEmail,
-      threadId,
+      threadId: gmailThreadId,
     },
     userId: 'me',
   });
+  log('Reply sent to thread %s', gmailThreadId);
 }
 
 /**
  * Snooze a thread (add SNOOZED label and remove from inbox)
  */
-async function snoozeThread(
-  gmail: gmail_v1.Gmail,
-  threadId: string,
-  payload: { until: string },
+export async function snoozeThread(
+  accountId: string,
+  gmailThreadId: string,
+  until: string,
 ): Promise<void> {
-  // For MVP, we just add a SNOOZED label
-  // In production, you'd use a scheduled job to un-snooze
+  const gmail = await getGmailClient(accountId);
   const labels = await gmail.users.labels.list({ userId: 'me' });
   let snoozeLabel = labels.data.labels?.find((l) => l.name === 'SNOOZED');
 
@@ -189,7 +109,7 @@ async function snoozeThread(
 
   if (snoozeLabel?.id) {
     await gmail.users.threads.modify({
-      id: threadId,
+      id: gmailThreadId,
       requestBody: {
         addLabelIds: [snoozeLabel.id],
         removeLabelIds: ['INBOX'],
@@ -198,20 +118,22 @@ async function snoozeThread(
     });
   }
 
-  log('Thread %s snoozed until %s', threadId, payload.until);
+  log('Thread %s snoozed until %s', gmailThreadId, until);
 }
 
 /**
  * Delete (trash) a thread
  */
-async function deleteThread(
-  gmail: gmail_v1.Gmail,
-  threadId: string,
+export async function trashThread(
+  accountId: string,
+  gmailThreadId: string,
 ): Promise<void> {
+  const gmail = await getGmailClient(accountId);
   await gmail.users.threads.trash({
-    id: threadId,
+    id: gmailThreadId,
     userId: 'me',
   });
+  log('Thread %s trashed', gmailThreadId);
 }
 
 /**

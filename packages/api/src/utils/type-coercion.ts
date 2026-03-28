@@ -19,11 +19,7 @@ export interface AttachmentMeta {
  * Normalized message with guaranteed non-null arrays
  */
 export interface NormalizedMessage
-  extends Omit<
-    EmailMessageType,
-    'attachmentMeta' | 'ccEmails' | 'aiSummary' | 'createdAt'
-  > {
-  aiSummary: string | null;
+  extends Omit<EmailMessageType, 'attachmentMeta' | 'ccEmails' | 'createdAt'> {
   attachmentMeta: AttachmentMeta[];
   ccEmails: string[];
   createdAt: Date;
@@ -36,7 +32,6 @@ export interface NormalizedMessage
 export function normalizeMessage(msg: EmailMessageType): NormalizedMessage {
   return {
     ...msg,
-    aiSummary: msg.aiSummary ?? null,
     attachmentMeta: (msg.attachmentMeta ?? []) as AttachmentMeta[],
     ccEmails: msg.ccEmails ?? [],
     createdAt: msg.createdAt ?? new Date(),
@@ -44,34 +39,14 @@ export function normalizeMessage(msg: EmailMessageType): NormalizedMessage {
 }
 
 /**
- * Bundle type union for type safety
- */
-export type BundleType =
-  | 'travel'
-  | 'purchases'
-  | 'finance'
-  | 'social'
-  | 'promos'
-  | 'updates'
-  | 'forums'
-  | 'personal';
-
-/**
- * Normalized thread with properly typed bundle
+ * Normalized thread with properly typed fields
  */
 export interface NormalizedThread
   extends Omit<
     EmailThreadType,
-    | 'bundleType'
-    | 'aiSummary'
-    | 'aiSummaryUpdatedAt'
-    | 'searchVector'
-    | 'createdAt'
-    | 'updatedAt'
+    'aiSummary' | 'searchVector' | 'createdAt' | 'updatedAt'
   > {
   aiSummary: string | null;
-  aiSummaryUpdatedAt: Date | null;
-  bundleType: BundleType | null;
   createdAt: Date;
   searchVector: string | null;
   updatedAt: Date | null;
@@ -84,8 +59,6 @@ export function normalizeThread(thread: EmailThreadType): NormalizedThread {
   return {
     ...thread,
     aiSummary: thread.aiSummary ?? null,
-    aiSummaryUpdatedAt: thread.aiSummaryUpdatedAt ?? null,
-    bundleType: thread.bundleType as BundleType | null,
     createdAt: thread.createdAt ?? new Date(),
     searchVector: (thread.searchVector as string) ?? null,
     updatedAt: thread.updatedAt ?? null,

@@ -1,31 +1,25 @@
-/**
- * Send Reply Procedure
- * Handles sending email replies
- */
+import { z } from 'zod';
 
-import { EmailActions } from '@seawatts/db/schema';
-
-import { sendReplySchema } from '../../email/types';
+import { sendReply } from '../../services/gmail/actions';
 import { protectedProcedure } from '../../trpc';
 
 export const sendReplyProcedure = protectedProcedure
-  .input(sendReplySchema)
-  .mutation(async ({ ctx, input }) => {
-    // Create a send action
-    const [action] = await ctx.db
-      .insert(EmailActions)
-      .values({
-        actionType: 'send',
-        payload: {
-          body: input.body,
-          cc: input.cc,
-          subject: input.subject,
-          to: input.to,
-        },
-        status: 'pending',
-        threadId: input.threadId,
-      })
-      .returning();
-
-    return action;
+  .input(
+    z.object({
+      accountId: z.string(),
+      body: z.string(),
+      cc: z.array(z.string().email()).optional(),
+      gmailThreadId: z.string(),
+      subject: z.string(),
+      to: z.array(z.string().email()),
+    }),
+  )
+  .mutation(async ({ input }) => {
+    await sendReply(input.accountId, input.gmailThreadId, {
+      body: input.body,
+      cc: input.cc,
+      subject: input.subject,
+      to: input.to,
+    });
+    return { success: true };
   });

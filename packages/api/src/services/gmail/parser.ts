@@ -1,4 +1,136 @@
 import type { gmail_v1 } from 'googleapis';
+import { type Attachment, simpleParser } from 'mailparser';
+
+// ============================================================================
+// MAILPARSER-BASED PARSING (for raw email content)
+// ============================================================================
+
+/**
+ * Parsed email content from mailparser
+ */
+export interface ParsedEmailContent {
+  /** Parsed attachments with content buffers */
+  attachments: ParsedAttachment[];
+  /** Email headers for threading */
+  headers: {
+    inReplyTo?: string;
+    messageId?: string;
+    references?: string[];
+  };
+  /** Full HTML body */
+  html: string | null;
+  /** Full plain text body */
+  text: string | null;
+}
+
+/**
+ * Parsed attachment with content
+ */
+export interface ParsedAttachment {
+  /** Content ID for inline images (without cid: prefix) */
+  cid?: string;
+  /** Binary content of the attachment */
+  content: Buffer;
+  /** Original filename */
+  filename: string;
+  /** MIME type */
+  mimeType: string;
+  /** File size in bytes */
+  size: number;
+}
+
+/**
+ * Parse raw email content using mailparser
+ *
+ * @param rawEmail - Base64url encoded raw email from Gmail API
+ */
+export async function parseRawEmail(
+  rawEmail: string,
+): Promise<ParsedEmailContent> {
+  // Gmail API returns base64url encoded content
+  const emailBuffer = Buffer.from(rawEmail, 'base64url');
+  const parsed = await simpleParser(emailBuffer);
+
+  return {
+    attachments: parseAttachments(parsed.attachments),
+    headers: {
+      inReplyTo: normalizeMessageId(parsed.inReplyTo),
+      messageId: normalizeMessageId(parsed.messageId),
+      references: parseReferences(parsed.references),
+    },
+    html: parsed.html || null,
+    text: parsed.text || null,
+  };
+}
+
+/**
+ * Parse raw email from a buffer
+ */
+export async function parseEmailBuffer(
+  emailBuffer: Buffer,
+): Promise<ParsedEmailContent> {
+  const parsed = await simpleParser(emailBuffer);
+
+  return {
+    attachments: parseAttachments(parsed.attachments),
+    headers: {
+      inReplyTo: normalizeMessageId(parsed.inReplyTo),
+      messageId: normalizeMessageId(parsed.messageId),
+      references: parseReferences(parsed.references),
+    },
+    html: parsed.html || null,
+    text: parsed.text || null,
+  };
+}
+
+/**
+ * Parse attachments from mailparser output
+ */
+function parseAttachments(attachments: Attachment[]): ParsedAttachment[] {
+  return attachments.map((att) => ({
+    cid: att.cid || undefined,
+    content: att.content,
+    filename: att.filename || 'attachment',
+    mimeType: att.contentType || 'application/octet-stream',
+    size: att.size,
+  }));
+}
+
+/**
+ * Normalize a Message-ID header value
+ */
+function normalizeMessageId(
+  messageId: string | string[] | undefined,
+): string | undefined {
+  if (!messageId) return undefined;
+  // If it's an array, take the first one
+  const id = Array.isArray(messageId) ? messageId[0] : messageId;
+  // Remove angle brackets if present
+  return id?.replace(/^<|>$/g, '');
+}
+
+/**
+ * Parse References header into array of message IDs
+ */
+function parseReferences(
+  references: string | string[] | undefined,
+): string[] | undefined {
+  if (!references) return undefined;
+
+  if (Array.isArray(references)) {
+    return references.map((ref) => ref.replace(/^<|>$/g, ''));
+  }
+
+  // Split by whitespace or comma and clean up
+  return references
+    .split(/[\s,]+/)
+    .map((ref) => ref.trim().replace(/^<|>$/g, ''))
+    .filter(Boolean);
+}
+
+// ============================================================================
+// GMAIL API HELPERS (for structured API responses)
+// ============================================================================
 
 /**
  * Parse email address from header value
@@ -126,19 +258,32 @@ export function redactPII(text: string): string {
 }
 
 /**
- * Extract attachment metadata from message payload
+ * Extract attachment metadata from message payload, including CID for inline images
  */
 export function extractAttachmentMeta(
   payload: gmail_v1.Schema$MessagePart | undefined,
-): { filename: string; mimeType: string; size: number }[] {
-  const attachments: { filename: string; mimeType: string; size: number }[] =
-    [];
+): { cid?: string; filename: string; mimeType: string; size: number }[] {
+  const attachments: {
+    cid?: string;
+    filename: string;
+    mimeType: string;
+    size: number;
+  }[] = [];
 
   if (!payload) return attachments;
 
   function traverse(part: gmail_v1.Schema$MessagePart): void {
     if (part.filename && part.body?.attachmentId) {
+      // Extract Content-ID header for inline images
+      const contentIdHeader = part.headers?.find(
+        (h) => h.name?.toLowerCase() === 'content-id',
+      );
+      // CID typically looks like <image001.png@01D12345.67890ABC>
+      // Remove angle brackets if present
+      const cid = contentIdHeader?.value?.replace(/^<|>$/g, '');
+
       attachments.push({
+        cid,
         filename: part.filename,
         mimeType: part.mimeType ?? 'application/octet-stream',
         size: part.body.size ?? 0,
@@ -167,4 +312,69 @@ export function getHeader(
     (h) => h.name?.toLowerCase() === name.toLowerCase(),
   );
   return header?.value ?? '';
+}
+
+/**
+ * Extract HTML content from Gmail API message payload
+ */
+export function extractHtmlContent(
+  payload: gmail_v1.Schema$MessagePart | undefined,
+): string | null {
+  if (!payload) return null;
+
+  // If it's a simple text/html part
+  if (payload.mimeType === 'text/html' && payload.body?.data) {
+    return Buffer.from(payload.body.data, 'base64').toString('utf-8');
+  }
+
+  // If it has parts, search through them
+  if (payload.parts) {
+    for (const part of payload.parts) {
+      if (part.mimeType === 'text/html' && part.body?.data) {
+        return Buffer.from(part.body.data, 'base64').toString('utf-8');
+      }
+      // Recursively check nested multipart structures
+      if (part.mimeType?.startsWith('multipart/')) {
+        const html = extractHtmlContent(part);
+        if (html) return html;
+      }
+    }
+  }
+
+  return null;
+}
+
+/**
+ * Extract both HTML and plain text from Gmail API message payload
+ */
+export function extractEmailBodies(
+  payload: gmail_v1.Schema$MessagePart | undefined,
+): { html: string | null; text: string | null } {
+  return {
+    html: extractHtmlContent(payload),
+    text: extractPlainText(payload),
+  };
+}
+
+/**
+ * Create a body preview from text content (truncated for list views)
+ */
+export function createBodyPreview(
+  text: string | null,
+  maxLength = 500,
+): string | null {
+  if (!text) return null;
+
+  // Clean up whitespace
+  const cleaned = text.replace(/\s+/g, ' ').trim();
+
+  if (cleaned.length <= maxLength) return cleaned;
+
+  // Truncate at word boundary
+  const truncated = cleaned.slice(0, maxLength);
+  const lastSpace = truncated.lastIndexOf(' ');
+
+  return lastSpace > maxLength * 0.8
+    ? `${truncated.slice(0, lastSpace)}...`
+    : `${truncated}...`;
 }

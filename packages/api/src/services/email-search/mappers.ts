@@ -18,20 +18,10 @@ export interface ThreadRow {
   id: string;
   subject: string;
   snippet: string | null;
-  bundleType: string | null;
   isRead: boolean;
   lastMessageAt: Date;
   messageCount: number;
   relevanceScore?: number;
-}
-
-/**
- * Keyword match from database
- */
-export interface KeywordMatch {
-  threadId: string;
-  keyword: string;
-  keywordType: string;
 }
 
 /**
@@ -68,7 +58,6 @@ export async function buildThreadSenderMap(
     .where(inArray(EmailMessages.threadId, threadIds))
     .orderBy(EmailMessages.internalDate);
 
-  // Pick only first message per thread
   for (const msg of firstMessages) {
     if (!senderMap.has(msg.threadId)) {
       senderMap.set(msg.threadId, {
@@ -82,58 +71,22 @@ export async function buildThreadSenderMap(
 }
 
 /**
- * Group keyword matches by thread ID.
- *
- * @param keywordMatches - Array of keyword matches from database
- * @returns Map of threadId to keywords array
- */
-export function buildKeywordsByThreadMap(
-  keywordMatches: KeywordMatch[],
-): Map<string, Array<{ keyword: string; keywordType: string }>> {
-  const keywordMap = new Map<
-    string,
-    Array<{ keyword: string; keywordType: string }>
-  >();
-
-  for (const kw of keywordMatches) {
-    const list = keywordMap.get(kw.threadId) ?? [];
-    list.push({ keyword: kw.keyword, keywordType: kw.keywordType });
-    keywordMap.set(kw.threadId, list);
-  }
-
-  return keywordMap;
-}
-
-/**
  * Map a thread row to a search result.
- *
- * @param thread - Thread row from database
- * @param senderMap - Map of thread IDs to sender info
- * @param keywordsMap - Map of thread IDs to keywords
- * @returns Search result object
  */
 export function mapThreadToSearchResult(
   thread: ThreadRow,
   senderMap: Map<string, SenderInfo>,
-  keywordsMap: Map<string, Array<{ keyword: string; keywordType: string }>>,
 ): EmailSearchResult {
   const sender = senderMap.get(thread.id) ?? {
     fromEmail: 'unknown',
     fromName: null,
   };
-  const keywords = keywordsMap.get(thread.id) ?? [];
 
   return {
-    bundleType: thread.bundleType,
     fromEmail: sender.fromEmail,
     fromName: sender.fromName,
     isRead: thread.isRead,
     lastMessageAt: thread.lastMessageAt,
-    matchingKeywords: keywords.map((k) => ({
-      keyword: k.keyword,
-      keywordType:
-        k.keywordType as EmailSearchResult['matchingKeywords'][0]['keywordType'],
-    })),
     messageCount: thread.messageCount,
     relevanceScore: thread.relevanceScore ?? 1.0,
     snippet: thread.snippet,
@@ -144,29 +97,18 @@ export function mapThreadToSearchResult(
 
 /**
  * Map multiple threads to search results.
- *
- * @param threads - Array of thread rows
- * @param senderMap - Map of thread IDs to sender info
- * @param keywordsMap - Map of thread IDs to keywords (optional)
- * @returns Array of search results
  */
 export function mapThreadsToSearchResults(
   threads: ThreadRow[],
   senderMap: Map<string, SenderInfo>,
-  keywordsMap?: Map<string, Array<{ keyword: string; keywordType: string }>>,
 ): EmailSearchResult[] {
-  const emptyKeywordsMap = new Map<
-    string,
-    Array<{ keyword: string; keywordType: string }>
-  >();
   return threads.map((thread) =>
-    mapThreadToSearchResult(thread, senderMap, keywordsMap ?? emptyKeywordsMap),
+    mapThreadToSearchResult(thread, senderMap),
   );
 }
 
 /**
  * Common stop words for search query parsing.
- * Exported so it can be used consistently across the codebase.
  */
 export const STOP_WORDS = new Set([
   'the',
@@ -282,6 +224,5 @@ export function parseSearchQuery(query: string): string[] {
     return !STOP_WORDS.has(word);
   });
 
-  // Add prefix matching for partial words
   return words.map((word) => `${word}:*`);
 }
