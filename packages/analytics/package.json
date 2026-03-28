@@ -1,18 +1,24 @@
 {
   "dependencies": {
+    "@seawatts/auth": "workspace:*",
     "@seawatts/logger": "workspace:*",
+    "@seawatts/ui": "workspace:*",
     "@t3-oss/env-nextjs": "catalog:",
     "@vercel/analytics": "1.6.1",
     "@vercel/speed-insights": "1.3.1",
-    "posthog-js": "1.309.1",
-    "posthog-node": "5.17.4",
+    "class-variance-authority": "0.7.1",
+    "next": "catalog:",
+    "posthog-js": "1.360.0",
+    "posthog-node": "5.28.0",
     "react": "catalog:",
+    "react-dom": "catalog:",
     "zod": "catalog:"
   },
   "devDependencies": {
     "@seawatts/tsconfig": "workspace:*",
     "@types/aws-lambda": "8.10.159",
     "@types/react": "catalog:",
+    "@types/react-dom": "catalog:",
     "typescript": "catalog:"
   },
   "exports": {

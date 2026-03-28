@@ -1,3 +1,4 @@
+import { expo } from '@better-auth/expo';
 import { db } from '@seawatts/db/client';
 import {
   Accounts,
@@ -11,12 +12,39 @@ import {
 import { createId } from '@seawatts/id';
 import { betterAuth } from 'better-auth';
 import { drizzleAdapter } from 'better-auth/adapters/drizzle';
-import { lastLoginMethod, organization } from 'better-auth/plugins';
+import { lastLoginMethod, oAuthProxy, organization } from 'better-auth/plugins';
 
 import { env } from './env';
 
+const FALLBACK_PRODUCTION_URL = 'https://open-email-web-app.vercel.app';
+
+const baseUrl =
+  env.BETTER_AUTH_URL ??
+  (env.VERCEL_ENV === 'production'
+    ? `https://${env.VERCEL_PROJECT_PRODUCTION_URL}`
+    : env.VERCEL_ENV === 'preview'
+      ? `https://${env.VERCEL_URL}`
+      : 'http://localhost:3000');
+
+const developmentHosts = [
+  'localhost:3000',
+  'localhost:*',
+  '192.168.*.*',
+  '192.168.*.*:*',
+  '*.sslip.io',
+  '*.sslip.io:*',
+  ...(env.BETTER_AUTH_EXPO_HOST ? [env.BETTER_AUTH_EXPO_HOST] : []),
+];
+const useDynamicBaseUrl =
+  env.NODE_ENV === 'development' && developmentHosts.length > 0;
+
+const productionUrl = env.VERCEL_PROJECT_PRODUCTION_URL
+  ? `https://${env.VERCEL_PROJECT_PRODUCTION_URL}`
+  : FALLBACK_PRODUCTION_URL;
+
 export const auth = betterAuth({
   advanced: {
+    cookiePrefix: 'open-email',
     database: {
       generateId: ({ model }) => {
         const prefixMap: Record<string, string> = {
@@ -32,8 +60,15 @@ export const auth = betterAuth({
         return createId({ prefix });
       },
     },
+    useSecureCookies: env.NODE_ENV === 'production',
   },
-  baseURL: env.BETTER_AUTH_URL,
+  baseURL: useDynamicBaseUrl
+    ? {
+        allowedHosts: developmentHosts,
+        fallback: baseUrl,
+        protocol: 'http',
+      }
+    : baseUrl,
   database: drizzleAdapter(db, {
     provider: 'pg',
     schema: {
@@ -48,13 +83,23 @@ export const auth = betterAuth({
   }),
 
   emailAndPassword: {
-    enabled: false, // Only using Google OAuth
+    enabled: false,
   },
-  experimental: {
-    joins: true,
+
+  onAPIError: {
+    onError(error) {
+      console.error('[BETTER AUTH ERROR]', error);
+    },
   },
 
   plugins: [
+    oAuthProxy({
+      productionURL: productionUrl,
+    }),
+    expo(),
+    lastLoginMethod({
+      storeInDatabase: true,
+    }),
     organization({
       allowUserToCreateOrganization: true,
       invitationExpiresIn: 60 * 60 * 24 * 7, // 7 days
@@ -72,20 +117,19 @@ export const auth = betterAuth({
         );
       },
     }),
-    lastLoginMethod({
-      storeInDatabase: true,
-    }),
   ],
 
   secret: env.BETTER_AUTH_SECRET,
 
   session: {
+    // cookieCache disabled: with it enabled, auth.api.getSession({ headers }) returns null
+    // when called from tRPC/API route despite valid cookies (better-auth#7008).
     cookieCache: {
-      enabled: true,
-      maxAge: 60 * 5, // 5 minutes
+      enabled: false,
+      maxAge: 60 * 5,
     },
     expiresIn: 60 * 60 * 24 * 7, // 7 days
-    updateAge: 60 * 60 * 24, // Update session every 24 hours
+    updateAge: 60 * 60 * 24,
   },
 
   socialProviders: {
@@ -95,24 +139,30 @@ export const auth = betterAuth({
       clientSecret: env.GOOGLE_CLIENT_SECRET,
       prompt: 'consent',
       scope: [
-        // User identity (included by default but explicit for clarity)
         'openid',
         'email',
         'profile',
-        // Gmail API
         'https://www.googleapis.com/auth/gmail.readonly',
         'https://www.googleapis.com/auth/gmail.send',
         'https://www.googleapis.com/auth/gmail.modify',
         'https://www.googleapis.com/auth/gmail.labels',
-        // Calendar API
         'https://www.googleapis.com/auth/calendar.events',
-        // Pub/Sub (for real-time notifications setup)
         'https://www.googleapis.com/auth/pubsub',
       ],
     },
   },
 
-  trustedOrigins: [env.BETTER_AUTH_URL, 'http://localhost:3000'],
+  trustedOrigins: [
+    'openemail://',
+    'openemail-development://',
+    'openemail-preview://',
+
+    'exp://',
+
+    ...(process.env.NODE_ENV === 'development'
+      ? ['http://192.168.', 'http://localhost:3000']
+      : []),
+  ],
 });
 
 export type Auth = typeof auth;

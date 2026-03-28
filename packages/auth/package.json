@@ -1,6 +1,8 @@
 {
   "dependencies": {
+    "@better-auth/expo": "catalog:",
     "@seawatts/db": "workspace:*",
+    "@seawatts/id": "workspace:*",
     "@t3-oss/env-nextjs": "catalog:",
     "better-auth": "catalog:",
     "next": "catalog:",

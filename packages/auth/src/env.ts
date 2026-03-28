@@ -26,12 +26,16 @@ export const env = createEnv({
    * isn't built with invalid env vars.
    */
   server: {
+    BETTER_AUTH_EXPO_HOST: z.string().optional(),
     BETTER_AUTH_SECRET: z.string().min(32),
-    BETTER_AUTH_URL: z.url(),
+    BETTER_AUTH_URL: z.url().optional(),
     GOOGLE_CLIENT_ID: z.string(),
     GOOGLE_CLIENT_SECRET: z.string(),
     NODE_ENV: z
       .enum(['development', 'production', 'test'])
       .default('development'),
+    VERCEL_ENV: z.enum(['development', 'preview', 'production']).optional(),
+    VERCEL_PROJECT_PRODUCTION_URL: z.string().optional(),
+    VERCEL_URL: z.string().optional(),
   },
 });

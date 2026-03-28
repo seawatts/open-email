@@ -1,11 +1,12 @@
 {
   "dependencies": {
+    "@seawatts/analytics": "workspace:*",
     "@seawatts/auth": "workspace:*",
     "@seawatts/db": "workspace:*",
     "@t3-oss/env-core": "catalog:",
     "drizzle-orm": "catalog:",
     "next": "catalog:",
-    "next-safe-action": "8.0.11",
+    "next-safe-action": "8.1.8",
     "react": "catalog:",
     "react-dom": "catalog:",
     "stripe": "catalog:",

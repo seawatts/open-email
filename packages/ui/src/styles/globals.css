@@ -1,9 +1,8 @@
-@import "tailwindcss";
+@import 'tailwindcss';
 
 @custom-variant dark (&:is(.dark *));
-@source "../../../apps/**/*.{ts,tsx}";
-@source "../**/*.{ts,tsx}";
-
+@source '../../../apps/**/*.{ts,tsx}';
+@source '../**/*.{ts,tsx}';
 
 :root {
   --background: oklch(1 0 0);
@@ -46,6 +45,19 @@
   --animation-duration-normal: 0.3s;
   --animation-duration-slow: 0.5s;
   --animation-duration-very-slow: 0.8s;
+
+  /* Light mode message bubble colors */
+  --message-sent: oklch(0.92 0.02 200);
+  --message-sent-foreground: oklch(0.25 0.03 200);
+  --message-received: oklch(0.96 0.01 200);
+  --message-received-foreground: oklch(0.3 0.02 200);
+  --message-draft: oklch(0.92 0.08 145);
+  --message-draft-foreground: oklch(0.4 0.12 145);
+  --avatar-pink: oklch(0.75 0.12 350);
+  --avatar-blue: oklch(0.65 0.12 250);
+  --avatar-green: oklch(0.65 0.12 145);
+  --avatar-orange: oklch(0.75 0.12 50);
+  --avatar-purple: oklch(0.65 0.12 300);
 }
 
 .dark {
@@ -81,6 +93,19 @@
   --sidebar-accent-foreground: oklch(0.985 0 0);
   --sidebar-border: oklch(1 0 0 / 10%);
   --sidebar-ring: oklch(0.656 0 0);
+
+  /* Superhuman-inspired message bubble colors */
+  --message-sent: oklch(0.25 0.035 175);
+  --message-sent-foreground: oklch(0.92 0.02 180);
+  --message-received: oklch(0.22 0.025 170);
+  --message-received-foreground: oklch(0.88 0.015 180);
+  --message-draft: oklch(0.55 0.15 145);
+  --message-draft-foreground: oklch(0.85 0.1 145);
+  --avatar-pink: oklch(0.7 0.15 350);
+  --avatar-blue: oklch(0.6 0.15 250);
+  --avatar-green: oklch(0.6 0.15 145);
+  --avatar-orange: oklch(0.7 0.15 50);
+  --avatar-purple: oklch(0.6 0.15 300);
 }
 
 @theme inline {
@@ -120,6 +145,20 @@
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
+
+  /* Superhuman-inspired message colors */
+  --color-message-sent: var(--message-sent);
+  --color-message-sent-foreground: var(--message-sent-foreground);
+  --color-message-received: var(--message-received);
+  --color-message-received-foreground: var(--message-received-foreground);
+  --color-message-draft: var(--message-draft);
+  --color-message-draft-foreground: var(--message-draft-foreground);
+  --color-avatar-pink: var(--avatar-pink);
+  --color-avatar-blue: var(--avatar-blue);
+  --color-avatar-green: var(--avatar-green);
+  --color-avatar-orange: var(--avatar-orange);
+  --color-avatar-purple: var(--avatar-purple);
+
   --animate-accordion-down: accordion-down 0.1s ease-out;
   --animate-accordion-up: accordion-up 0.1s ease-out;
 
