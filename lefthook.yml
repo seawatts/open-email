@@ -16,3 +16,5 @@ pre-push:
   commands:
     typecheck:
       run: bun typecheck
+    infisical:
+      run: infisical scan git-changes --staged --verbose

@@ -48,8 +48,8 @@ jobs:
         run: bun install --frozen-lockfile
 
       - name: Setup database
-        run: |
-          bun run db:push
+        run: bun run push:ci
+        working-directory: packages/db
         env:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/test
           POSTGRES_URL: postgresql://postgres:postgres@localhost:5432/test

@@ -30,12 +30,17 @@
       "!**/coverage",
       "!**/.nyc_output",
       "!**/packages/ai",
-      "!**/apps/chrome-extension/scripts/detect-obfuscation",
       "!**/.grit",
-      "!**/styles.css",
-      "!**/theme.css",
-      "!**/globals.css"
+      "!**/apps/chrome-extension/scripts/detect-obfuscation"
     ]
+  },
+  "css": {
+    "formatter": {
+      "quoteStyle": "single"
+    },
+    "parser": {
+      "tailwindDirectives": true
+    }
   },
   "formatter": {
     "enabled": true,
@@ -47,7 +52,9 @@
       "semicolons": "always",
       "trailingCommas": "all"
     },
-    "globals": ["React"]
+    "globals": [
+      "React"
+    ]
   },
   "linter": {
     "enabled": true,
@@ -86,7 +93,9 @@
         "useFilenamingConvention": {
           "level": "error",
           "options": {
-            "filenameCases": ["kebab-case"],
+            "filenameCases": [
+              "kebab-case"
+            ],
             "requireAscii": true
           }
         },
