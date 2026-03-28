@@ -1,13 +1,8 @@
 /**
  * @seawatts/ai - Email Agent Package
  *
- * This package provides two AI SDK implementations:
- *
- * 1. TanStack AI (default): import from '@seawatts/ai' or '@seawatts/ai/tanstack-ai'
- * 2. AI SDK v6 beta: import from '@seawatts/ai/ai-sdk-v6'
- *
- * The default export uses TanStack AI for backwards compatibility.
+ * 1. AI SDK v6 (default): import from '@seawatts/ai' or '@seawatts/ai/ai-sdk-v6'
+ * 2. TanStack AI: import from '@seawatts/ai/tanstack-ai'
  */
 
-// Re-export everything from TanStack AI as the default
-export * from './tanstack-ai';
+export * from './ai-sdk-v6';

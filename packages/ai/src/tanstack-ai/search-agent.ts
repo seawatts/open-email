@@ -13,11 +13,9 @@
 import { chat, toolDefinition } from '@tanstack/ai';
 import { z } from 'zod';
 
-import { getDefaultAdapter, getModel } from './adapters';
+import { getAdapter } from './adapters';
 import {
-  emailSearchTools,
   getEmailThreadParams,
-  listEmailsByCategoryParams,
   searchEmailsParams,
   TOOL_NAMES,
 } from './tools';
@@ -46,9 +44,7 @@ export interface EmailSearchResult {
   lastMessageAt: Date;
   messageCount: number;
   isRead: boolean;
-  bundleType: string | null;
   relevanceScore: number;
-  matchingKeywords: Array<{ keyword: string; keywordType: string }>;
 }
 
 export interface EmailThreadContent {
@@ -60,9 +56,7 @@ export interface EmailThreadContent {
     to: string[];
     date: Date;
     body: string;
-    snippet: string;
   }>;
-  keywords: Array<{ keyword: string; keywordType: string }>;
 }
 
 export interface ToolCallResult {
@@ -101,10 +95,6 @@ export interface SearchToolExecutor {
     totalCount: number;
   }>;
   getEmailThread: (params: z.infer<typeof getEmailThreadParams>) => Promise<EmailThreadContent | null>;
-  listEmailsByCategory: (params: z.infer<typeof listEmailsByCategoryParams>) => Promise<{
-    results: EmailSearchResult[];
-    totalCount: number;
-  }>;
 }
 
 /**
@@ -119,9 +109,8 @@ export type CreateSearchExecutor = (accountId: string) => SearchToolExecutor;
 const SEARCH_PLANNING_PROMPT = `You are an intelligent email search assistant. Your job is to help users find information in their emails by planning and executing searches.
 
 CAPABILITIES:
-- search_emails: Search by keywords, names, topics, dates. Supports filters for category, date range, senders, attachments.
+- search_emails: Search by keywords, names, topics, dates. Supports filters for date range, senders, attachments.
 - get_email_thread: Get full content of a specific thread after finding it via search.
-- list_emails_by_category: Browse emails by category (travel, purchases, finance, etc.)
 
 STRATEGY:
 1. Analyze the user's question to identify what they're looking for
@@ -172,13 +161,7 @@ const agentGetThreadTool = toolDefinition({
   name: TOOL_NAMES.GET_EMAIL_THREAD as 'get_email_thread',
 });
 
-const agentListCategoryTool = toolDefinition({
-  description: 'List recent emails by category/bundle type',
-  inputSchema: listEmailsByCategoryParams,
-  name: TOOL_NAMES.LIST_EMAILS_BY_CATEGORY as 'list_emails_by_category',
-});
-
-const agentTools = [agentSearchTool, agentGetThreadTool, agentListCategoryTool];
+const agentTools = [agentSearchTool, agentGetThreadTool];
 
 // ============================================================================
 // Main Search Agent
@@ -204,7 +187,7 @@ export async function* searchAgent(
     includeFullContent = true,
   } = config;
 
-  const adapter = getDefaultAdapter();
+  const adapter = getAdapter('reasoning');
 
   // Track state across iterations
   let totalToolCalls = 0;
@@ -234,7 +217,6 @@ export async function* searchAgent(
       const stream = chat({
         adapter,
         messages: conversationHistory,
-        model: getModel('reasoning'),
         systemPrompts: [SEARCH_PLANNING_PROMPT],
         tools: agentTools,
       });
@@ -317,7 +299,7 @@ export async function* searchAgent(
         yield { type: 'tool_call_result', result };
 
         // Track results for final answer
-        if (result.toolName === TOOL_NAMES.SEARCH_EMAILS || result.toolName === TOOL_NAMES.LIST_EMAILS_BY_CATEGORY) {
+        if (result.toolName === TOOL_NAMES.SEARCH_EMAILS) {
           const searchResult = result.result as { results: EmailSearchResult[] } | undefined;
           if (searchResult?.results) {
             for (const r of searchResult.results) {
@@ -415,12 +397,6 @@ async function executeToolCallsInParallel(
         return { toolCallId: tc.id, toolName: tc.name, params, result };
       }
 
-      if (tc.name === TOOL_NAMES.LIST_EMAILS_BY_CATEGORY) {
-        const categoryParams = params as z.infer<typeof listEmailsByCategoryParams>;
-        const result = await executor.listEmailsByCategory(categoryParams);
-        return { toolCallId: tc.id, toolName: tc.name, params, result };
-      }
-
       return {
         toolCallId: tc.id,
         toolName: tc.name,
@@ -456,10 +432,7 @@ function buildContextSummary(
   if (results.length > 0) {
     lines.push('\nTop results:');
     for (const r of results.slice(0, 5)) {
-      lines.push(`- "${r.subject}" from ${r.fromEmail} (${r.bundleType || 'uncategorized'})`);
-      if (r.matchingKeywords.length > 0) {
-        lines.push(`  Keywords: ${r.matchingKeywords.map((k) => k.keyword).join(', ')}`);
-      }
+      lines.push(`- "${r.subject}" from ${r.fromEmail}`);
     }
   }
 
@@ -477,7 +450,7 @@ async function* synthesizeAnswer(
   query: string,
   results: EmailSearchResult[],
   threads: Map<string, EmailThreadContent>,
-  adapter: ReturnType<typeof getDefaultAdapter>,
+  adapter: ReturnType<typeof getAdapter>,
 ): AsyncGenerator<string> {
   // Build context from threads
   const contextParts: string[] = [];
@@ -492,7 +465,6 @@ ${thread.messages.map((m) => `
 [${m.date}] ${m.from}:
 ${m.body.slice(0, 500)}${m.body.length > 500 ? '...' : ''}
 `).join('\n')}
-Keywords: ${thread.keywords.map((k) => k.keyword).join(', ')}
 ---`);
   }
 
@@ -503,9 +475,7 @@ Keywords: ${thread.keywords.map((k) => k.keyword).join(', ')}
 --- Email: "${r.subject}" ---
 From: ${r.fromEmail} (${r.fromName || ''})
 Date: ${r.lastMessageAt}
-Category: ${r.bundleType || 'uncategorized'}
 Snippet: ${r.snippet}
-Keywords: ${r.matchingKeywords.map((k) => k.keyword).join(', ')}
 ---`);
     }
   }
@@ -522,7 +492,6 @@ Please provide a helpful answer based on the email context above.`;
   const stream = chat({
     adapter,
     messages: [{ content: synthesisPrompt, role: 'user' }],
-    model: getModel('reasoning'),
     systemPrompts: [SYNTHESIS_PROMPT],
   });
 

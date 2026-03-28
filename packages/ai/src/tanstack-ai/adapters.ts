@@ -5,55 +5,63 @@
  * with support for streaming, tool calling, and thinking/reasoning.
  */
 
-import { openai as openaiAdapter } from '@tanstack/ai-openai';
-
-/**
- * OpenAI adapter configuration for email agent
- */
-export function createOpenAIAdapter() {
-  // TanStack AI OpenAI adapter reads OPENAI_API_KEY from env automatically
-  return openaiAdapter();
-}
+import { openaiText } from '@tanstack/ai-openai';
 
 /**
  * Model configurations for different tasks
  */
 export const models = {
   // Fast model for classification/triage
-  classification: 'gpt-4o-mini' as const,
+  classification: 'gpt-4o-mini',
 
   // Standard model for planning and draft generation
-  planning: 'gpt-4o' as const,
+  planning: 'gpt-4o',
 
   // High-capability model for complex reasoning
-  reasoning: 'gpt-4o' as const,
-  chat: 'gpt-4o-mini' as const,
-  draft: 'gpt-4o' as const,
-};
+  reasoning: 'gpt-4o',
+  chat: 'gpt-4o-mini',
+  draft: 'gpt-4o',
+} as const;
 
 export type ModelType = keyof typeof models;
+type ModelName = (typeof models)[ModelType];
 
 /**
- * Get the appropriate model for a task type
+ * Get the appropriate model name for a task type
  */
 export function getModel(taskType: ModelType) {
   return models[taskType];
 }
 
 /**
- * Default adapter instance
+ * Cache for adapter instances by model
  */
-let defaultAdapter: ReturnType<typeof createOpenAIAdapter> | null = null;
+const adapterCache = new Map<ModelName, ReturnType<typeof openaiText>>();
 
 /**
- * Get or create the default OpenAI adapter
+ * Get or create an OpenAI adapter for a specific model.
+ * The model parameter is REQUIRED by TanStack AI's openaiText function.
+ */
+export function getAdapter(taskType: ModelType) {
+  const model = models[taskType];
+  let adapter = adapterCache.get(model);
+
+  if (!adapter) {
+    // TanStack AI OpenAI adapter reads OPENAI_API_KEY from env automatically
+    adapter = openaiText(model);
+    adapterCache.set(model, adapter);
+  }
+
+  return adapter;
+}
+
+/**
+ * Get or create the default OpenAI adapter (uses 'chat' model)
+ * @deprecated Use getAdapter(taskType) instead for explicit model selection
  */
 export function getDefaultAdapter() {
-  if (!defaultAdapter) {
-    defaultAdapter = createOpenAIAdapter();
-  }
-  return defaultAdapter;
+  return getAdapter('chat');
 }
 
 // Re-export for convenience
-export { openaiAdapter };
+export { openaiText };

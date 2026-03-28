@@ -1,26 +1,20 @@
 {
   "dependencies": {
-    "@ai-sdk/openai": "^3.0.0-beta.104",
-    "@tanstack/ai": "^0.0.3",
-    "@tanstack/ai-openai": "^0.0.3",
-    "ai": "^6.0.0-beta.159",
+    "@ai-sdk/openai": "^3.0.0",
+    "@tanstack/ai": "^0.1.0",
+    "@tanstack/ai-openai": "^0.1.1",
+    "ai": "^6.0.1",
     "zod": "^4.2.1"
   },
   "devDependencies": {
     "@seawatts/tsconfig": "workspace:*",
     "typescript": "catalog:",
-    "vitest": "4.0.16"
+    "vitest": "4.0.18"
   },
   "exports": {
     ".": "./src/index.ts",
     "./tanstack-ai": "./src/tanstack-ai/index.ts",
-    "./tanstack-ai/adapters": "./src/tanstack-ai/adapters.ts",
-    "./tanstack-ai/tools": "./src/tanstack-ai/tools.ts",
-    "./tanstack-ai/agent": "./src/tanstack-ai/email-agent.ts",
-    "./ai-sdk-v6": "./src/ai-sdk-v6/index.ts",
-    "./ai-sdk-v6/adapters": "./src/ai-sdk-v6/adapters.ts",
-    "./ai-sdk-v6/tools": "./src/ai-sdk-v6/tools.ts",
-    "./ai-sdk-v6/agent": "./src/ai-sdk-v6/email-agent.ts"
+    "./ai-sdk-v6": "./src/ai-sdk-v6/index.ts"
   },
   "license": "MIT",
   "name": "@seawatts/ai",
